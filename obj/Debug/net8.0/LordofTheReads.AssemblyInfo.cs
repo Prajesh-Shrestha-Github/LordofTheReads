@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("LordofTheReads")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5410604dd72b7ade5f09bcb7a97f25504ead95cc")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7662b59ef8fa813cbe739f0c5873d73f31ffa20f")]
 [assembly: System.Reflection.AssemblyProductAttribute("LordofTheReads")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LordofTheReads")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
