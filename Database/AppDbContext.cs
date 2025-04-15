@@ -1,6 +1,15 @@
-﻿namespace LordofTheReads.Database
+﻿using LordofTheReads.Database.Entities;
+using Microsoft.EntityFrameworkCore;
+
+namespace LordofTheReads.Database
 {
-    public class AppDbContext
+    public class AppDbContext : DbContext
     {
+        public AppDbContext(DbContextOptions options) : base(options)
+        {
+
+        }
+
+        public DbSet<Book> Books { get; set; }
     }
 }
