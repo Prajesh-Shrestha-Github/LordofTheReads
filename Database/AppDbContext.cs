@@ -1,4 +1,4 @@
-﻿using LordofTheReads.Database.Entities;
+using LordofTheReads.Database.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace LordofTheReads.Database
@@ -11,5 +11,6 @@ namespace LordofTheReads.Database
         }
 
         public DbSet<Book> Books { get; set; }
+        public DbSet<User> Users { get; set; }
     }
 }
