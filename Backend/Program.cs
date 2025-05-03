@@ -41,7 +41,16 @@ builder.Services.AddDbContext<AppDbContext>(
         options.UseNpgsql(builder.Configuration.GetConnectionString("PostgresConnection")).LogTo(Console.WriteLine);
     }
 );
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowReactApp", 
+        builder => builder
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader());
+});
 
+builder.Services.AddScoped<IBookService, BookService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -51,6 +60,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseCors("AllowReactApp");
 
 app.UseHttpsRedirection();
 

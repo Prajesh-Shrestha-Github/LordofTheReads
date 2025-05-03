@@ -1,8 +1,38 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { BookOpen, ShoppingCart, Search } from 'lucide-react';
 
 function Navbar() {
+  const [cartItemCount, setCartItemCount] = useState(0);
+
+  // Update cart count whenever localStorage changes
+  useEffect(() => {
+    const updateCartCount = () => {
+      try {
+        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+        const itemCount = cart.reduce((total, item) => total + item.quantity, 0);
+        setCartItemCount(itemCount);
+      } catch (error) {
+        console.error('Error reading cart from localStorage:', error);
+        setCartItemCount(0);
+      }
+    };
+
+    // Initial count
+    updateCartCount();
+
+    // Listen for storage events (when localStorage changes)
+    window.addEventListener('storage', updateCartCount);
+
+    // Custom event for cart updates from within the same window
+    window.addEventListener('cartUpdated', updateCartCount);
+
+    return () => {
+      window.removeEventListener('storage', updateCartCount);
+      window.removeEventListener('cartUpdated', updateCartCount);
+    };
+  }, []);
+
   return (
     <header className="bg-white py-3 border-b border-gray">
       <div className="container mx-auto px-4 flex items-center">
@@ -40,8 +70,13 @@ function Navbar() {
           </div>
           
           {/* Cart */}
-          <Link to="/cart" className="text-navy hover:text-gold transition-colors">
+          <Link to="/cart" className="text-navy hover:text-gold transition-colors relative">
             <ShoppingCart className="h-5 w-5" />
+            {cartItemCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-gold text-navy text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                {cartItemCount}
+              </span>
+            )}
           </Link>
           
           {/* Sign In Button */}

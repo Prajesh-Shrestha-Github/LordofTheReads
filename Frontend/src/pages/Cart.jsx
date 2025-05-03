@@ -1,37 +1,65 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Minus, Plus, Trash2 } from 'lucide-react';
 
 function Cart() {
-  // Sample cart items
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      title: 'The Fantasy Chronicles 1',
-      author: 'Author Name',
-      price: 19.99,
-      quantity: 1
-    },
-    {
-      id: 2,
-      title: 'The Fantasy Chronicles 2',
-      author: 'Author Name',
-      price: 19.99,
-      quantity: 2
-    },
-    {
-      id: 3,
-      title: 'The Magical Journey',
-      author: 'Another Author',
-      price: 24.99,
-      quantity: 1
-    }
-  ]);
+  const [cartItems, setCartItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchCartItems = async () => {
+      try {
+        // Get cart items from localStorage
+        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+        
+        if (cart.length === 0) {
+          setCartItems([]);
+          setLoading(false);
+          return;
+        }
+        
+        // Fetch book details for each cart item
+        const itemsWithDetails = await Promise.all(
+          cart.map(async (item) => {
+            try {
+              const response = await fetch(`http://localhost:5253/api/book/${item.bookId}`);
+              if (!response.ok) {
+                throw new Error(`Failed to fetch book with id ${item.bookId}`);
+              }
+              const book = await response.json();
+              return { ...item, book };
+            } catch (err) {
+              console.error(`Error fetching book with id ${item.bookId}:`, err);
+              return { 
+                ...item, 
+                book: { 
+                  title: 'Unknown Book', 
+                  price: 0, 
+                  authors: ['Unknown Author'] 
+                } 
+              };
+            }
+          })
+        );
+        
+        setCartItems(itemsWithDetails);
+      } catch (err) {
+        console.error('Error fetching cart items:', err);
+        setError('Failed to load cart items');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchCartItems();
+  }, []);
 
   // Calculate subtotal
-  const subtotal = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+  const subtotal = cartItems.reduce((total, item) => 
+    total + (item.book?.price || 0) * item.quantity, 0);
   
   // Calculate tax (10%)
   const taxRate = 0.10;
@@ -41,17 +69,38 @@ function Cart() {
   const total = subtotal + tax;
 
   // Handle quantity change
-  const updateQuantity = (id, newQuantity) => {
+  const updateQuantity = (bookId, newQuantity) => {
     if (newQuantity < 1) return;
     
+    // Update in state
     setCartItems(cartItems.map(item => 
-      item.id === id ? { ...item, quantity: newQuantity } : item
+      item.bookId === bookId ? { ...item, quantity: newQuantity } : item
     ));
+    
+    // Update in localStorage
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    const itemIndex = cart.findIndex(item => item.bookId === bookId);
+    if (itemIndex !== -1) {
+      cart[itemIndex].quantity = newQuantity;
+      localStorage.setItem('cart', JSON.stringify(cart));
+      
+      // Dispatch event to update cart count in navbar
+      window.dispatchEvent(new Event('cartUpdated'));
+    }
   };
 
   // Handle item removal
-  const removeItem = (id) => {
-    setCartItems(cartItems.filter(item => item.id !== id));
+  const removeItem = (bookId) => {
+    // Remove from state
+    setCartItems(cartItems.filter(item => item.bookId !== bookId));
+    
+    // Remove from localStorage
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    const updatedCart = cart.filter(item => item.bookId !== bookId);
+    localStorage.setItem('cart', JSON.stringify(updatedCart));
+    
+    // Dispatch event to update cart count in navbar
+    window.dispatchEvent(new Event('cartUpdated'));
   };
 
   return (
@@ -75,7 +124,11 @@ function Cart() {
 
         <h1 className="text-2xl font-bold mb-8 text-navy">Your Shopping Cart</h1>
 
-        {cartItems.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-10">Loading cart items...</div>
+        ) : error ? (
+          <div className="text-center py-10 text-red-500">{error}</div>
+        ) : cartItems.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg shadow-sm">
             <p className="text-gray mb-4">Your cart is empty</p>
             <Link 
@@ -97,12 +150,20 @@ function Cart() {
               </div>
 
               {cartItems.map(item => (
-                <div key={item.id} className="border-b border-gray py-4 grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                <div key={item.bookId} className="border-b border-gray py-4 grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
                   <div className="md:col-span-6 flex items-center">
-                    <div className="w-16 h-20 bg-beige mr-4 flex-shrink-0"></div>
+                    <div className="w-16 h-20 bg-beige mr-4 flex-shrink-0">
+                      {item.book?.coverImageUrl && (
+                        <img 
+                          src={item.book.coverImageUrl} 
+                          alt={item.book.title} 
+                          className="w-full h-full object-cover"
+                        />
+                      )}
+                    </div>
                     <div>
-                      <h3 className="font-medium text-navy">{item.title}</h3>
-                      <p className="text-sm text-gray">{item.author}</p>
+                      <h3 className="font-medium text-navy">{item.book?.title || 'Unknown Book'}</h3>
+                      <p className="text-sm text-gray">{item.book?.authors?.join(', ') || 'Unknown Author'}</p>
                     </div>
                   </div>
                   
@@ -110,14 +171,15 @@ function Cart() {
                     <span className="md:hidden text-gray">Quantity:</span>
                     <div className="flex items-center border border-gray rounded-md">
                       <button 
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                        onClick={() => updateQuantity(item.bookId, item.quantity - 1)}
                         className="px-2 py-1 text-gray hover:text-navy"
+                        disabled={item.quantity <= 1}
                       >
                         <Minus className="h-3 w-3" />
                       </button>
                       <span className="px-2 text-navy">{item.quantity}</span>
                       <button 
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        onClick={() => updateQuantity(item.bookId, item.quantity + 1)}
                         className="px-2 py-1 text-gray hover:text-navy"
                       >
                         <Plus className="h-3 w-3" />
@@ -128,14 +190,14 @@ function Cart() {
                   <div className="md:col-span-2 flex justify-between md:justify-end">
                     <span className="md:hidden text-gray">Price:</span>
                     <div>
-                      <div className="font-medium text-navy">${(item.price * item.quantity).toFixed(2)}</div>
-                      <div className="text-xs text-gray">${item.price.toFixed(2)} each</div>
+                      <div className="font-medium text-navy">${((item.book?.price || 0) * item.quantity).toFixed(2)}</div>
+                      <div className="text-xs text-gray">${(item.book?.price || 0).toFixed(2)} each</div>
                     </div>
                   </div>
                   
                   <div className="md:col-span-2 flex justify-end">
                     <button 
-                      onClick={() => removeItem(item.id)}
+                      onClick={() => removeItem(item.bookId)}
                       className="text-gray hover:text-gold transition-colors"
                     >
                       <Trash2 className="h-5 w-5" />
