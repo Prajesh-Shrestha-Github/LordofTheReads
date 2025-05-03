@@ -31,8 +31,13 @@ namespace LordofTheReads.Controllers
         {
             try
             {
-                if (await UserExists(registerDto.Username, registerDto.Email))
-                    return BadRequest("Username or email already exists");
+                // Check if username already exists
+                if (await UsernameExists(registerDto.Username))
+                    return BadRequest("Username already taken. Please choose a different username.");
+                
+                // Check if email already exists
+                if (await EmailExists(registerDto.Email))
+                    return BadRequest("Email already registered. Please use a different email address.");
 
                 // Hash the password before storing
                 var hashedPassword = _passwordService.HashPassword(registerDto.Password);
@@ -116,6 +121,16 @@ namespace LordofTheReads.Controllers
                 _logger.LogError(ex, "Error during user login");
                 return StatusCode(500, "An error occurred during login. Please try again later.");
             }
+        }
+
+        private async Task<bool> UsernameExists(string username)
+        {
+            return await _context.Users.AnyAsync(u => u.Username.ToLower() == username.ToLower());
+        }
+
+        private async Task<bool> EmailExists(string email)
+        {
+            return await _context.Users.AnyAsync(u => u.Email.ToLower() == email.ToLower());
         }
 
         private async Task<bool> UserExists(string username, string email)
