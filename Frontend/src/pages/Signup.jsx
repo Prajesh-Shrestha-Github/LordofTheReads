@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Eye, EyeOff, Check, X } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 function Signup() {
   const [formData, setFormData] = useState({
@@ -11,12 +12,14 @@ function Signup() {
     email: '',
     password: '',
     confirmPassword: '',
+    phoneNumber: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   
   const navigate = useNavigate();
+  const { register } = useAuth();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -75,13 +78,10 @@ function Signup() {
     setIsLoading(true);
     
     try {
-      // This would be replaced with an actual API call to your .NET backend
-      // const response = await registerUser(formData);
+      // Call register function from auth context to connect with backend
+      await register(formData);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Redirect to login page
+      // Redirect to login page with success message
       navigate('/login', { 
         state: { 
           message: 'Account created successfully! Please sign in.' 
@@ -90,7 +90,7 @@ function Signup() {
     } catch (error) {
       setErrors({
         ...errors,
-        form: 'An error occurred during registration. Please try again.',
+        form: error.toString() || 'An error occurred during registration. Please try again.',
       });
     } finally {
       setIsLoading(false);
@@ -190,6 +190,22 @@ function Signup() {
                 {errors.email && (
                   <p className="mt-1 text-sm text-red-600">{errors.email}</p>
                 )}
+              </div>
+              
+              <div>
+                <label htmlFor="phoneNumber" className="block text-sm font-medium text-navy mb-1">
+                  Phone Number <span className="text-xs text-gray">(Optional)</span>
+                </label>
+                <input
+                  id="phoneNumber"
+                  name="phoneNumber"
+                  type="tel"
+                  autoComplete="tel"
+                  value={formData.phoneNumber}
+                  onChange={handleChange}
+                  className={`w-full px-3 py-2 border border-gray rounded-md text-navy text-sm focus:outline-none focus:ring-1 focus:ring-gold`}
+                  placeholder="+977 9XXXXXXXX"
+                />
               </div>
               
               <div>

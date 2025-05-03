@@ -1,19 +1,32 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Eye, EyeOff } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 function Login() {
   const [formData, setFormData] = useState({
-    email: '',
+    usernameOrEmail: '',
     password: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuth();
+  
+  // Check for success message from registration
+  useEffect(() => {
+    if (location.state?.message) {
+      setSuccessMessage(location.state.message);
+      // Clear location state
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -34,10 +47,8 @@ function Login() {
   const validateForm = () => {
     const newErrors = {};
     
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
+    if (!formData.usernameOrEmail) {
+      newErrors.usernameOrEmail = 'Username or Email is required';
     }
     
     if (!formData.password) {
@@ -58,22 +69,18 @@ function Login() {
     setIsLoading(true);
     
     try {
-      // This would be replaced with an actual API call to your .NET backend
-      // const response = await loginUser(formData);
+      // Call login from auth context which connects to the backend
+      await login({
+        email: formData.usernameOrEmail, // The API will handle it as usernameOrEmail
+        password: formData.password
+      });
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Store JWT token in localStorage
-      // localStorage.setItem('token', response.token);
-      localStorage.setItem('token', 'sample-jwt-token');
-      
-      // Redirect to home page
+      // Redirect to home page on success
       navigate('/');
     } catch (error) {
       setErrors({
         ...errors,
-        form: 'Invalid email or password. Please try again.',
+        form: error.toString() || 'Invalid email or password. Please try again.',
       });
     } finally {
       setIsLoading(false);
@@ -96,6 +103,12 @@ function Login() {
               <p className="text-gray text-sm">Sign in to continue to Lord of the Reads</p>
             </div>
             
+            {successMessage && (
+              <div className="bg-green-50 text-green-600 p-3 rounded-md mb-4 text-sm">
+                {successMessage}
+              </div>
+            )}
+            
             {errors.form && (
               <div className="bg-red-50 text-red-600 p-3 rounded-md mb-4 text-sm">
                 {errors.form}
@@ -104,23 +117,23 @@ function Login() {
             
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-navy mb-1">
-                  Email Address
+                <label htmlFor="usernameOrEmail" className="block text-sm font-medium text-navy mb-1">
+                  Username or Email
                 </label>
                 <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  value={formData.email}
+                  id="usernameOrEmail"
+                  name="usernameOrEmail"
+                  type="text"
+                  autoComplete="username email"
+                  value={formData.usernameOrEmail}
                   onChange={handleChange}
                   className={`w-full px-3 py-2 border ${
-                    errors.email ? 'border-red-500' : 'border-gray'
+                    errors.usernameOrEmail ? 'border-red-500' : 'border-gray'
                   } rounded-md text-navy text-sm focus:outline-none focus:ring-1 focus:ring-gold`}
-                  placeholder="your.email@example.com"
+                  placeholder="Username or email address"
                 />
-                {errors.email && (
-                  <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+                {errors.usernameOrEmail && (
+                  <p className="mt-1 text-sm text-red-600">{errors.usernameOrEmail}</p>
                 )}
               </div>
               
