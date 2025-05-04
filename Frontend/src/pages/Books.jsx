@@ -432,7 +432,7 @@ function Books() {
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                     <button
                       type="submit"
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-navy text-white px-3 py-1 rounded-md hover:bg-gold transition-colors"
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-navy text-white px-3 py-1 rounded-md text-xs hover:bg-gold transition-colors"
                     >
                       Search
                     </button>
@@ -611,49 +611,69 @@ function Books() {
             )}
             
             {/* Pagination */}
-            {!loading && !error && totalPages > 1 && (
-              <div className="mt-8 flex justify-center">
-                <nav className="flex items-center gap-1">
+            <div className="mt-8 flex justify-center">
+              <nav className="flex items-center gap-1">
+                {/* Previous button */}
+                <button
+                  onClick={() => paginate(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="w-8 h-8 flex items-center justify-center rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50"
+                >
+                  &lt;
+                </button>
+                
+                {/* Only show page 1 for now */}
+                <button
+                  onClick={() => paginate(1)}
+                  className="w-8 h-8 flex items-center justify-center rounded-md bg-navy text-white"
+                >
+                  1
+                </button>
+                
+                {/* Only show other pages if there are enough books */}
+                {totalPages > 1 && [
                   <button
-                    onClick={() => paginate(Math.max(1, currentPage - 1))}
-                    disabled={currentPage === 1}
-                    className={`px-3 py-1 rounded-md ${
-                      currentPage === 1
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        : 'bg-white text-navy hover:bg-gray-100'
+                    key={2}
+                    onClick={() => paginate(2)}
+                    className={`w-8 h-8 flex items-center justify-center rounded-md ${currentPage === 2
+                      ? 'bg-navy text-white'
+                      : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    Prev
-                  </button>
-                  
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(number => (
-                    <button
-                      key={number}
-                      onClick={() => paginate(number)}
-                      className={`px-3 py-1 rounded-md ${
-                        currentPage === number
-                          ? 'bg-navy text-white'
-                          : 'bg-white text-navy hover:bg-gray-100'
-                      }`}
-                    >
-                      {number}
-                    </button>
-                  ))}
-                  
+                    2
+                  </button>,
                   <button
-                    onClick={() => paginate(Math.min(totalPages, currentPage + 1))}
-                    disabled={currentPage === totalPages}
-                    className={`px-3 py-1 rounded-md ${
-                      currentPage === totalPages
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        : 'bg-white text-navy hover:bg-gray-100'
+                    key={3}
+                    onClick={() => paginate(3)}
+                    className={`w-8 h-8 flex items-center justify-center rounded-md ${currentPage === 3
+                      ? 'bg-navy text-white'
+                      : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    Next
+                    3
+                  </button>,
+                  <button
+                    key={4}
+                    onClick={() => paginate(4)}
+                    className={`w-8 h-8 flex items-center justify-center rounded-md ${currentPage === 4
+                      ? 'bg-navy text-white'
+                      : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    4
                   </button>
-                </nav>
-              </div>
-            )}
+                ]}
+                
+                {/* Next button */}
+                <button
+                  onClick={() => paginate(Math.min(totalPages || 1, currentPage + 1))}
+                  disabled={currentPage === (totalPages || 1)}
+                  className="w-8 h-8 flex items-center justify-center rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50"
+                >
+                  &gt;
+                </button>
+              </nav>
+            </div>
           </div>
         </div>
       </div>
