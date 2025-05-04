@@ -432,7 +432,7 @@ function Books() {
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                     <button
                       type="submit"
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-navy text-white px-3 py-1 rounded-md text-xs hover:bg-gold transition-colors"
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-navy text-white px-3 py-1 rounded-md hover:bg-gold transition-colors"
                     >
                       Search
                     </button>
@@ -458,16 +458,16 @@ function Books() {
                 </div>
                 
                 {/* View Toggle */}
-                <div className="flex items-center bg-gray-100 rounded-md">
+                <div className="flex items-center bg-gray-200 rounded-md">
                   <button
                     onClick={() => toggleViewMode('grid')}
-                    className={`p-2 rounded-l-md ${viewMode === 'grid' ? 'bg-navy text-white' : 'text-navy'}`}
+                    className={`p-2 rounded-l-md ${viewMode === 'grid' ? 'bg-navy text-white' : 'bg-white text-navy hover:bg-gray-100'}`}
                   >
                     <Grid className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => toggleViewMode('list')}
-                    className={`p-2 rounded-r-md ${viewMode === 'list' ? 'bg-navy text-white' : 'text-navy'}`}
+                    className={`p-2 rounded-r-md ${viewMode === 'list' ? 'bg-navy text-white' : 'bg-white text-navy hover:bg-gray-100'}`}
                   >
                     <List className="h-4 w-4" />
                   </button>
