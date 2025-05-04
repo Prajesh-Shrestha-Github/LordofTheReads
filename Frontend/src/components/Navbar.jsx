@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, ShoppingCart, Search } from 'lucide-react';
+import { BookOpen, ShoppingCart, Search, Bookmark } from 'lucide-react';
 
 function Navbar() {
   const [cartItemCount, setCartItemCount] = useState(0);
+  const [bookmarkCount, setBookmarkCount] = useState(0);
 
   // Update cart count whenever localStorage changes
   useEffect(() => {
@@ -30,6 +31,33 @@ function Navbar() {
     return () => {
       window.removeEventListener('storage', updateCartCount);
       window.removeEventListener('cartUpdated', updateCartCount);
+    };
+  }, []);
+
+  // Update bookmark count whenever localStorage changes
+  useEffect(() => {
+    const updateBookmarkCount = () => {
+      try {
+        const bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]');
+        setBookmarkCount(bookmarks.length);
+      } catch (error) {
+        console.error('Error reading bookmarks from localStorage:', error);
+        setBookmarkCount(0);
+      }
+    };
+
+    // Initial count
+    updateBookmarkCount();
+
+    // Listen for storage events (when localStorage changes)
+    window.addEventListener('storage', updateBookmarkCount);
+
+    // Custom event for bookmark updates from within the same window
+    window.addEventListener('bookmarksUpdated', updateBookmarkCount);
+
+    return () => {
+      window.removeEventListener('storage', updateBookmarkCount);
+      window.removeEventListener('bookmarksUpdated', updateBookmarkCount);
     };
   }, []);
 
@@ -68,6 +96,16 @@ function Navbar() {
               <Search className="absolute left-2 h-3 w-3 text-gray" />
             </div>
           </div>
+          
+          {/* Bookmarks */}
+          <Link to="/bookmarks" className="text-navy hover:text-gold transition-colors relative">
+            <Bookmark className="h-5 w-5" />
+            {bookmarkCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-gold text-navy text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                {bookmarkCount}
+              </span>
+            )}
+          </Link>
           
           {/* Cart */}
           <Link to="/cart" className="text-navy hover:text-gold transition-colors relative">

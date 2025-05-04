@@ -51,6 +51,10 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddScoped<IBookService, BookService>();
+// Commented out for now - will be used when implementing database storage
+// builder.Services.AddScoped<ICartService, CartService>();
+// builder.Services.AddScoped<IBookmarkService, BookmarkService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
