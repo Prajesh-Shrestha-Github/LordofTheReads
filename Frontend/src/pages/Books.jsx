@@ -109,10 +109,11 @@ function Books() {
     // Search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      return (
-        book.title.toLowerCase().includes(query) ||
-        book.author.toLowerCase().includes(query)
-      );
+      const titleMatch = book.title?.toLowerCase().includes(query) || false;
+      const authorMatch = book.author?.toLowerCase().includes(query) || 
+                         (book.authors && book.authors.some(author => author.toLowerCase().includes(query))) || 
+                         false;
+      if (!titleMatch && !authorMatch) return false;
     }
     
     return true;
