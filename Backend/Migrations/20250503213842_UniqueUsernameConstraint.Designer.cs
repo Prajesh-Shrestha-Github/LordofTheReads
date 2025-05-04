@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LordofTheReads.Database.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250503213842_UniqueUsernameConstraint")]
-    partial class UniqueUsernameConstraint
+    [Migration("20250504065039_AddCoverImageUrlToBooks")]
+    partial class AddCoverImageUrlToBooks
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -87,6 +87,11 @@ namespace LordofTheReads.Database.Migrations
                         .HasColumnName("book_id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CoverImageUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("cover_image_url");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -507,12 +512,6 @@ namespace LordofTheReads.Database.Migrations
                         .HasColumnType("character varying(50)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Email")
-                        .IsUnique();
-
-                    b.HasIndex("Username")
-                        .IsUnique();
 
                     b.ToTable("Users");
                 });
