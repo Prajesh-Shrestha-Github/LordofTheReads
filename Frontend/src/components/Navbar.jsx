@@ -1,10 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, ShoppingCart, Search, Bookmark } from 'lucide-react';
+import { BookOpen, ShoppingCart, Search, Bookmark, User, LogOut, ChevronDown } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 function Navbar() {
+  const { user, logout, isAuthenticated } = useAuth();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [cartItemCount, setCartItemCount] = useState(0);
   const [bookmarkCount, setBookmarkCount] = useState(0);
+  
+  const handleLogout = () => {
+    logout();
+    // Optionally redirect to home or login page
+    window.location.href = '/';
+  };
+  
+  const toggleDropdown = () => {
+    setDropdownOpen(!dropdownOpen);
+  };
 
   // Update cart count whenever localStorage changes
   useEffect(() => {
@@ -117,13 +130,46 @@ function Navbar() {
             )}
           </Link>
           
-          {/* Sign In Button */}
-          <Link 
-            to="/login" 
-            className="bg-navy text-white text-xs px-4 py-1.5 rounded-md hover:bg-gold transition-colors"
-          >
-            Sign In
-          </Link>
+          {isAuthenticated() ? (
+            <div className="relative">
+              <button 
+                onClick={toggleDropdown}
+                className="flex items-center text-navy gap-1 hover:text-gold transition-colors"
+              >
+                <User className="h-5 w-5" />
+                <span className="text-xs hidden sm:inline">{user?.firstName || 'User'}</span>
+                <ChevronDown className="h-3 w-3" />
+              </button>
+              
+              {dropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 border border-gray">
+                  <div className="px-4 py-2 border-b border-gray">
+                    <p className="text-xs font-medium text-navy">{user?.firstName} {user?.lastName}</p>
+                    <p className="text-xs text-gray-400 capitalize">{user?.role !== undefined ? (['Member', 'Staff', 'Admin'][user.role]) : 'Member'}</p>
+                  </div>
+                  <Link to="/profile" className="block px-4 py-2 text-xs text-navy hover:bg-gray-100">My Profile</Link>
+                  <Link to="/orders" className="block px-4 py-2 text-xs text-navy hover:bg-gray-100">My Orders</Link>
+                  {(user?.role === 1 || user?.role === 2) && (
+                    <Link to="/admin" className="block px-4 py-2 text-xs text-navy hover:bg-gray-100">Admin Dashboard</Link>
+                  )}
+                  <button 
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2 text-xs text-red-500 hover:bg-gray-100 flex items-center gap-1"
+                  >
+                    <LogOut className="h-3 w-3" />
+                    Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Link 
+              to="/login" 
+              className="bg-navy text-white text-xs px-4 py-1.5 rounded-md hover:bg-gold transition-colors"
+            >
+              Sign In
+            </Link>
+          )}
         </div>
       </div>
     </header>
