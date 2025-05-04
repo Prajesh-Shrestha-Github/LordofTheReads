@@ -72,6 +72,19 @@ builder.Services.AddDbContext<AppDbContext>(
         options.UseNpgsql(builder.Configuration.GetConnectionString("PostgresConnection")).LogTo(Console.WriteLine);
     }
 );
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowReactApp", 
+        builder => builder
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader());
+});
+
+builder.Services.AddScoped<IBookService, BookService>();
+// Commented out for now - will be used when implementing database storage
+// builder.Services.AddScoped<ICartService, CartService>();
+// builder.Services.AddScoped<IBookmarkService, BookmarkService>();
 
 var app = builder.Build();
 
@@ -90,6 +103,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseCors("AllowReactApp");
 
 app.UseHttpsRedirection();
 
