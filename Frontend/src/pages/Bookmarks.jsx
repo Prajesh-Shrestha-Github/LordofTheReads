@@ -66,7 +66,7 @@ function Bookmarks() {
                     <img 
                       src={book.coverImageUrl || `https://via.placeholder.com/300x450?text=${encodeURIComponent(book.title)}`}
                       alt={book.title}
-                      className="w-full aspect-[2/3] object-cover"
+                      className="w-full aspect-[2/3] object-contain"
                     />
                     <button 
                       onClick={() => handleRemoveBookmark(book.id)}

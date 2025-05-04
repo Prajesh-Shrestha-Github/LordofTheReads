@@ -37,7 +37,9 @@ namespace LordofTheReads.Services
                     Publisher = b.Publisher,
                     Authors = b.BookAuthors.Select(ba => ba.Author.Name).ToList(),
                     Genres = b.BookGenres.Select(bg => bg.Genre.Name).ToList(),
-                    CoverImageUrl = $"https://via.placeholder.com/300x450?text={b.Title}"
+                    CoverImageUrl = !string.IsNullOrEmpty(b.CoverImageUrl) 
+                        ? b.CoverImageUrl 
+                        : $"https://via.placeholder.com/300x450?text={b.Title}"
                 })
                 .ToListAsync();
 
@@ -64,7 +66,9 @@ namespace LordofTheReads.Services
                     Publisher = b.Publisher,
                     Authors = b.BookAuthors.Select(ba => ba.Author.Name).ToList(),
                     Genres = b.BookGenres.Select(bg => bg.Genre.Name).ToList(),
-                    CoverImageUrl = $"https://via.placeholder.com/300x450?text={b.Title}"
+                    CoverImageUrl = !string.IsNullOrEmpty(b.CoverImageUrl) 
+                        ? b.CoverImageUrl 
+                        : $"https://via.placeholder.com/300x450?text={b.Title}"
                 })
                 .FirstOrDefaultAsync();
 

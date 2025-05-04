@@ -61,12 +61,8 @@ function Cart() {
   const subtotal = cartItems.reduce((total, item) => 
     total + (item.book?.price || 0) * item.quantity, 0);
   
-  // Calculate tax (10%)
-  const taxRate = 0.10;
-  const tax = subtotal * taxRate;
-  
-  // Calculate total
-  const total = subtotal + tax;
+  // Calculate total (no tax)
+  const total = subtotal;
 
   // Handle quantity change
   const updateQuantity = (bookId, newQuantity) => {
@@ -216,10 +212,6 @@ function Cart() {
                   <div className="flex justify-between text-navy">
                     <span>Subtotal</span>
                     <span>${subtotal.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-navy">
-                    <span>Tax ({(taxRate * 100).toFixed(0)}%)</span>
-                    <span>${tax.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-navy">
                     <span>Shipping</span>

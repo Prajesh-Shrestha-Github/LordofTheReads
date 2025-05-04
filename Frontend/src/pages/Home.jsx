@@ -87,13 +87,14 @@ function Home() {
             <div className="text-center text-red-500 py-10">{error}</div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {books.slice(0, 8).map(book => (
+              {[...books.filter(book => book.id >= 8 && book.id <= 12).slice(0, 4), 
+                ...books.filter(book => book.id < 8 || book.id > 12)].slice(0, 8).map(book => (
                 <div key={book.id} className="flex flex-col">
-                  <div className="bg-beige aspect-square mb-3 flex items-center justify-center relative">
+                  <div className="bg-beige aspect-[2/3] mb-3 flex items-center justify-center relative overflow-hidden">
                     <img 
                       src={book.coverImageUrl || `https://via.placeholder.com/300x450?text=${encodeURIComponent(book.title)}`}
                       alt={book.title}
-                      className="object-cover h-full w-full"
+                      className="object-contain h-full w-full"
                     />
                     <button 
                       onClick={() => {
