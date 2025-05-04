@@ -31,6 +31,10 @@ namespace LordofTheReads.Database.Entities
 
         [StringLength(100)]
         public string? Publisher { get; set; }
+        
+        [StringLength(255)]
+        [Column("image_url")]
+        public string? ImageUrl { get; set; }
 
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
