@@ -2,21 +2,27 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { Eye, EyeOff, Check, X } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, Check, X } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 function Signup() {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
+    username: '',
+    phoneNumber: '',
     password: '',
     confirmPassword: '',
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [globalError, setGlobalError] = useState('');
   
   const navigate = useNavigate();
+  const { register } = useAuth();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -45,6 +51,14 @@ function Signup() {
       newErrors.lastName = 'Last name is required';
     }
     
+    if (!formData.username) {
+      newErrors.username = 'Username is required';
+    } else if (formData.username.length < 3) {
+      newErrors.username = 'Username must be at least 3 characters';
+    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
+      newErrors.username = 'Username can only contain letters, numbers, and underscores';
+    }
+    
     if (!formData.email) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -67,31 +81,26 @@ function Signup() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
     setIsLoading(true);
-    
+    setGlobalError('');
+
     try {
-      // This would be replaced with an actual API call to your .NET backend
-      // const response = await registerUser(formData);
+      // Call register method from auth context
+      await register(formData);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Redirect to login page
+      // Redirect to login page with success message
       navigate('/login', { 
-        state: { 
-          message: 'Account created successfully! Please sign in.' 
-        } 
+        state: { message: 'Registration successful! Please log in with your new account.' } 
       });
     } catch (error) {
-      setErrors({
-        ...errors,
-        form: 'An error occurred during registration. Please try again.',
-      });
+      setGlobalError(error.message || 'Registration failed. Please try again.');
+      // Scroll to the top of the form to show the error
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setIsLoading(false);
     }
@@ -101,12 +110,16 @@ function Signup() {
     setShowPassword(!showPassword);
   };
 
-  // Password strength indicators
-  const passwordHasMinLength = formData.password.length >= 8;
-  const passwordHasLowerCase = /[a-z]/.test(formData.password);
-  const passwordHasUpperCase = /[A-Z]/.test(formData.password);
-  const passwordHasNumber = /\d/.test(formData.password);
-  const passwordHasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(formData.password);
+  const toggleConfirmPasswordVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
+  };
+
+  // Password strength indicators - handle safely with optional chaining to prevent errors
+  const passwordHasMinLength = formData?.password?.length >= 8 || false;
+  const passwordHasLowerCase = /[a-z]/.test(formData?.password || '');
+  const passwordHasUpperCase = /[A-Z]/.test(formData?.password || '');
+  const passwordHasNumber = /\d/.test(formData?.password || '');
+  const passwordHasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(formData?.password || '');
 
   return (
     <div className="flex min-h-screen flex-col bg-beige">
@@ -115,14 +128,16 @@ function Signup() {
       <div className="flex-1 flex items-center justify-center py-12 px-4">
         <div className="w-full max-w-lg">
           <div className="bg-white shadow-md rounded-lg p-8">
-            <div className="text-center mb-8">
-              <h1 className="text-2xl font-bold text-navy mb-2">Create Your Account</h1>
-              <p className="text-gray text-sm">Join Lord of the Reads and discover your next literary adventure</p>
+            {/* Form header */}
+            <div className="text-center mb-6">
+              <h1 className="text-2xl font-bold text-navy mb-2">Create Account</h1>
+              <p className="text-gray text-sm">Join our community of book lovers</p>
             </div>
             
-            {errors.form && (
-              <div className="bg-red-50 text-red-600 p-3 rounded-md mb-4 text-sm">
-                {errors.form}
+            {globalError && (
+              <div className="bg-red-50 text-red-600 p-3 rounded-md mb-4 text-sm flex items-start gap-2">
+                <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                <p>{globalError}</p>
               </div>
             )}
             
@@ -172,6 +187,27 @@ function Signup() {
               </div>
               
               <div>
+                <label htmlFor="username" className="block text-sm font-medium text-navy mb-1">
+                  Username
+                </label>
+                <input
+                  id="username"
+                  name="username"
+                  type="text"
+                  autoComplete="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  className={`w-full px-3 py-2 border ${
+                    errors.username ? 'border-red-500' : 'border-gray'
+                  } rounded-md text-navy text-sm focus:outline-none focus:ring-1 focus:ring-gold`}
+                  placeholder="johnDoe"
+                />
+                {errors.username && (
+                  <p className="mt-1 text-sm text-red-600">{errors.username}</p>
+                )}
+              </div>
+              
+              <div>
                 <label htmlFor="email" className="block text-sm font-medium text-navy mb-1">
                   Email Address
                 </label>
@@ -190,6 +226,23 @@ function Signup() {
                 {errors.email && (
                   <p className="mt-1 text-sm text-red-600">{errors.email}</p>
                 )}
+              </div>
+              
+              <div>
+                <label htmlFor="phoneNumber" className="block text-sm font-medium text-navy mb-1">
+                  Phone Number <span className="text-xs text-gray">(Optional)</span>
+                </label>
+                <input
+                  id="phoneNumber"
+                  name="phoneNumber"
+                  type="tel"
+                  autoComplete="tel"
+                  value={formData.phoneNumber}
+                  onChange={handleChange}
+                  className={`w-full px-3 py-2 border border-gray rounded-md text-navy text-sm focus:outline-none focus:ring-1 focus:ring-gold`}
+                  placeholder="+977 9XXXXXXXX"
+                  disabled={isLoading}
+                />
               </div>
               
               <div>
@@ -289,18 +342,31 @@ function Signup() {
                 <label htmlFor="confirmPassword" className="block text-sm font-medium text-navy mb-1">
                   Confirm Password
                 </label>
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className={`w-full px-3 py-2 border ${
-                    errors.confirmPassword ? 'border-red-500' : 'border-gray'
-                  } rounded-md text-navy text-sm focus:outline-none focus:ring-1 focus:ring-gold`}
-                  placeholder="••••••••"
-                />
+                <div className="relative">
+                  <input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    className={`w-full px-3 py-2 border ${
+                      errors.confirmPassword ? 'border-red-500' : 'border-gray'
+                    } rounded-md text-navy text-sm focus:outline-none focus:ring-1 focus:ring-gold`}
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={toggleConfirmPasswordVisibility}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray hover:text-navy"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
                 {errors.confirmPassword && (
                   <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
                 )}
@@ -329,10 +395,18 @@ function Signup() {
               <div>
                 <button
                   type="submit"
+                  className="w-full py-2 px-4 bg-gold text-white font-medium rounded-md focus:outline-none hover:bg-amber-500 transition-colors duration-200 flex justify-center items-center"
                   disabled={isLoading}
-                  className="w-full bg-navy text-white py-2 px-4 rounded-md hover:bg-gold hover:text-navy transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gold"
                 >
-                  {isLoading ? 'Creating Account...' : 'Create Account'}
+                  {isLoading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Creating Account...
+                    </>
+                  ) : 'Create Account'}
                 </button>
               </div>
             </form>
