@@ -34,6 +34,8 @@ namespace LordofTheReads.Database
             // Configure unique constraints
             modelBuilder.Entity<Book>().HasIndex(b => b.ISBN).IsUnique();
             modelBuilder.Entity<Genre>().HasIndex(g => g.Name).IsUnique();
+            modelBuilder.Entity<User>().HasIndex(u => u.Username).IsUnique();
+            modelBuilder.Entity<User>().HasIndex(u => u.Email).IsUnique();
             modelBuilder.Entity<Bookmark>().HasIndex(b => new { b.UserId, b.BookId }).IsUnique();
             modelBuilder.Entity<Review>().HasIndex(r => new { r.UserId, r.BookId }).IsUnique();
             modelBuilder.Entity<Order>().HasIndex(o => o.ClaimCode).IsUnique();

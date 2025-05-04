@@ -1,0 +1,11 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Lord of The Reads API",
+    "description": "API for the Lord of The Reads book store application",
+    "version": "v1"
+  },
+  "paths": {},
+  "components": {},
+  "security": []
+}
