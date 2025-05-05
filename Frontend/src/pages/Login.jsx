@@ -88,14 +88,19 @@ function Login() {
 
     try {
       // Call login from auth context which connects to the backend
-      await login({
+      const userData = await login({
         email: formData.usernameOrEmail, // The API will handle it as usernameOrEmail
         password: formData.password
       });
 
-      // Redirect to home page or intended page on successful login
-      const redirectTo = location.state?.from?.pathname || '/';
-      navigate(redirectTo);
+      // Check if user is an admin (role === 2) and redirect to admin dashboard
+      if (userData && userData.role === 2) {
+        navigate('/admin');
+      } else {
+        // Redirect to home page or intended page for non-admin users
+        const redirectTo = location.state?.from?.pathname || '/';
+        navigate(redirectTo);
+      }
     } catch (error) {
       setGlobalError(error.message || 'Invalid login credentials. Please try again.');
     } finally {

@@ -33,7 +33,17 @@ const authService = {
       // Store the JWT token in localStorage
       if (response.data && response.data.token) {
         localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data));
+        
+        // Parse the JWT token to extract role information
+        const tokenData = authService.parseJwt(response.data.token);
+        const userData = { ...response.data };
+        
+        // Add role from token claims (the claim with name "role" contains the role as a number)
+        if (tokenData && tokenData.role !== undefined) {
+          userData.role = parseInt(tokenData.role, 10);
+        }
+        
+        localStorage.setItem('user', JSON.stringify(userData));
         localStorage.setItem('loginTime', Date.now().toString());
       } else {
         throw new Error('Invalid response from server. No token received.');

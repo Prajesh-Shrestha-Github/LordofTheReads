@@ -31,30 +31,38 @@ namespace LordofTheReads.Controllers
         [HttpGet]
         public async Task<IActionResult> GetBooks()
         {
-            // Check if user is admin
-            if (!await _adminAuthService.IsAdmin(User))
+            try 
             {
-                return Forbid();
-            }
-
-            var books = await _context.Books
-                .Select(b => new BookDto
+                // Check if user is admin
+                if (!await _adminAuthService.IsAdmin(User))
                 {
-                    Id = b.Id,
-                    Title = b.Title,
-                    ISBN = b.ISBN,
-                    Description = b.Description,
-                    Price = b.Price,
-                    PublicationDate = b.PublicationDate,
-                    StockQuantity = b.StockQuantity,
-                    Publisher = b.Publisher,
-                    ImageUrl = b.ImageUrl,
-                    CreatedAt = b.CreatedAt,
-                    UpdatedAt = b.UpdatedAt
-                })
-                .ToListAsync();
+                    return Forbid();
+                }
 
-            return Ok(books);
+                var books = await _context.Books
+                    .Select(b => new BookDto
+                    {
+                        Id = b.Id,
+                        Title = b.Title,
+                        ISBN = b.ISBN,
+                        Description = b.Description,
+                        Price = b.Price,
+                        PublicationDate = b.PublicationDate,
+                        StockQuantity = b.StockQuantity,
+                        Publisher = b.Publisher,
+                        ImageUrl = b.ImageUrl,
+                        CreatedAt = b.CreatedAt,
+                        UpdatedAt = b.UpdatedAt
+                    })
+                    .ToListAsync();
+
+                return Ok(books);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in GetBooks: {Message}", ex.Message);
+                return StatusCode(500, new { message = ex.Message, stackTrace = ex.StackTrace });
+            }
         }
 
         [HttpGet("{id}")]
@@ -118,112 +126,135 @@ namespace LordofTheReads.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateBook(BookCreateDto bookCreateDto)
         {
-            // Check if user is admin
-            if (!await _adminAuthService.IsAdmin(User))
+            try
             {
-                return Forbid();
-            }
-
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            // Check if ISBN is unique if provided
-            if (!string.IsNullOrEmpty(bookCreateDto.ISBN) && 
-                await _context.Books.AnyAsync(b => b.ISBN == bookCreateDto.ISBN))
-            {
-                ModelState.AddModelError("ISBN", "ISBN must be unique");
-                return BadRequest(ModelState);
-            }
-
-            // Validate that the authors exist
-            if (bookCreateDto.AuthorIds != null && bookCreateDto.AuthorIds.Any())
-            {
-                var existingAuthorIds = await _context.Authors
-                    .Where(a => bookCreateDto.AuthorIds.Contains(a.Id))
-                    .Select(a => a.Id)
-                    .ToListAsync();
-
-                var missingAuthorIds = bookCreateDto.AuthorIds
-                    .Except(existingAuthorIds)
-                    .ToList();
-
-                if (missingAuthorIds.Any())
+                // Check if user is admin
+                if (!await _adminAuthService.IsAdmin(User))
                 {
-                    ModelState.AddModelError("AuthorIds", $"The following author IDs do not exist: {string.Join(", ", missingAuthorIds)}");
+                    return Forbid();
+                }
+
+                if (!ModelState.IsValid)
+                {
                     return BadRequest(ModelState);
                 }
-            }
 
-            // Validate that the genres exist
-            if (bookCreateDto.GenreIds != null && bookCreateDto.GenreIds.Any())
-            {
-                var existingGenreIds = await _context.Genres
-                    .Where(g => bookCreateDto.GenreIds.Contains(g.Id))
-                    .Select(g => g.Id)
-                    .ToListAsync();
-
-                var missingGenreIds = bookCreateDto.GenreIds
-                    .Except(existingGenreIds)
-                    .ToList();
-
-                if (missingGenreIds.Any())
+                // Check if ISBN is unique if provided
+                if (!string.IsNullOrEmpty(bookCreateDto.ISBN) && 
+                    await _context.Books.AnyAsync(b => b.ISBN == bookCreateDto.ISBN))
                 {
-                    ModelState.AddModelError("GenreIds", $"The following genre IDs do not exist: {string.Join(", ", missingGenreIds)}");
+                    ModelState.AddModelError("ISBN", "ISBN must be unique");
                     return BadRequest(ModelState);
                 }
-            }
 
-            // Create the book entity
-            var book = new Book
-            {
-                Title = bookCreateDto.Title,
-                ISBN = bookCreateDto.ISBN,
-                Description = bookCreateDto.Description,
-                Price = bookCreateDto.Price,
-                PublicationDate = bookCreateDto.PublicationDate,
-                StockQuantity = bookCreateDto.StockQuantity,
-                Publisher = bookCreateDto.Publisher,
-                ImageUrl = bookCreateDto.ImageUrl,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-
-            _context.Books.Add(book);
-            await _context.SaveChangesAsync();
-
-            // Add authors if provided
-            if (bookCreateDto.AuthorIds != null && bookCreateDto.AuthorIds.Any())
-            {
-                foreach (var authorId in bookCreateDto.AuthorIds)
+                // Validate that the authors exist
+                if (bookCreateDto.AuthorIds != null && bookCreateDto.AuthorIds.Any())
                 {
-                    _context.BookAuthors.Add(new BookAuthor
+                    var existingAuthorIds = await _context.Authors
+                        .Where(a => bookCreateDto.AuthorIds.Contains(a.Id))
+                        .Select(a => a.Id)
+                        .ToListAsync();
+
+                    var missingAuthorIds = bookCreateDto.AuthorIds
+                        .Except(existingAuthorIds)
+                        .ToList();
+
+                    if (missingAuthorIds.Any())
                     {
-                        BookId = book.Id,
-                        AuthorId = authorId
+                        ModelState.AddModelError("AuthorIds", $"The following author IDs do not exist: {string.Join(", ", missingAuthorIds)}");
+                        return BadRequest(ModelState);
+                    }
+                }
+
+                // Validate that the genres exist
+                if (bookCreateDto.GenreIds != null && bookCreateDto.GenreIds.Any())
+                {
+                    var existingGenreIds = await _context.Genres
+                        .Where(g => bookCreateDto.GenreIds.Contains(g.Id))
+                        .Select(g => g.Id)
+                        .ToListAsync();
+
+                    var missingGenreIds = bookCreateDto.GenreIds
+                        .Except(existingGenreIds)
+                        .ToList();
+
+                    if (missingGenreIds.Any())
+                    {
+                        ModelState.AddModelError("GenreIds", $"The following genre IDs do not exist: {string.Join(", ", missingGenreIds)}");
+                        return BadRequest(ModelState);
+                    }
+                }
+
+                // Create the book entity
+                var book = new Book
+                {
+                    Title = bookCreateDto.Title,
+                    ISBN = bookCreateDto.ISBN,
+                    Description = bookCreateDto.Description,
+                    Price = bookCreateDto.Price,
+                    PublicationDate = bookCreateDto.PublicationDate.HasValue 
+                        ? DateTime.SpecifyKind(bookCreateDto.PublicationDate.Value, DateTimeKind.Utc) 
+                        : null,
+                    StockQuantity = bookCreateDto.StockQuantity,
+                    Publisher = bookCreateDto.Publisher,
+                    ImageUrl = bookCreateDto.ImageUrl,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                _context.Books.Add(book);
+                await _context.SaveChangesAsync();
+
+                // Add authors if provided
+                if (bookCreateDto.AuthorIds != null && bookCreateDto.AuthorIds.Any())
+                {
+                    foreach (var authorId in bookCreateDto.AuthorIds)
+                    {
+                        _context.BookAuthors.Add(new BookAuthor
+                        {
+                            BookId = book.Id,
+                            AuthorId = authorId
+                        });
+                    }
+                    await _context.SaveChangesAsync();
+                }
+
+                // Add genres if provided
+                if (bookCreateDto.GenreIds != null && bookCreateDto.GenreIds.Any())
+                {
+                    foreach (var genreId in bookCreateDto.GenreIds)
+                    {
+                        _context.BookGenres.Add(new BookGenre
+                        {
+                            BookId = book.Id,
+                            GenreId = genreId
+                        });
+                    }
+                    await _context.SaveChangesAsync();
+                }
+
+                _logger.LogInformation("Book created: {BookId}", book.Id);
+
+                return CreatedAtAction(nameof(GetBook), new { id = book.Id }, new { id = book.Id });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating book: {Message}", ex.Message);
+                
+                // Get more detailed info for DbUpdateException
+                if (ex is DbUpdateException dbEx)
+                {
+                    _logger.LogError("DbUpdateException details - Inner Exception: {InnerMessage}", 
+                        dbEx.InnerException?.Message);
+                    
+                    return StatusCode(500, new { 
+                        message = $"Database error: {dbEx.InnerException?.Message ?? dbEx.Message}", 
+                        stackTrace = ex.StackTrace 
                     });
                 }
-                await _context.SaveChangesAsync();
+                
+                return StatusCode(500, new { message = ex.Message, stackTrace = ex.StackTrace });
             }
-
-            // Add genres if provided
-            if (bookCreateDto.GenreIds != null && bookCreateDto.GenreIds.Any())
-            {
-                foreach (var genreId in bookCreateDto.GenreIds)
-                {
-                    _context.BookGenres.Add(new BookGenre
-                    {
-                        BookId = book.Id,
-                        GenreId = genreId
-                    });
-                }
-                await _context.SaveChangesAsync();
-            }
-
-            _logger.LogInformation("Book created: {BookId}", book.Id);
-
-            return CreatedAtAction(nameof(GetBook), new { id = book.Id }, new { id = book.Id });
         }
 
         [HttpPut("{id}")]
@@ -298,7 +329,9 @@ namespace LordofTheReads.Controllers
             book.ISBN = bookUpdateDto.ISBN;
             book.Description = bookUpdateDto.Description;
             book.Price = bookUpdateDto.Price;
-            book.PublicationDate = bookUpdateDto.PublicationDate;
+            book.PublicationDate = bookUpdateDto.PublicationDate.HasValue 
+                ? DateTime.SpecifyKind(bookUpdateDto.PublicationDate.Value, DateTimeKind.Utc) 
+                : null;
             book.StockQuantity = bookUpdateDto.StockQuantity;
             book.Publisher = bookUpdateDto.Publisher;
             book.ImageUrl = bookUpdateDto.ImageUrl;

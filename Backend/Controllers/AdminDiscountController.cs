@@ -125,8 +125,10 @@ namespace LordofTheReads.Controllers
                 BookId = discountCreateDto.BookId,
                 DiscountPercentage = discountCreateDto.DiscountPercentage,
                 OnSaleFlag = discountCreateDto.OnSaleFlag,
-                StartDate = discountCreateDto.StartDate,
-                EndDate = discountCreateDto.EndDate
+                StartDate = DateTime.SpecifyKind(discountCreateDto.StartDate, DateTimeKind.Utc),
+                EndDate = discountCreateDto.EndDate.HasValue 
+                    ? DateTime.SpecifyKind(discountCreateDto.EndDate.Value, DateTimeKind.Utc) 
+                    : null
             };
 
             _context.Discounts.Add(discount);
@@ -167,8 +169,10 @@ namespace LordofTheReads.Controllers
             // Update discount properties
             discount.DiscountPercentage = discountUpdateDto.DiscountPercentage;
             discount.OnSaleFlag = discountUpdateDto.OnSaleFlag;
-            discount.StartDate = discountUpdateDto.StartDate;
-            discount.EndDate = discountUpdateDto.EndDate;
+            discount.StartDate = DateTime.SpecifyKind(discountUpdateDto.StartDate, DateTimeKind.Utc);
+            discount.EndDate = discountUpdateDto.EndDate.HasValue 
+                ? DateTime.SpecifyKind(discountUpdateDto.EndDate.Value, DateTimeKind.Utc) 
+                : null;
 
             _context.Discounts.Update(discount);
             await _context.SaveChangesAsync();

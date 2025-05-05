@@ -112,8 +112,10 @@ namespace LordofTheReads.Controllers
             {
                 Title = announcementCreateDto.Title,
                 Content = announcementCreateDto.Content,
-                StartDate = announcementCreateDto.StartDate,
-                EndDate = announcementCreateDto.EndDate,
+                StartDate = DateTime.SpecifyKind(announcementCreateDto.StartDate, DateTimeKind.Utc),
+                EndDate = announcementCreateDto.EndDate.HasValue 
+                    ? DateTime.SpecifyKind(announcementCreateDto.EndDate.Value, DateTimeKind.Utc) 
+                    : null,
                 IsActive = isActive
             };
 
@@ -160,8 +162,10 @@ namespace LordofTheReads.Controllers
             // Update announcement properties
             announcement.Title = announcementUpdateDto.Title;
             announcement.Content = announcementUpdateDto.Content;
-            announcement.StartDate = announcementUpdateDto.StartDate;
-            announcement.EndDate = announcementUpdateDto.EndDate;
+            announcement.StartDate = DateTime.SpecifyKind(announcementUpdateDto.StartDate, DateTimeKind.Utc);
+            announcement.EndDate = announcementUpdateDto.EndDate.HasValue 
+                ? DateTime.SpecifyKind(announcementUpdateDto.EndDate.Value, DateTimeKind.Utc) 
+                : null;
             announcement.IsActive = isActive;
 
             _context.Announcements.Update(announcement);
