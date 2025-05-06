@@ -112,7 +112,7 @@ function Bookmarks() {
                 <div className="bg-white rounded-md overflow-hidden shadow-md">
                   <div className="relative">
                     <img 
-                      src={bookmark.book.coverImageUrl || `https://via.placeholder.com/300x450?text=${encodeURIComponent(bookmark.book.title)}`}
+                      src={bookmark.book.imageUrl || `https://via.placeholder.com/300x450?text=${encodeURIComponent(bookmark.book.title)}`}
                       alt={bookmark.book.title}
                       className="w-full aspect-[2/3] object-contain"
                     />

@@ -141,7 +141,7 @@ function Cart() {
                 <div key={item.bookId} className="bg-white rounded-lg p-4 shadow-sm grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
                   <div className="md:col-span-2">
                     <img 
-                      src={item.book?.coverImageUrl || '/placeholder-book.png'} 
+                      src={item.book?.imageUrl || '/placeholder-book.png'} 
                       alt={item.book?.title || 'Book cover'} 
                       className="w-full h-32 object-cover rounded-md"
                     />
