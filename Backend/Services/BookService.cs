@@ -39,7 +39,7 @@ namespace LordofTheReads.Services
                         Publisher = b.Publisher,
                         Authors = new List<string>(),
                         Genres = new List<string>(),
-                        ImageUrl = b.ImageUrl ?? "https://via.placeholder.com/300x450?text=No+Cover"
+                        ImageUrl = b.ImageUrl ?? "https://placehold.co/300x450?text=No+Cover"
                     })
                     .ToListAsync();
 
@@ -71,7 +71,7 @@ namespace LordofTheReads.Services
                         Publisher = b.Publisher,
                         Authors = new List<string>(),
                         Genres = new List<string>(),
-                        ImageUrl = b.ImageUrl ?? "https://via.placeholder.com/300x450?text=No+Cover"
+                        ImageUrl = b.ImageUrl ?? "https://placehold.co/300x450?text=No+Cover"
                     })
                     .FirstOrDefaultAsync();
 

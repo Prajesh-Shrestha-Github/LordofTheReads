@@ -537,11 +537,12 @@ function Books() {
                       
                       <div className={`${viewMode === 'grid' ? 'aspect-[3/4]' : 'h-full'} bg-gray-100 flex items-center justify-center`}>
                         <img 
-                          src={book.coverImageUrl || `https://via.placeholder.com/300x450?text=${encodeURIComponent(book.title)}`} 
+                          src={book.imageUrl || `https://placehold.co/300x450?text=${encodeURIComponent(book.title)}`} 
                           alt={book.title} 
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            e.target.src = '/default-book-cover.jpg';
+                            // Use placehold.co as a fallback
+                            e.target.src = `https://placehold.co/300x450/e2e8f0/1e293b?text=No+Cover`;
                           }}
                         />
                       </div>

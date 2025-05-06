@@ -41,11 +41,12 @@ namespace LordofTheReads.Database.Entities
         // [Column("cover_image_url")]
         // public string? CoverImageUrl { get; set; }
 
+        // Make timestamp fields nullable to avoid issues with database mismatches
         [Column("created_at")]
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
 
         [Column("updated_at")]
-        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? UpdatedAt { get; set; } = DateTime.UtcNow;
 
         // ? ADDED: Average rating for sorting/filtering
         [Column("rating")]

@@ -14,11 +14,12 @@ namespace LordofTheReads.Database.Entities
         [StringLength(50)]
         public required string Name { get; set; }
 
-        [Column("created_at")]
-        public DateTime CreatedAt { get; set; }
+        // Remove Column attribute and make nullable to avoid issues with missing database columns
+        // [Column("created_at")]
+        public DateTime? CreatedAt { get; set; }
 
-        [Column("updated_at")]
-        public DateTime UpdatedAt { get; set; }
+        // [Column("updated_at")]
+        public DateTime? UpdatedAt { get; set; }
 
         // Navigation property
         public virtual ICollection<BookGenre> BookGenres { get; set; } = new List<BookGenre>();
