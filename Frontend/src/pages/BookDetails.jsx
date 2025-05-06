@@ -188,7 +188,7 @@ function BookDetails() {
               <div className="flex items-center">
                 <button 
                   onClick={decrementQuantity}
-                  className="w-8 h-8 flex items-center justify-center border border-gray rounded-l-md text-navy hover:bg-navy hover:text-white transition-colors"
+                  className="w-8 h-8 flex items-center justify-center bg-navy text-white rounded-l-md hover:bg-gold hover:text-navy transition-colors"
                   disabled={quantity <= 1}
                 >
                   -
@@ -201,7 +201,7 @@ function BookDetails() {
                 />
                 <button 
                   onClick={incrementQuantity}
-                  className="w-8 h-8 flex items-center justify-center border border-gray rounded-r-md text-navy hover:bg-navy hover:text-white transition-colors"
+                  className="w-8 h-8 flex items-center justify-center bg-navy text-white rounded-r-md hover:bg-gold hover:text-navy transition-colors"
                 >
                   +
                 </button>
@@ -220,7 +220,7 @@ function BookDetails() {
               
               <button 
                 onClick={handleBookmark}
-                className={`flex items-center px-6 py-2 rounded-md transition-colors ${isBookmarked ? 'bg-gold text-navy' : 'border border-navy text-navy hover:bg-navy hover:text-white'}`}
+                className={`flex items-center px-6 py-2 rounded-md transition-colors ${isBookmarked ? 'bg-gold text-navy' : 'bg-navy text-white hover:bg-gold hover:text-navy'}`}
               >
                 <Bookmark className="mr-2 h-5 w-5" fill={isBookmarked ? 'currentColor' : 'none'} />
                 {isBookmarked ? 'Bookmarked' : 'Bookmark'}
