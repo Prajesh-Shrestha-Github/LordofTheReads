@@ -52,7 +52,7 @@ namespace LordofTheReads.Controllers
                         PublicationDate = b.PublicationDate,
                         StockQuantity = b.StockQuantity,
                         Publisher = b.Publisher,
-                        ImageUrl = b.ImageUrl,
+                        ImageUrl = b.ImageUrl ?? "https://placehold.co/300x450?text=No+Cover",
                         CreatedAt = b.CreatedAt,
                         UpdatedAt = b.UpdatedAt
                     })
@@ -104,7 +104,7 @@ namespace LordofTheReads.Controllers
                     PublicationDate = book.PublicationDate,
                     StockQuantity = book.StockQuantity,
                     Publisher = book.Publisher,
-                    ImageUrl = book.ImageUrl,
+                    ImageUrl = book.ImageUrl ?? "https://placehold.co/300x450?text=No+Cover",
                     CreatedAt = book.CreatedAt,
                     UpdatedAt = book.UpdatedAt,
                     Authors = book.BookAuthors.Select(ba => new AuthorDto
@@ -365,6 +365,8 @@ namespace LordofTheReads.Controllers
                     return Forbid();
                 }
 
+                _logger.LogInformation("Starting update for book ID: {Id} with data: {@BookUpdateDto}", id, bookUpdateDto);
+
                 var book = await _context.Books
                     .Include(b => b.BookAuthors)
                     .Include(b => b.BookGenres)
@@ -372,11 +374,18 @@ namespace LordofTheReads.Controllers
 
                 if (book == null)
                 {
+                    _logger.LogWarning("Book with ID {Id} not found for update", id);
                     return NotFound();
                 }
 
                 // Log the received data for debugging
                 _logger.LogInformation("Received book update request: {@BookUpdateDto}", bookUpdateDto);
+
+                if (!ModelState.IsValid)
+                {
+                    _logger.LogWarning("Model state is invalid for book update: {@ModelState}", ModelState);
+                    return BadRequest(ModelState);
+                }
 
                 // Check if ISBN is unique (if changed)
                 if (!string.IsNullOrEmpty(bookUpdateDto.ISBN) && 
@@ -519,55 +528,130 @@ namespace LordofTheReads.Controllers
                 // Update authors if provided
                 if (bookUpdateDto.AuthorIds != null || bookUpdateDto.NewAuthors != null)
                 {
-                    // Remove existing book authors
-                    var existingBookAuthors = await _context.BookAuthors
-                        .Where(ba => ba.BookId == id)
-                        .ToListAsync();
-                    
-                    _context.BookAuthors.RemoveRange(existingBookAuthors);
-                    await _context.SaveChangesAsync();
-
-                    // Add new book authors
-                    foreach (var authorId in allAuthorIds)
+                    try
                     {
-                        _context.BookAuthors.Add(new BookAuthor
+                        _logger.LogInformation("Updating authors for book ID: {Id}", id);
+                        
+                        // Remove existing book authors
+                        var existingBookAuthors = await _context.BookAuthors
+                            .Where(ba => ba.BookId == id)
+                            .ToListAsync();
+                        
+                        _context.BookAuthors.RemoveRange(existingBookAuthors);
+                        await _context.SaveChangesAsync();
+
+                        // Add new book authors
+                        foreach (var authorId in allAuthorIds)
                         {
-                            BookId = book.Id,
-                            AuthorId = authorId
-                        });
+                            _context.BookAuthors.Add(new BookAuthor
+                            {
+                                BookId = book.Id,
+                                AuthorId = authorId
+                            });
+                        }
+                        
+                        _logger.LogInformation("Successfully updated authors for book ID: {Id}", id);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error updating book authors for book ID {Id}: {Message}", id, ex.Message);
+                        throw; // Re-throw to be caught by the outer try-catch
                     }
                 }
 
                 // Update genres if provided
                 if (bookUpdateDto.GenreIds != null || bookUpdateDto.NewGenres != null)
                 {
-                    // Remove existing book genres
-                    var existingBookGenres = await _context.BookGenres
-                        .Where(bg => bg.BookId == id)
-                        .ToListAsync();
-                    
-                    _context.BookGenres.RemoveRange(existingBookGenres);
-                    await _context.SaveChangesAsync();
-
-                    // Add new book genres
-                    foreach (var genreId in allGenreIds)
+                    try
                     {
-                        _context.BookGenres.Add(new BookGenre
+                        _logger.LogInformation("Updating genres for book ID: {Id}", id);
+                        
+                        // Remove existing book genres
+                        var existingBookGenres = await _context.BookGenres
+                            .Where(bg => bg.BookId == id)
+                            .ToListAsync();
+                        
+                        _context.BookGenres.RemoveRange(existingBookGenres);
+                        await _context.SaveChangesAsync();
+
+                        // Add new book genres
+                        foreach (var genreId in allGenreIds)
                         {
-                            BookId = book.Id,
-                            GenreId = genreId
-                        });
+                            _context.BookGenres.Add(new BookGenre
+                            {
+                                BookId = book.Id,
+                                GenreId = genreId
+                            });
+                        }
+                        
+                        _logger.LogInformation("Successfully updated genres for book ID: {Id}", id);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error updating book genres for book ID {Id}: {Message}", id, ex.Message);
+                        throw; // Re-throw to be caught by the outer try-catch
                     }
                 }
 
-                await _context.SaveChangesAsync();
-                _logger.LogInformation("Book updated: {BookId}", book.Id);
-
-                return NoContent();
+                // Save changes
+                try
+                {
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation("Successfully updated book with ID: {Id}", id);
+                    
+                    // Return updated book
+                    var updatedBook = await _context.Books
+                        .Include(b => b.BookAuthors)
+                        .ThenInclude(ba => ba.Author)
+                        .Include(b => b.BookGenres)
+                        .ThenInclude(bg => bg.Genre)
+                        .Include(b => b.Discounts)
+                        .FirstOrDefaultAsync(b => b.Id == id);
+                    
+                    var bookDetailDto = new BookDetailDto
+                    {
+                        Id = updatedBook.Id,
+                        Title = updatedBook.Title,
+                        ISBN = updatedBook.ISBN,
+                        Description = updatedBook.Description,
+                        Price = updatedBook.Price,
+                        PublicationDate = updatedBook.PublicationDate,
+                        StockQuantity = updatedBook.StockQuantity,
+                        Publisher = updatedBook.Publisher,
+                        ImageUrl = updatedBook.ImageUrl ?? "https://placehold.co/300x450?text=No+Cover",
+                        CreatedAt = updatedBook.CreatedAt,
+                        UpdatedAt = updatedBook.UpdatedAt,
+                        Authors = updatedBook.BookAuthors.Select(ba => new AuthorDto
+                        {
+                            Id = ba.Author.Id,
+                            Name = ba.Author.Name
+                        }).ToList(),
+                        Genres = updatedBook.BookGenres.Select(bg => new GenreDto
+                        {
+                            Id = bg.Genre.Id,
+                            Name = bg.Genre.Name
+                        }).ToList(),
+                        Discounts = updatedBook.Discounts.Select(d => new DiscountDto
+                        {
+                            Id = d.Id,
+                            DiscountPercentage = d.DiscountPercentage,
+                            OnSaleFlag = d.OnSaleFlag,
+                            StartDate = d.StartDate,
+                            EndDate = d.EndDate
+                        }).ToList()
+                    };
+                    
+                    return Ok(bookDetailDto);
+                }
+                catch (DbUpdateException dbEx)
+                {
+                    _logger.LogError(dbEx, "Database error when updating book ID {Id}: {Message}", id, dbEx.InnerException?.Message ?? dbEx.Message);
+                    return StatusCode(500, new { message = "A database error occurred while updating the book.", details = dbEx.InnerException?.Message ?? dbEx.Message });
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating book: {Message}", ex.Message);
+                _logger.LogError(ex, "Error updating book {BookId}: {Message}", id, ex.Message);
                 
                 // Get more detailed info for DbUpdateException
                 if (ex is DbUpdateException dbEx)
@@ -581,7 +665,11 @@ namespace LordofTheReads.Controllers
                     });
                 }
                 
-                return StatusCode(500, new { message = ex.Message, stackTrace = ex.StackTrace });
+                return StatusCode(500, new { 
+                    message = "An error occurred while updating the book. Please try again.",
+                    details = ex.Message,
+                    stackTrace = ex.StackTrace 
+                });
             }
         }
 

@@ -216,19 +216,31 @@ const BookForm = () => {
       }, 1500);
     } catch (err) {
       console.error('Error saving book:', err);
+      setLoading(false);
       
       // Show more detailed error information if available
       if (err.response?.data) {
         console.error('Error details:', err.response.data);
-        if (typeof err.response.data === 'string') {
-          setError(err.response.data);
+        
+        // Handle validation errors from server
+        if (err.response.data.AuthorIds) {
+          setError(`Author error: ${err.response.data.AuthorIds}`);
+        } else if (err.response.data.GenreIds) {
+          setError(`Genre error: ${err.response.data.GenreIds}`);
+        } else if (err.response.data.ISBN) {
+          setError(`ISBN error: ${err.response.data.ISBN}`);
         } else if (err.response.data.message) {
-          setError(err.response.data.message);
+          // For our custom error messages
+          setError(`Server error: ${err.response.data.message}`);
+        } else if (typeof err.response.data === 'string') {
+          setError(err.response.data);
         } else {
-          setError('Failed to save book. Please check your inputs and try again.');
+          // If it's a complex object but none of the expected properties
+          setError('Failed to save book. Please check your input and try again.');
         }
       } else {
-        setError(err.message || 'An error occurred while saving the book.');
+        // Generic error message if no response data
+        setError('Failed to save book. Please try again later.');
       }
     } finally {
       setLoading(false);

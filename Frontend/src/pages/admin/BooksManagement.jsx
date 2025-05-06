@@ -113,17 +113,14 @@ const BooksManagement = () => {
                   <tr key={book.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex-shrink-0 h-12 w-12">
-                        {book.imageUrl ? (
-                          <img 
-                            className="h-12 w-12 rounded-md object-cover" 
-                            src={book.imageUrl} 
-                            alt={book.title} 
-                          />
-                        ) : (
-                          <div className="h-12 w-12 rounded-md bg-gray-100 flex items-center justify-center text-gray-500">
-                            No Image
-                          </div>
-                        )}
+                        <img 
+                          className="h-12 w-12 rounded-md object-cover" 
+                          src={book.imageUrl || `https://placehold.co/300x300/e2e8f0/1e293b?text=Book`} 
+                          alt={book.title}
+                          onError={(e) => {
+                            e.target.src = `https://placehold.co/300x300/e2e8f0/1e293b?text=No+Image`;
+                          }}
+                        />
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

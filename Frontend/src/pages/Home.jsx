@@ -94,7 +94,7 @@ function Home() {
                 <div key={book.id} className="flex flex-col">
                   <div className="bg-beige aspect-[2/3] mb-3 flex items-center justify-center relative overflow-hidden">
                     <img 
-                      src={book.coverImageUrl || `https://via.placeholder.com/300x450?text=${encodeURIComponent(book.title)}`}
+                      src={book.coverImageUrl || `https://placehold.co/300x450?text=${encodeURIComponent(book.title)}`}
                       alt={book.title}
                       className="object-contain h-full w-full"
                     />

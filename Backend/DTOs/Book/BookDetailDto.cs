@@ -11,8 +11,8 @@ namespace LordofTheReads.DTOs.Book
         public int StockQuantity { get; set; }
         public string? Publisher { get; set; }
         public string? ImageUrl { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
+        public DateTime? CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
         
         public List<AuthorDto> Authors { get; set; } = new List<AuthorDto>();
         public List<GenreDto> Genres { get; set; } = new List<GenreDto>();

@@ -64,9 +64,12 @@ function Bookmarks() {
                 <div className="bg-white rounded-md overflow-hidden shadow-md">
                   <div className="relative">
                     <img 
-                      src={book.coverImageUrl || `https://via.placeholder.com/300x450?text=${encodeURIComponent(book.title)}`}
+                      src={book.coverImageUrl || `https://placehold.co/300x450?text=${encodeURIComponent(book.title)}`}
                       alt={book.title}
                       className="w-full aspect-[2/3] object-contain"
+                      onError={(e) => {
+                        e.target.src = `https://placehold.co/300x450/e2e8f0/1e293b?text=No+Cover`;
+                      }}
                     />
                     <button 
                       onClick={() => handleRemoveBookmark(book.id)}
