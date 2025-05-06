@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LordofTheReads.Database;
 using LordofTheReads.Database.Entities;
@@ -22,7 +22,8 @@ namespace LordofTheReads.Controllers
             var books = _context.Books.AsQueryable();
 
             if (!string.IsNullOrEmpty(query))
-                books = books.Where(b => b.Title.Contains(query) || b.Description.Contains(query));
+                books = books.Where(b => (b.Title != null && b.Title.Contains(query)) || 
+                                         (b.Description != null && b.Description.Contains(query)));
 
             books = sort switch
             {

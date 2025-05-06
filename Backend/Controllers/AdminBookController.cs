@@ -107,24 +107,24 @@ namespace LordofTheReads.Controllers
                     ImageUrl = book.ImageUrl ?? "https://placehold.co/300x450?text=No+Cover",
                     CreatedAt = book.CreatedAt,
                     UpdatedAt = book.UpdatedAt,
-                    Authors = book.BookAuthors.Select(ba => new AuthorDto
+                    Authors = book.BookAuthors?.Select(ba => new AuthorDto
                     {
                         Id = ba.Author.Id,
                         Name = ba.Author.Name
-                    }).ToList(),
-                    Genres = book.BookGenres.Select(bg => new GenreDto
+                    }).ToList() ?? new List<AuthorDto>(),
+                    Genres = book.BookGenres?.Select(bg => new GenreDto
                     {
                         Id = bg.Genre.Id,
                         Name = bg.Genre.Name
-                    }).ToList(),
-                    Discounts = book.Discounts.Select(d => new DiscountDto
+                    }).ToList() ?? new List<GenreDto>(),
+                    Discounts = book.Discounts?.Select(d => new LordofTheReads.DTOs.Book.DiscountDto
                     {
                         Id = d.Id,
                         DiscountPercentage = d.DiscountPercentage,
                         OnSaleFlag = d.OnSaleFlag,
                         StartDate = d.StartDate,
                         EndDate = d.EndDate
-                    }).ToList()
+                    }).ToList() ?? new List<LordofTheReads.DTOs.Book.DiscountDto>()
                 };
 
                 return Ok(bookDetailDto);
@@ -401,7 +401,9 @@ namespace LordofTheReads.Controllers
                 book.ISBN = bookUpdateDto.ISBN;
                 book.Description = bookUpdateDto.Description;
                 book.Price = bookUpdateDto.Price;
-                book.PublicationDate = bookUpdateDto.PublicationDate;
+                book.PublicationDate = bookUpdateDto.PublicationDate.HasValue 
+                    ? DateTime.SpecifyKind(bookUpdateDto.PublicationDate.Value, DateTimeKind.Utc) 
+                    : (DateTime?)null;
                 book.StockQuantity = bookUpdateDto.StockQuantity;
                 book.Publisher = bookUpdateDto.Publisher;
                 book.ImageUrl = bookUpdateDto.ImageUrl;
@@ -621,24 +623,24 @@ namespace LordofTheReads.Controllers
                         ImageUrl = updatedBook.ImageUrl ?? "https://placehold.co/300x450?text=No+Cover",
                         CreatedAt = updatedBook.CreatedAt,
                         UpdatedAt = updatedBook.UpdatedAt,
-                        Authors = updatedBook.BookAuthors.Select(ba => new AuthorDto
+                        Authors = updatedBook.BookAuthors?.Select(ba => new AuthorDto
                         {
                             Id = ba.Author.Id,
                             Name = ba.Author.Name
-                        }).ToList(),
-                        Genres = updatedBook.BookGenres.Select(bg => new GenreDto
+                        }).ToList() ?? new List<AuthorDto>(),
+                        Genres = updatedBook.BookGenres?.Select(bg => new GenreDto
                         {
                             Id = bg.Genre.Id,
                             Name = bg.Genre.Name
-                        }).ToList(),
-                        Discounts = updatedBook.Discounts.Select(d => new DiscountDto
+                        }).ToList() ?? new List<GenreDto>(),
+                        Discounts = updatedBook.Discounts?.Select(d => new LordofTheReads.DTOs.Book.DiscountDto
                         {
                             Id = d.Id,
                             DiscountPercentage = d.DiscountPercentage,
                             OnSaleFlag = d.OnSaleFlag,
                             StartDate = d.StartDate,
                             EndDate = d.EndDate
-                        }).ToList()
+                        }).ToList() ?? new List<LordofTheReads.DTOs.Book.DiscountDto>()
                     };
                     
                     return Ok(bookDetailDto);
