@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BookOpen, ShoppingCart, Search, Bookmark, User, LogOut, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import cartService from '../services/cartService';
 import { getBookmarkCount } from '../services/bookmarkService';
+import { searchBooks } from '../services/bookService';
 
 function Navbar() {
   const { user, logout, isAuthenticated, hasRole } = useAuth();
@@ -12,6 +13,10 @@ function Navbar() {
   const [cartItemCount, setCartItemCount] = useState(0);
   const [bookmarkCount, setBookmarkCount] = useState(0);
   const [showNavbar, setShowNavbar] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const searchRef = useRef(null);
   
   const handleLogout = () => {
     logout();
@@ -21,6 +26,56 @@ function Navbar() {
   const toggleDropdown = () => {
     setDropdownOpen(!dropdownOpen);
   };
+
+  // Handle search input change
+  const handleSearchChange = async (e) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    
+    if (query.trim().length > 1) {
+      try {
+        const results = await searchBooks(query);
+        setSearchResults(results.slice(0, 5)); // Limit to 5 results
+        setShowSearchResults(true);
+      } catch (error) {
+        console.error('Error searching books:', error);
+        setSearchResults([]);
+      }
+    } else {
+      setSearchResults([]);
+      setShowSearchResults(false);
+    }
+  };
+
+  // Handle search form submission
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/books?search=${encodeURIComponent(searchQuery)}`);
+      setShowSearchResults(false);
+    }
+  };
+
+  // Handle clicking on a search result
+  const handleResultClick = (bookId) => {
+    navigate(`/book/${bookId}`);
+    setSearchQuery('');
+    setShowSearchResults(false);
+  };
+
+  // Close search results when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setShowSearchResults(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Check if user is admin and update showNavbar state
   useEffect(() => {
@@ -131,15 +186,57 @@ function Navbar() {
         {/* Search and Actions */}
         <div className="flex items-center gap-4 flex-1 justify-end">
           {/* Search */}
-          <div className="relative hidden md:block">
-            <div className="relative flex items-center">
-              <input 
-                type="search" 
-                placeholder="Search books..." 
-                className="w-40 text-xs py-1 px-2 pl-7 border border-gray rounded-md focus:outline-none focus:ring-1 focus:ring-gold"
-              />
-              <Search className="absolute left-2 h-3 w-3 text-gray" />
-            </div>
+          <div className="relative hidden md:block" ref={searchRef}>
+            <form onSubmit={handleSearchSubmit}>
+              <div className="relative flex items-center">
+                <input 
+                  type="search" 
+                  placeholder="Search books..." 
+                  className="w-40 text-xs py-1 px-2 pl-7 border border-gray rounded-md focus:outline-none focus:ring-1 focus:ring-gold"
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
+                />
+                <Search className="absolute left-2 h-3 w-3 text-gray" />
+              </div>
+            </form>
+            
+            {/* Search Results Dropdown */}
+            {showSearchResults && searchResults.length > 0 && (
+              <div className="absolute mt-1 w-64 bg-white border border-gray rounded-md shadow-lg z-20">
+                <ul className="py-1">
+                  {searchResults.map(book => (
+                    <li key={book.id} className="px-2 py-1 hover:bg-beige cursor-pointer">
+                      <div 
+                        onClick={() => handleResultClick(book.id)}
+                        className="flex items-center gap-2"
+                      >
+                        <div className="w-8 h-12 bg-gray-100 flex-shrink-0">
+                          <img 
+                            src={book.imageUrl || `https://placehold.co/32x48?text=${encodeURIComponent(book.title?.charAt(0) || 'B')}`} 
+                            alt={book.title} 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="overflow-hidden">
+                          <p className="text-xs font-medium text-navy truncate">{book.title}</p>
+                          <p className="text-xs text-gray truncate">{book.authors?.join(', ') || 'Unknown Author'}</p>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                  <li className="border-t border-gray px-2 py-1">
+                    <Link 
+                      to={`/books?search=${encodeURIComponent(searchQuery)}`}
+                      className="text-xs text-gold hover:underline block text-center"
+                      onClick={() => setShowSearchResults(false)}
+                    >
+                      View all results
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            )}
           </div>
           
           {/* Bookmarks */}
