@@ -15,6 +15,8 @@ function BookDetails() {
   const [error, setError] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const [selectedFormat, setSelectedFormat] = useState('Paperback');
+  const [notification, setNotification] = useState({ show: false, message: '', type: '' });
   const { isAuthenticated } = useAuth();
   
   useEffect(() => {
@@ -63,7 +65,14 @@ function BookDetails() {
   const handleAddToCart = async () => {
     if (!isAuthenticated()) {
       // Redirect to login if not authenticated
-      window.location.href = '/login';
+      setNotification({
+        show: true,
+        message: 'Please login to add items to your cart',
+        type: 'login'
+      });
+      setTimeout(() => {
+        setNotification({ show: false, message: '', type: '' });
+      }, 3000);
       return;
     }
     
@@ -71,17 +80,38 @@ function BookDetails() {
       await cartService.addToCart(book.id, quantity);
       // Dispatch custom event to update cart count in navbar
       window.dispatchEvent(new CustomEvent('cart-updated'));
-      alert('Book added to cart successfully!');
+      setNotification({
+        show: true,
+        message: `${book.title} added to cart!`,
+        type: 'cart'
+      });
+      setTimeout(() => {
+        setNotification({ show: false, message: '', type: '' });
+      }, 3000);
     } catch (err) {
       console.error('Error adding book to cart:', err);
-      alert('Failed to add book to cart. Please try again.');
+      setNotification({
+        show: true,
+        message: 'Failed to add book to cart. Please try again.',
+        type: 'error'
+      });
+      setTimeout(() => {
+        setNotification({ show: false, message: '', type: '' });
+      }, 3000);
     }
   };
   
   const handleBookmark = async () => {
     if (!isAuthenticated()) {
       // Redirect to login if not authenticated
-      window.location.href = '/login';
+      setNotification({
+        show: true,
+        message: 'Please login to bookmark books',
+        type: 'login'
+      });
+      setTimeout(() => {
+        setNotification({ show: false, message: '', type: '' });
+      }, 3000);
       return;
     }
     
@@ -90,10 +120,24 @@ function BookDetails() {
       setIsBookmarked(true);
       // Dispatch custom event to update bookmark count in navbar
       window.dispatchEvent(new CustomEvent('bookmarksUpdated'));
-      alert('Book bookmarked successfully!');
+      setNotification({
+        show: true,
+        message: `${book.title} added to bookmarks!`,
+        type: 'bookmark'
+      });
+      setTimeout(() => {
+        setNotification({ show: false, message: '', type: '' });
+      }, 3000);
     } catch (err) {
       console.error('Error bookmarking book:', err);
-      alert('Failed to bookmark book. Please try again.');
+      setNotification({
+        show: true,
+        message: 'Failed to bookmark book. Please try again.',
+        type: 'error'
+      });
+      setTimeout(() => {
+        setNotification({ show: false, message: '', type: '' });
+      }, 3000);
     }
   };
   
@@ -131,6 +175,25 @@ function BookDetails() {
   return (
     <div className="flex min-h-screen flex-col bg-beige">
       <Navbar />
+      
+      {/* Notification */}
+      {notification.show && (
+        <div className="fixed bottom-4 right-4 bg-navy text-white px-4 py-3 rounded-md shadow-lg z-50 animate-fade-in-up">
+          <div className="flex items-center">
+            <span>{notification.message}</span>
+            {notification.type === 'login' ? (
+              <Link to="/login" className="ml-4 text-gold hover:underline">Login</Link>
+            ) : (
+              <Link 
+                to={notification.type === 'bookmark' || notification.message.includes('bookmark') ? "/bookmarks" : "/cart"}
+                className="ml-4 text-gold hover:underline"
+              >
+                View {notification.type === 'bookmark' || notification.message.includes('bookmark') ? "Bookmarks" : "Cart"}
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
       
       <div className="container mx-auto px-4 py-8 flex-grow">
         {/* Breadcrumb navigation */}
@@ -181,6 +244,55 @@ function BookDetails() {
             
             {/* Description */}
             <p className="text-navy mb-6">{book.description}</p>
+            
+            {/* Format selection */}
+            <div className="mb-6">
+              <h3 className="font-medium mb-2">Format</h3>
+              <div className="flex flex-wrap gap-2">
+                <button 
+                  onClick={() => setSelectedFormat('Paperback')}
+                  className={`px-3 py-1 flex items-center justify-center ${selectedFormat === 'Paperback' ? 'bg-navy text-white' : 'bg-gray-100 text-navy'} rounded-md hover:bg-gold hover:text-navy transition-colors`}
+                >
+                  Paperback
+                </button>
+                <button 
+                  onClick={() => setSelectedFormat('Hardcover')}
+                  className={`px-3 py-1 flex items-center justify-center ${selectedFormat === 'Hardcover' ? 'bg-navy text-white' : 'bg-gray-100 text-navy'} rounded-md hover:bg-gold hover:text-navy transition-colors`}
+                >
+                  Hardcover
+                </button>
+                <button 
+                  onClick={() => setSelectedFormat('E-Book')}
+                  className={`px-3 py-1 flex items-center justify-center ${selectedFormat === 'E-Book' ? 'bg-navy text-white' : 'bg-gray-100 text-navy'} rounded-md hover:bg-gold hover:text-navy transition-colors`}
+                >
+                  E-Book
+                </button>
+                <button 
+                  onClick={() => setSelectedFormat('Audiobook')}
+                  className={`px-3 py-1 flex items-center justify-center ${selectedFormat === 'Audiobook' ? 'bg-navy text-white' : 'bg-gray-100 text-navy'} rounded-md hover:bg-gold hover:text-navy transition-colors`}
+                >
+                  Audiobook
+                </button>
+                <button 
+                  onClick={() => setSelectedFormat('Signed Edition')}
+                  className={`px-3 py-1 flex items-center justify-center ${selectedFormat === 'Signed Edition' ? 'bg-navy text-white' : 'bg-gray-100 text-navy'} rounded-md hover:bg-gold hover:text-navy transition-colors`}
+                >
+                  Signed Edition
+                </button>
+                <button 
+                  onClick={() => setSelectedFormat('Collector\'s Edition')}
+                  className={`px-3 py-1 flex items-center justify-center ${selectedFormat === 'Collector\'s Edition' ? 'bg-navy text-white' : 'bg-gray-100 text-navy'} rounded-md hover:bg-gold hover:text-navy transition-colors`}
+                >
+                  Collector's Edition
+                </button>
+                <button 
+                  onClick={() => setSelectedFormat('Deluxe Edition')}
+                  className={`px-3 py-1 flex items-center justify-center ${selectedFormat === 'Deluxe Edition' ? 'bg-navy text-white' : 'bg-gray-100 text-navy'} rounded-md hover:bg-gold hover:text-navy transition-colors`}
+                >
+                  Deluxe Edition
+                </button>
+              </div>
+            </div>
             
             {/* Quantity selector */}
             <div className="mb-6">
