@@ -518,7 +518,7 @@ function Books() {
               <div className={viewMode === 'grid' ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" : "space-y-4"}>
                 {currentBooks.map(book => (
                   <div key={book.id} className={`bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow ${viewMode === 'list' ? 'flex' : ''}`}>
-                    <div className={`relative ${viewMode === 'list' ? 'w-1/4 min-w-[100px]' : ''}`}>
+                    <Link to={`/book/${book.id}`} className={`relative ${viewMode === 'list' ? 'w-1/4 min-w-[100px]' : ''}`}>
                       {/* Bestseller Tag */}
                       {book.rating > 4 && (
                         <div className="absolute top-0 left-0 bg-gold text-navy text-xs font-bold px-2 py-1 z-10">
@@ -533,21 +533,23 @@ function Books() {
                           className="w-full h-full object-cover"
                         />
                       </div>
+                    </Link>
                       
-                      {/* Bookmark Button */}
-                      <button 
-                        onClick={() => handleBookmarkToggle(book)}
-                        className="absolute top-2 right-2 bg-white p-1.5 rounded-full shadow-sm hover:bg-gray-100 transition-colors"
-                      >
-                        <Bookmark className="h-4 w-4 text-navy" fill={bookmarkStates[book.id] ? 'currentColor' : 'none'} />
-                      </button>
-                    </div>
+                    {/* Bookmark Button */}
+                    <button 
+                      onClick={() => handleBookmarkToggle(book)}
+                      className="absolute top-2 right-2 bg-white p-1.5 rounded-full shadow-sm hover:bg-gray-100 transition-colors"
+                    >
+                      <Bookmark className="h-4 w-4 text-navy" fill={bookmarkStates[book.id] ? 'currentColor' : 'none'} />
+                    </button>
                     
                     <div className={`p-4 ${viewMode === 'list' ? 'flex-1 flex flex-col justify-between' : ''}`}>
-                      <h3 className="font-medium text-navy text-sm truncate">{book.title}</h3>
-                      <p className="text-xs text-gray-600 mb-1 truncate">
-                        {book.authors?.join(', ') || 'Unknown Author'}
-                      </p>
+                      <Link to={`/book/${book.id}`} className="hover:text-gold transition-colors">
+                        <h3 className="font-medium text-navy text-sm truncate">{book.title}</h3>
+                        <p className="text-xs text-gray-600 mb-1 truncate">
+                          {book.authors?.join(', ') || 'Unknown Author'}
+                        </p>
+                      </Link>
                       
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-bold text-navy">${(book.price || 0).toFixed(2)}</span>

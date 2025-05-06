@@ -97,7 +97,7 @@ function Cart() {
     <div className="flex min-h-screen flex-col bg-beige">
       <Navbar />
       
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 flex-grow">
         {/* Back to shopping link */}
         <Link to="/" className="text-navy hover:text-gold flex items-center text-sm mb-6 transition-colors">
           <svg 
@@ -155,18 +155,18 @@ function Cart() {
                   </div>
                   
                   <div className="md:col-span-2">
-                    <div className="flex items-center border border-gray rounded-md">
+                    <div className="flex items-center border border-gray rounded-md overflow-hidden">
                       <button 
                         onClick={() => updateQuantity(item.bookId, item.quantity - 1)}
-                        className="px-2 py-1 text-gray hover:text-navy"
+                        className="px-2 py-1 text-gray hover:text-white hover:bg-navy transition-colors"
                         disabled={item.quantity <= 1}
                       >
                         <Minus className="h-3 w-3" />
                       </button>
-                      <span className="px-2 text-navy">{item.quantity}</span>
+                      <span className="px-3 text-navy font-medium">{item.quantity}</span>
                       <button 
                         onClick={() => updateQuantity(item.bookId, item.quantity + 1)}
-                        className="px-2 py-1 text-gray hover:text-navy"
+                        className="px-2 py-1 text-gray hover:text-white hover:bg-navy transition-colors"
                       >
                         <Plus className="h-3 w-3" />
                       </button>
@@ -223,21 +223,6 @@ function Cart() {
                 <p className="text-xs text-center text-gray mt-4">
                   Free shipping on orders over $50
                 </p>
-              </div>
-
-              {/* Promo Code */}
-              <div className="mt-6 bg-white rounded-lg p-6 shadow-sm">
-                <h3 className="font-medium mb-3 text-navy">Have a Promo Code?</h3>
-                <div className="flex">
-                  <input 
-                    type="text" 
-                    placeholder="Enter code" 
-                    className="flex-grow px-3 py-2 border border-gray rounded-l-md text-sm focus:outline-none focus:ring-1 focus:ring-gold"
-                  />
-                  <button className="bg-beige text-navy px-4 py-2 rounded-r-md text-sm hover:bg-gold transition-colors">
-                    Apply
-                  </button>
-                </div>
               </div>
             </div>
           </div>
