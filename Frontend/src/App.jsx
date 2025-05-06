@@ -5,6 +5,7 @@ import Cart from "./pages/Cart";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Books from "./pages/Books";
+import Bookmarks from "./pages/Bookmarks";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import UserOnlyRoute from "./components/UserOnlyRoute";
@@ -14,7 +15,6 @@ import BooksManagement from "./pages/admin/BooksManagement";
 import BookForm from "./pages/admin/BookForm";
 import DiscountsManagement from "./pages/admin/DiscountsManagement";
 import AnnouncementsManagement from "./pages/admin/AnnouncementsManagement";
-import SessionInfo from "./components/SessionInfo";
 import authService from "./services/authService";
 
 // Root level redirection component to handle admin routes
@@ -26,6 +26,17 @@ const RootRedirect = () => {
   }
   
   return <Navigate to="/" replace />;
+};
+
+// Check if user is an admin and redirect if needed
+const AdminRedirectWrapper = ({ children }) => {
+  const { isAuthenticated, hasRole } = useAuth();
+  
+  if (isAuthenticated() && hasRole('Admin')) {
+    return <Navigate to="/admin" replace />;
+  }
+  
+  return children;
 };
 
 // Wrapper for the entire app to ensure admin users are redirected properly
@@ -88,9 +99,9 @@ const AppRoutes = () => {
     <Routes>
       {/* User Routes with Admin Restriction */}
       <Route path="/" element={
-        <UserOnlyRoute>
+        <AdminRedirectWrapper>
           <Home />
-        </UserOnlyRoute>
+        </AdminRedirectWrapper>
       } />
       <Route path="/cart" element={
         <UserOnlyRoute>
@@ -105,6 +116,11 @@ const AppRoutes = () => {
       <Route path="/categories/*" element={
         <UserOnlyRoute>
           <Books />
+        </UserOnlyRoute>
+      } />
+      <Route path="/bookmarks" element={
+        <UserOnlyRoute>
+          <Bookmarks />
         </UserOnlyRoute>
       } />
       
@@ -138,8 +154,6 @@ function App() {
     <AuthProvider>
       <Router>
         <AppRoutes />
-        {/* Session information display - shows authentication status and errors */}
-        {process.env.NODE_ENV === 'development' && <SessionInfo showErrors={true} />}
       </Router>
     </AuthProvider>
   );

@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BookOpen, ShoppingCart, Search, User, LogOut, ChevronDown } from 'lucide-react';
+import { BookOpen, ShoppingCart, Search, Bookmark, User, LogOut, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 function Navbar() {
   const { user, logout, isAuthenticated, hasRole } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const navigate = useNavigate();
+  const [cartItemCount, setCartItemCount] = useState(0);
+  const [bookmarkCount, setBookmarkCount] = useState(0);
+  const [showNavbar, setShowNavbar] = useState(true);
   
   const handleLogout = () => {
     logout();
@@ -17,8 +20,72 @@ function Navbar() {
     setDropdownOpen(!dropdownOpen);
   };
 
-  // If user is admin, don't show the regular navbar
-  if (isAuthenticated() && hasRole('Admin')) {
+  // Check if user is admin and update showNavbar state
+  useEffect(() => {
+    if (isAuthenticated() && hasRole('Admin')) {
+      setShowNavbar(false);
+    } else {
+      setShowNavbar(true);
+    }
+  }, [isAuthenticated, hasRole]);
+
+  // Update cart count whenever localStorage changes
+  useEffect(() => {
+    const updateCartCount = () => {
+      try {
+        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+        const itemCount = cart.reduce((total, item) => total + item.quantity, 0);
+        setCartItemCount(itemCount);
+      } catch (error) {
+        console.error('Error reading cart from localStorage:', error);
+        setCartItemCount(0);
+      }
+    };
+
+    // Initial count
+    updateCartCount();
+
+    // Listen for storage events (when localStorage changes)
+    window.addEventListener('storage', updateCartCount);
+
+    // Custom event for cart updates from within the same window
+    window.addEventListener('cartUpdated', updateCartCount);
+
+    return () => {
+      window.removeEventListener('storage', updateCartCount);
+      window.removeEventListener('cartUpdated', updateCartCount);
+    };
+  }, []);
+
+  // Update bookmark count whenever localStorage changes
+  useEffect(() => {
+    const updateBookmarkCount = () => {
+      try {
+        const bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]');
+        setBookmarkCount(bookmarks.length);
+      } catch (error) {
+        console.error('Error reading bookmarks from localStorage:', error);
+        setBookmarkCount(0);
+      }
+    };
+
+    // Initial count
+    updateBookmarkCount();
+
+    // Listen for storage events (when localStorage changes)
+    window.addEventListener('storage', updateBookmarkCount);
+
+    // Custom event for bookmark updates from within the same window
+    window.addEventListener('bookmarksUpdated', updateBookmarkCount);
+
+    return () => {
+      window.removeEventListener('storage', updateBookmarkCount);
+      window.removeEventListener('bookmarksUpdated', updateBookmarkCount);
+    };
+  }, []);
+  
+  // If we shouldn't show the navbar, return null but after all hooks have been called
+  if (!showNavbar) {
     return null;
   }
   
@@ -58,9 +125,24 @@ function Navbar() {
             </div>
           </div>
           
+          {/* Bookmarks */}
+          <Link to="/bookmarks" className="text-navy hover:text-gold transition-colors relative">
+            <Bookmark className="h-5 w-5" />
+            {bookmarkCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-gold text-navy text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                {bookmarkCount}
+              </span>
+            )}
+          </Link>
+          
           {/* Cart */}
-          <Link to="/cart" className="text-navy hover:text-gold transition-colors">
+          <Link to="/cart" className="text-navy hover:text-gold transition-colors relative">
             <ShoppingCart className="h-5 w-5" />
+            {cartItemCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-gold text-navy text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                {cartItemCount}
+              </span>
+            )}
           </Link>
           
           {isAuthenticated() ? (

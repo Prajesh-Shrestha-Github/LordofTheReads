@@ -183,7 +183,7 @@ const BookForm = () => {
       setLoading(true);
       setError(null);
       
-      // Format the data for the API
+      // Prepare book data
       const bookData = {
         title: formData.title.trim(),
         isbn: formData.isbn?.trim() || null,
@@ -198,6 +198,9 @@ const BookForm = () => {
         newAuthors: formData.newAuthors,
         newGenres: formData.newGenres
       };
+      
+      // Debug: Log the data being sent
+      console.log('Sending book data:', JSON.stringify(bookData, null, 2));
       
       if (isEditMode) {
         await bookService.updateBook(id, bookData);

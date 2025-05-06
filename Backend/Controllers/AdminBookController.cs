@@ -70,59 +70,70 @@ namespace LordofTheReads.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetBook(int id)
         {
-            // Check if user is admin
-            if (!await _adminAuthService.IsAdmin(User))
+            try
             {
-                return Forbid();
+                // Check if user is admin
+                if (!await _adminAuthService.IsAdmin(User))
+                {
+                    return Forbid();
+                }
+
+                _logger.LogInformation("Fetching book details for ID: {Id}", id);
+
+                var book = await _context.Books
+                    .Include(b => b.BookAuthors)
+                    .ThenInclude(ba => ba.Author)
+                    .Include(b => b.BookGenres)
+                    .ThenInclude(bg => bg.Genre)
+                    .Include(b => b.Discounts)
+                    .FirstOrDefaultAsync(b => b.Id == id);
+
+                if (book == null)
+                {
+                    _logger.LogWarning("Book with ID {Id} not found", id);
+                    return NotFound();
+                }
+
+                var bookDetailDto = new BookDetailDto
+                {
+                    Id = book.Id,
+                    Title = book.Title,
+                    ISBN = book.ISBN,
+                    Description = book.Description,
+                    Price = book.Price,
+                    PublicationDate = book.PublicationDate,
+                    StockQuantity = book.StockQuantity,
+                    Publisher = book.Publisher,
+                    ImageUrl = book.ImageUrl,
+                    CreatedAt = book.CreatedAt,
+                    UpdatedAt = book.UpdatedAt,
+                    Authors = book.BookAuthors.Select(ba => new AuthorDto
+                    {
+                        Id = ba.Author.Id,
+                        Name = ba.Author.Name
+                    }).ToList(),
+                    Genres = book.BookGenres.Select(bg => new GenreDto
+                    {
+                        Id = bg.Genre.Id,
+                        Name = bg.Genre.Name
+                    }).ToList(),
+                    Discounts = book.Discounts.Select(d => new DiscountDto
+                    {
+                        Id = d.Id,
+                        DiscountPercentage = d.DiscountPercentage,
+                        OnSaleFlag = d.OnSaleFlag,
+                        StartDate = d.StartDate,
+                        EndDate = d.EndDate
+                    }).ToList()
+                };
+
+                return Ok(bookDetailDto);
             }
-
-            var book = await _context.Books
-                .Include(b => b.BookAuthors)
-                .ThenInclude(ba => ba.Author)
-                .Include(b => b.BookGenres)
-                .ThenInclude(bg => bg.Genre)
-                .Include(b => b.Discounts)
-                .FirstOrDefaultAsync(b => b.Id == id);
-
-            if (book == null)
+            catch (Exception ex)
             {
-                return NotFound();
+                _logger.LogError(ex, "Error in GetBook for ID {Id}: {Message}", id, ex.Message);
+                return StatusCode(500, new { message = ex.Message, stackTrace = ex.StackTrace });
             }
-
-            var bookDetailDto = new BookDetailDto
-            {
-                Id = book.Id,
-                Title = book.Title,
-                ISBN = book.ISBN,
-                Description = book.Description,
-                Price = book.Price,
-                PublicationDate = book.PublicationDate,
-                StockQuantity = book.StockQuantity,
-                Publisher = book.Publisher,
-                ImageUrl = book.ImageUrl,
-                CreatedAt = book.CreatedAt,
-                UpdatedAt = book.UpdatedAt,
-                Authors = book.BookAuthors.Select(ba => new AuthorDto
-                {
-                    Id = ba.Author.Id,
-                    Name = ba.Author.Name
-                }).ToList(),
-                Genres = book.BookGenres.Select(bg => new GenreDto
-                {
-                    Id = bg.Genre.Id,
-                    Name = bg.Genre.Name
-                }).ToList(),
-                Discounts = book.Discounts.Select(d => new DiscountDto
-                {
-                    Id = d.Id,
-                    DiscountPercentage = d.DiscountPercentage,
-                    OnSaleFlag = d.OnSaleFlag,
-                    StartDate = d.StartDate,
-                    EndDate = d.EndDate
-                }).ToList()
-            };
-
-            return Ok(bookDetailDto);
         }
 
         [HttpPost]
@@ -136,8 +147,12 @@ namespace LordofTheReads.Controllers
                     return Forbid();
                 }
 
+                // Log the received data for debugging
+                _logger.LogInformation("Received book creation request: {@BookCreateDto}", bookCreateDto);
+
                 if (!ModelState.IsValid)
                 {
+                    _logger.LogWarning("Model state is invalid: {@ModelState}", ModelState);
                     return BadRequest(ModelState);
                 }
 
@@ -359,6 +374,9 @@ namespace LordofTheReads.Controllers
                 {
                     return NotFound();
                 }
+
+                // Log the received data for debugging
+                _logger.LogInformation("Received book update request: {@BookUpdateDto}", bookUpdateDto);
 
                 // Check if ISBN is unique (if changed)
                 if (!string.IsNullOrEmpty(bookUpdateDto.ISBN) && 
