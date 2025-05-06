@@ -537,7 +537,7 @@ function Books() {
                       
                       <div className={`${viewMode === 'grid' ? 'aspect-[3/4]' : 'h-full'} bg-gray-100 flex items-center justify-center`}>
                         <img 
-                          src={book.imageUrl || `https://placehold.co/300x450?text=${encodeURIComponent(book.title)}`} 
+                          src={book.imageUrl || `https://placehold.co/300x450?text=${encodeURIComponent(book.title)}`}
                           alt={book.title} 
                           className="w-full h-full object-cover"
                           onError={(e) => {
@@ -583,7 +583,7 @@ function Books() {
                                 id: book.id,
                                 title: book.title,
                                 price: book.price || 0,
-                                coverImageUrl: book.coverImageUrl,
+                                imageUrl: book.imageUrl,
                                 quantity: 1
                               });
                             }

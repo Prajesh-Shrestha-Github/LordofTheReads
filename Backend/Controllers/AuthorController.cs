@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using LordofTheReads.Database;
 using LordofTheReads.Database.Entities;
 using System.Text.Json;
+using System.Linq;
 
 namespace LordofTheReads.Controllers
 {
@@ -25,14 +26,7 @@ namespace LordofTheReads.Controllers
         {
             try
             {
-                // Return a hardcoded list for testing
-                var authors = new[]
-                {
-                    new { Id = 1, Name = "J.K. Rowling" },
-                    new { Id = 2, Name = "George R.R. Martin" },
-                    new { Id = 3, Name = "J.R.R. Tolkien" }
-                };
-
+                var authors = _context.Authors.Select(a => new { a.Id, a.Name }).ToList();
                 return Ok(authors);
             }
             catch (Exception ex)
