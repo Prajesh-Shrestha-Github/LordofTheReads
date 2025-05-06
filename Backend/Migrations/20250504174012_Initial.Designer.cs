@@ -9,11 +9,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace LordofTheReads.Database.Migrations
+namespace LordofTheReads.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250504065039_AddCoverImageUrlToBooks")]
-    partial class AddCoverImageUrlToBooks
+    [Migration("20250504174012_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -512,6 +512,12 @@ namespace LordofTheReads.Database.Migrations
                         .HasColumnType("character varying(50)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("Username")
+                        .IsUnique();
 
                     b.ToTable("Users");
                 });

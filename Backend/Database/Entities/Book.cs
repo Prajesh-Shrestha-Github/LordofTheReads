@@ -42,6 +42,15 @@ namespace LordofTheReads.Database.Entities
         [Column("updated_at")]
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
+        // ? ADDED: Average rating for sorting/filtering
+        [Column("rating")]
+        public double Rating { get; set; } = 0;
+
+        // ? ADDED: Category for filtering (e.g. "fiction", "fantasy")
+        [StringLength(100)]
+        [Column("category")]
+        public string? Category { get; set; }
+
         // Navigation properties
         public virtual ICollection<BookAuthor> BookAuthors { get; set; } = new List<BookAuthor>();
         public virtual ICollection<BookGenre> BookGenres { get; set; } = new List<BookGenre>();
