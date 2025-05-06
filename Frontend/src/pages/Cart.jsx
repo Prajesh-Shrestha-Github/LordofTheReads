@@ -3,49 +3,44 @@ import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Minus, Plus, Trash2 } from 'lucide-react';
+import cartService from '../services/cartService';
+import { useAuth } from '../context/AuthContext';
 
 function Cart() {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     const fetchCartItems = async () => {
       try {
-        // Get cart items from localStorage
-        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+        setLoading(true);
         
-        if (cart.length === 0) {
+        // Check if user is authenticated
+        if (!isAuthenticated()) {
+          setError('Please login to view your cart');
+          setLoading(false);
+          return;
+        }
+        
+        // Get cart from database via API
+        const cart = await cartService.getCart();
+        
+        if (!cart || !cart.cartItems || cart.cartItems.length === 0) {
           setCartItems([]);
           setLoading(false);
           return;
         }
         
-        // Fetch book details for each cart item
-        const itemsWithDetails = await Promise.all(
-          cart.map(async (item) => {
-            try {
-              const response = await fetch(`http://localhost:5253/api/book/${item.bookId}`);
-              if (!response.ok) {
-                throw new Error(`Failed to fetch book with id ${item.bookId}`);
-              }
-              const book = await response.json();
-              return { ...item, book };
-            } catch (err) {
-              console.error(`Error fetching book with id ${item.bookId}:`, err);
-              return { 
-                ...item, 
-                book: { 
-                  title: 'Unknown Book', 
-                  price: 0, 
-                  authors: ['Unknown Author'] 
-                } 
-              };
-            }
-          })
-        );
+        // Transform the data structure to match component expectations
+        const formattedItems = cart.cartItems.map(item => ({
+          bookId: item.bookId,
+          quantity: item.quantity,
+          book: item.book
+        }));
         
-        setCartItems(itemsWithDetails);
+        setCartItems(formattedItems);
       } catch (err) {
         console.error('Error fetching cart items:', err);
         setError('Failed to load cart items');
@@ -55,7 +50,7 @@ function Cart() {
     };
     
     fetchCartItems();
-  }, []);
+  }, [isAuthenticated]);
 
   // Calculate subtotal
   const subtotal = cartItems.reduce((total, item) => 
@@ -65,38 +60,37 @@ function Cart() {
   const total = subtotal;
 
   // Handle quantity change
-  const updateQuantity = (bookId, newQuantity) => {
+  const updateQuantity = async (bookId, newQuantity) => {
     if (newQuantity < 1) return;
     
-    // Update in state
-    setCartItems(cartItems.map(item => 
-      item.bookId === bookId ? { ...item, quantity: newQuantity } : item
-    ));
-    
-    // Update in localStorage
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const itemIndex = cart.findIndex(item => item.bookId === bookId);
-    if (itemIndex !== -1) {
-      cart[itemIndex].quantity = newQuantity;
-      localStorage.setItem('cart', JSON.stringify(cart));
+    try {
+      // Update in database via API
+      await cartService.updateQuantity(bookId, newQuantity);
       
-      // Dispatch event to update cart count in navbar
-      window.dispatchEvent(new Event('cartUpdated'));
+      // Update in state
+      setCartItems(cartItems.map(item => 
+        item.bookId === bookId ? { ...item, quantity: newQuantity } : item
+      ));
+    } catch (err) {
+      console.error('Error updating cart item quantity:', err);
+      // Show error to user
+      alert('Failed to update item quantity. Please try again.');
     }
   };
 
   // Handle item removal
-  const removeItem = (bookId) => {
-    // Remove from state
-    setCartItems(cartItems.filter(item => item.bookId !== bookId));
-    
-    // Remove from localStorage
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const updatedCart = cart.filter(item => item.bookId !== bookId);
-    localStorage.setItem('cart', JSON.stringify(updatedCart));
-    
-    // Dispatch event to update cart count in navbar
-    window.dispatchEvent(new Event('cartUpdated'));
+  const removeItem = async (bookId) => {
+    try {
+      // Remove from database via API
+      await cartService.removeItem(bookId);
+      
+      // Remove from state
+      setCartItems(cartItems.filter(item => item.bookId !== bookId));
+    } catch (err) {
+      console.error('Error removing item from cart:', err);
+      // Show error to user
+      alert('Failed to remove item from cart. Please try again.');
+    }
   };
 
   return (
@@ -121,50 +115,46 @@ function Cart() {
         <h1 className="text-2xl font-bold mb-8 text-navy">Your Shopping Cart</h1>
 
         {loading ? (
-          <div className="text-center py-10">Loading cart items...</div>
+          <div className="text-center py-12">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-navy border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
+            <p className="mt-4 text-navy">Loading your cart...</p>
+          </div>
         ) : error ? (
-          <div className="text-center py-10 text-red-500">{error}</div>
+          <div className="bg-white rounded-lg p-6 shadow-sm text-center">
+            <p className="text-red-500 mb-4">{error}</p>
+            <Link to="/login" className="bg-navy text-white px-4 py-2 rounded-md hover:bg-gold hover:text-navy transition-colors">
+              Login
+            </Link>
+          </div>
         ) : cartItems.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-            <p className="text-gray mb-4">Your cart is empty</p>
-            <Link 
-              to="/books" 
-              className="bg-navy text-white px-4 py-2 rounded-md inline-block hover:bg-gold transition-colors"
-            >
+          <div className="bg-white rounded-lg p-6 shadow-sm text-center">
+            <p className="text-navy mb-4">Your cart is empty</p>
+            <Link to="/" className="bg-navy text-white px-4 py-2 rounded-md hover:bg-gold hover:text-navy transition-colors">
               Browse Books
             </Link>
           </div>
         ) : (
           <div className="flex flex-col lg:flex-row gap-8">
             {/* Cart Items */}
-            <div className="lg:w-2/3">
-              <div className="border-b border-gray pb-4 mb-4 hidden md:grid md:grid-cols-12 text-sm font-medium text-gray">
-                <div className="col-span-6">Product</div>
-                <div className="col-span-2 text-center">Quantity</div>
-                <div className="col-span-2 text-right">Price</div>
-                <div className="col-span-2 text-right"></div>
-              </div>
-
+            <div className="lg:w-2/3 space-y-4">
               {cartItems.map(item => (
-                <div key={item.bookId} className="border-b border-gray py-4 grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
-                  <div className="md:col-span-6 flex items-center">
-                    <div className="w-16 h-20 bg-beige mr-4 flex-shrink-0">
-                      {item.book?.coverImageUrl && (
-                        <img 
-                          src={item.book.coverImageUrl} 
-                          alt={item.book.title} 
-                          className="w-full h-full object-cover"
-                        />
-                      )}
-                    </div>
-                    <div>
-                      <h3 className="font-medium text-navy">{item.book?.title || 'Unknown Book'}</h3>
-                      <p className="text-sm text-gray">{item.book?.authors?.join(', ') || 'Unknown Author'}</p>
-                    </div>
+                <div key={item.bookId} className="bg-white rounded-lg p-4 shadow-sm grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                  <div className="md:col-span-2">
+                    <img 
+                      src={item.book?.coverImageUrl || '/placeholder-book.png'} 
+                      alt={item.book?.title || 'Book cover'} 
+                      className="w-full h-32 object-cover rounded-md"
+                    />
                   </div>
                   
-                  <div className="md:col-span-2 flex items-center justify-between md:justify-center">
-                    <span className="md:hidden text-gray">Quantity:</span>
+                  <div className="md:col-span-4">
+                    <h3 className="font-medium text-navy">{item.book?.title || 'Unknown Book'}</h3>
+                    <p className="text-sm text-gray">
+                      {item.book?.bookAuthors?.map(ba => ba.author?.name).join(', ') || 'Unknown Author'}
+                    </p>
+                  </div>
+                  
+                  <div className="md:col-span-2">
                     <div className="flex items-center border border-gray rounded-md">
                       <button 
                         onClick={() => updateQuantity(item.bookId, item.quantity - 1)}

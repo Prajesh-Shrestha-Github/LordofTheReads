@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { BookOpen, ShoppingCart, Search, Bookmark, User, LogOut, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import cartService from '../services/cartService';
+import { getBookmarkCount } from '../services/bookmarkService';
 
 function Navbar() {
   const { user, logout, isAuthenticated } = useAuth();
@@ -19,60 +21,75 @@ function Navbar() {
     setDropdownOpen(!dropdownOpen);
   };
 
-  // Update cart count whenever localStorage changes
+  // Update cart count from the database
   useEffect(() => {
-    const updateCartCount = () => {
-      try {
-        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-        const itemCount = cart.reduce((total, item) => total + item.quantity, 0);
-        setCartItemCount(itemCount);
-      } catch (error) {
-        console.error('Error reading cart from localStorage:', error);
+    const fetchCartCount = async () => {
+      if (isAuthenticated()) {
+        try {
+          const count = await cartService.getCartCount();
+          setCartItemCount(count);
+        } catch (error) {
+          console.error('Error fetching cart count:', error);
+          setCartItemCount(0);
+        }
+      } else {
         setCartItemCount(0);
       }
     };
 
-    // Initial count
-    updateCartCount();
+    // Initial fetch
+    fetchCartCount();
 
-    // Listen for storage events (when localStorage changes)
-    window.addEventListener('storage', updateCartCount);
+    // Set up polling to refresh cart count every 30 seconds
+    const intervalId = setInterval(fetchCartCount, 30000);
 
-    // Custom event for cart updates from within the same window
-    window.addEventListener('cartUpdated', updateCartCount);
+    // Listen for cart updates
+    const handleCartUpdate = () => {
+      fetchCartCount();
+    };
+
+    window.addEventListener('cartUpdated', handleCartUpdate);
 
     return () => {
-      window.removeEventListener('storage', updateCartCount);
-      window.removeEventListener('cartUpdated', updateCartCount);
+      clearInterval(intervalId);
+      window.removeEventListener('cartUpdated', handleCartUpdate);
     };
-  }, []);
+  }, [isAuthenticated]);
 
-  // Update bookmark count whenever localStorage changes
+  // Update bookmark count from the database
   useEffect(() => {
-    const updateBookmarkCount = () => {
-      try {
-        const bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]');
-        setBookmarkCount(bookmarks.length);
-      } catch (error) {
-        console.error('Error reading bookmarks from localStorage:', error);
+    const fetchBookmarkCount = async () => {
+      if (isAuthenticated()) {
+        try {
+          const count = await getBookmarkCount();
+          setBookmarkCount(count);
+        } catch (error) {
+          console.error('Error fetching bookmark count:', error);
+          setBookmarkCount(0);
+        }
+      } else {
         setBookmarkCount(0);
       }
     };
 
-    // Initial count
-    updateBookmarkCount();
+    // Initial fetch
+    fetchBookmarkCount();
 
-    // Listen for storage events (when localStorage changes)
-    window.addEventListener('storage', updateBookmarkCount);
+    // Set up polling to refresh bookmark count every 30 seconds
+    const intervalId = setInterval(fetchBookmarkCount, 30000);
 
-    // Custom event for bookmark updates from within the same window
-    window.addEventListener('bookmarksUpdated', updateBookmarkCount);
+    // Also listen for bookmark updates
+    const handleBookmarkUpdate = () => {
+      fetchBookmarkCount();
+    };
+
+    window.addEventListener('bookmarksUpdated', handleBookmarkUpdate);
 
     return () => {
-      window.removeEventListener('storage', updateBookmarkCount);
-      window.removeEventListener('bookmarksUpdated', updateBookmarkCount);
+      clearInterval(intervalId);
+      window.removeEventListener('bookmarksUpdated', handleBookmarkUpdate);
     };
-  }, []);
+  }, [isAuthenticated]);
 
   return (
     <header className="bg-white py-3 border-b border-gray">

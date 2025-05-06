@@ -1,158 +1,157 @@
 using LordofTheReads.Database;
 using LordofTheReads.Database.Entities;
+using LordofTheReads.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace LordofTheReads.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize] // Require authentication for all cart operations
     public class CartController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly ICartService _cartService;
         private readonly ILogger<CartController> _logger;
 
-        public CartController(AppDbContext context, ILogger<CartController> logger)
+        public CartController(ICartService cartService, ILogger<CartController> logger)
         {
-            _context = context;
+            _cartService = cartService;
             _logger = logger;
         }
 
-        // For demo purposes, we'll use a fixed user ID
-        private const int DemoUserId = 1;
+        // Helper method to get the current user's ID from the JWT token
+        private int GetUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            {
+                throw new UnauthorizedAccessException("User not authenticated or invalid user ID");
+            }
+            return userId;
+        }
 
         // Get cart items
         [HttpGet]
         public async Task<ActionResult<Cart>> GetCart()
         {
-            var cart = await GetOrCreateCart(DemoUserId);
-
-            // Include book details in cart items
-            var cartWithItems = await _context.Carts
-                .Include(c => c.CartItems)
-                .ThenInclude(ci => ci.Book)
-                .FirstOrDefaultAsync(c => c.Id == cart.Id);
-
-            return Ok(cartWithItems);
+            try
+            {
+                var userId = GetUserId();
+                var cart = await _cartService.GetCartWithItemsAsync(userId);
+                return Ok(cart);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving cart");
+                return StatusCode(500, "An error occurred while retrieving your cart");
+            }
         }
 
         // Add item to cart
         [HttpPost("items")]
         public async Task<ActionResult> AddToCart([FromBody] AddToCartRequest request)
         {
-            var book = await _context.Books.FindAsync(request.BookId);
-            if (book == null) return NotFound("Book not found");
-
-            var cart = await GetOrCreateCart(DemoUserId);
-
-            var existingItem = await _context.CartItems
-                .FirstOrDefaultAsync(ci => ci.CartId == cart.Id && ci.BookId == request.BookId);
-
-            if (existingItem != null)
+            try
             {
-                existingItem.Quantity += request.Quantity;
+                var userId = GetUserId();
+                await _cartService.AddToCartAsync(userId, request.BookId, request.Quantity);
+                return Ok();
             }
-            else
+            catch (UnauthorizedAccessException ex)
             {
-                var cartItem = new CartItem
-                {
-                    CartId = cart.Id,
-                    BookId = request.BookId,
-                    Quantity = request.Quantity
-                };
-                _context.CartItems.Add(cartItem);
+                return Unauthorized(ex.Message);
             }
-
-            cart.UpdatedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
-
-            return Ok();
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding item to cart");
+                return StatusCode(500, "An error occurred while adding the item to your cart");
+            }
         }
 
         // Update cart item quantity
         [HttpPut("items/{bookId}")]
         public async Task<ActionResult> UpdateCartItem(int bookId, [FromBody] UpdateCartItemRequest request)
         {
-            var cart = await GetOrCreateCart(DemoUserId);
-
-            var cartItem = await _context.CartItems
-                .FirstOrDefaultAsync(ci => ci.CartId == cart.Id && ci.BookId == bookId);
-
-            if (cartItem == null) return NotFound("Item not in cart");
-
-            if (request.Quantity <= 0)
+            try
             {
-                _context.CartItems.Remove(cartItem);
+                var userId = GetUserId();
+                await _cartService.UpdateCartItemAsync(userId, bookId, request.Quantity);
+                return Ok();
             }
-            else
+            catch (UnauthorizedAccessException ex)
             {
-                cartItem.Quantity = request.Quantity;
+                return Unauthorized(ex.Message);
             }
-
-            cart.UpdatedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
-
-            return Ok();
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating cart item");
+                return StatusCode(500, "An error occurred while updating the cart item");
+            }
         }
 
         // Remove item from cart
         [HttpDelete("items/{bookId}")]
         public async Task<ActionResult> RemoveFromCart(int bookId)
         {
-            var cart = await GetOrCreateCart(DemoUserId);
-
-            var cartItem = await _context.CartItems
-                .FirstOrDefaultAsync(ci => ci.CartId == cart.Id && ci.BookId == bookId);
-
-            if (cartItem == null) return NotFound("Item not in cart");
-
-            _context.CartItems.Remove(cartItem);
-            cart.UpdatedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
-
-            return Ok();
+            try
+            {
+                var userId = GetUserId();
+                await _cartService.RemoveFromCartAsync(userId, bookId);
+                return Ok();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(ex.Message);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error removing item from cart");
+                return StatusCode(500, "An error occurred while removing the item from your cart");
+            }
         }
 
         // Clear cart
         [HttpDelete]
         public async Task<ActionResult> ClearCart()
         {
-            var cart = await GetOrCreateCart(DemoUserId);
-
-            var cartItems = await _context.CartItems
-                .Where(ci => ci.CartId == cart.Id)
-                .ToListAsync();
-
-            _context.CartItems.RemoveRange(cartItems);
-            cart.UpdatedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
-
-            return Ok();
-        }
-
-        // Helper method to get or create a cart for a user
-        private async Task<Cart> GetOrCreateCart(int userId)
-        {
-            var cart = await _context.Carts
-                .FirstOrDefaultAsync(c => c.UserId == userId);
-
-            if (cart == null)
+            try
             {
-                cart = new Cart
-                {
-                    UserId = userId,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                };
-                _context.Carts.Add(cart);
-                await _context.SaveChangesAsync();
+                var userId = GetUserId();
+                await _cartService.ClearCartAsync(userId);
+                return Ok();
             }
-
-            return cart;
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error clearing cart");
+                return StatusCode(500, "An error occurred while clearing your cart");
+            }
         }
     }
 
