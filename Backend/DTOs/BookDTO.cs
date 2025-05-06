@@ -16,6 +16,8 @@ namespace LordofTheReads.DTOs
         public string? Publisher { get; set; }
         public List<string> Authors { get; set; } = new List<string>();
         public List<string> Genres { get; set; } = new List<string>();
-        public string CoverImageUrl { get; set; } = "https://via.placeholder.com/300x450";
+        public string? ImageUrl { get; set; } = "https://placehold.co/300x450?text=No+Cover";
+        public DateTime? CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
     }
 }

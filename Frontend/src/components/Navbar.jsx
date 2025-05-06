@@ -1,25 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { BookOpen, ShoppingCart, Search, Bookmark, User, LogOut, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import cartService from '../services/cartService';
 import { getBookmarkCount } from '../services/bookmarkService';
 
 function Navbar() {
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated, hasRole } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const navigate = useNavigate();
   const [cartItemCount, setCartItemCount] = useState(0);
   const [bookmarkCount, setBookmarkCount] = useState(0);
+  const [showNavbar, setShowNavbar] = useState(true);
   
   const handleLogout = () => {
     logout();
-    // Optionally redirect to home or login page
-    window.location.href = '/';
+    navigate('/login');
   };
   
   const toggleDropdown = () => {
     setDropdownOpen(!dropdownOpen);
   };
+
+  // Check if user is admin and update showNavbar state
+  useEffect(() => {
+    if (isAuthenticated() && hasRole('Admin')) {
+      setShowNavbar(false);
+    } else {
+      setShowNavbar(true);
+    }
+  }, [isAuthenticated, hasRole]);
 
   // Update cart count from the database
   useEffect(() => {
@@ -90,6 +100,11 @@ function Navbar() {
       window.removeEventListener('bookmarksUpdated', handleBookmarkUpdate);
     };
   }, [isAuthenticated]);
+
+  // If we shouldn't show the navbar, return null but after all hooks have been called
+  if (!showNavbar) {
+    return null;
+  }
 
   return (
     <header className="bg-white py-3 border-b border-gray">

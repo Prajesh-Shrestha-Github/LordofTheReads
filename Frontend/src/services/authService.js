@@ -23,6 +23,55 @@ const authService = {
     return localStorage.getItem('token');
   },
 
+  // Validate the current token
+  validateToken: () => {
+    const token = localStorage.getItem('token');
+    if (!token) return false;
+    
+    try {
+      const tokenData = authService.parseJwt(token);
+      // Check if token is expired
+      if (!tokenData || !tokenData.exp) return false;
+      
+      const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
+      const timeToExpiry = tokenData.exp - currentTime; // Time remaining in seconds
+      
+      // If the token is expired, clean up immediately
+      if (timeToExpiry <= 0) {
+        console.log('Token expired - clearing session');
+        authService.clearSession();
+        return false;
+      }
+      
+      // If token is close to expiry (less than 1 minute), force refreshing soon
+      if (timeToExpiry < 60) {
+        console.log(`Token expiring soon (${timeToExpiry}s remaining)`);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error validating token:', error);
+      authService.clearSession();
+      return false;
+    }
+  },
+  
+  // Clear all session data
+  clearSession: () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('loginTime');
+    // Clear any other auth-related data
+    sessionStorage.removeItem('authState');
+    
+    // Force a reload of the application to clear any in-memory auth state
+    if (typeof window !== 'undefined') {
+      console.log('Session cleared - forcing application refresh');
+      // This is commented out to avoid unexpected page refreshes during development
+      // window.location.reload();
+    }
+  },
+
   login: async (credentials) => {
     try {
       const response = await api.post('/Auth/login', {
@@ -33,7 +82,17 @@ const authService = {
       // Store the JWT token in localStorage
       if (response.data && response.data.token) {
         localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data));
+        
+        // Parse the JWT token to extract role information
+        const tokenData = authService.parseJwt(response.data.token);
+        const userData = { ...response.data };
+        
+        // Add role from token claims (the claim with name "role" contains the role as a number)
+        if (tokenData && tokenData.role !== undefined) {
+          userData.role = parseInt(tokenData.role, 10);
+        }
+        
+        localStorage.setItem('user', JSON.stringify(userData));
         localStorage.setItem('loginTime', Date.now().toString());
       } else {
         throw new Error('Invalid response from server. No token received.');
@@ -107,14 +166,12 @@ const authService = {
   
   // Logout - clear stored tokens
   logout: () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('loginTime');
+    authService.clearSession();
   },
   
   // Check if user is logged in
   isAuthenticated: () => {
-    return !!localStorage.getItem('token');
+    return authService.validateToken();
   },
   
   // Get current user data

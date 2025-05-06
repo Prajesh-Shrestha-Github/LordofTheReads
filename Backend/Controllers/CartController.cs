@@ -30,9 +30,16 @@ namespace LordofTheReads.Controllers
         private int GetUserId()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            if (string.IsNullOrEmpty(userIdClaim))
             {
-                throw new UnauthorizedAccessException("User not authenticated or invalid user ID");
+                _logger.LogError("User ID claim not found in token");
+                throw new UnauthorizedAccessException("User not authenticated or missing user ID claim");
+            }
+            
+            if (!int.TryParse(userIdClaim, out int userId))
+            {
+                _logger.LogError($"Invalid user ID format in token: {userIdClaim}");
+                throw new UnauthorizedAccessException("Invalid user ID format in token");
             }
             return userId;
         }

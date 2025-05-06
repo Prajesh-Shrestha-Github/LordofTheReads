@@ -30,12 +30,28 @@ namespace LordofTheReads.Controllers
         {
             try
             {
-                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdClaim))
+                {
+                    return Unauthorized("User ID claim not found in token");
+                }
+
+                if (!int.TryParse(userIdClaim, out int userId))
+                {
+                    return BadRequest("Invalid user ID format in token");
+                }
+
                 var bookmarks = await _bookmarkService.GetBookmarksAsync(userId);
                 return Ok(bookmarks);
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"BookmarkController.GetBookmarks error: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
@@ -46,7 +62,17 @@ namespace LordofTheReads.Controllers
         {
             try
             {
-                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdClaim))
+                {
+                    return Unauthorized("User ID claim not found in token");
+                }
+
+                if (!int.TryParse(userIdClaim, out int userId))
+                {
+                    return BadRequest("Invalid user ID format in token");
+                }
+
                 var bookmark = await _bookmarkService.AddBookmarkAsync(userId, bookId);
                 return CreatedAtAction(nameof(GetBookmarks), new { id = bookmark.Id }, bookmark);
             }
@@ -56,6 +82,12 @@ namespace LordofTheReads.Controllers
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"BookmarkController.AddBookmark error: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
@@ -66,7 +98,17 @@ namespace LordofTheReads.Controllers
         {
             try
             {
-                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdClaim))
+                {
+                    return Unauthorized("User ID claim not found in token");
+                }
+
+                if (!int.TryParse(userIdClaim, out int userId))
+                {
+                    return BadRequest("Invalid user ID format in token");
+                }
+
                 await _bookmarkService.RemoveBookmarkAsync(userId, bookId);
                 return NoContent();
             }
@@ -76,6 +118,12 @@ namespace LordofTheReads.Controllers
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"BookmarkController.RemoveBookmark error: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
@@ -86,12 +134,28 @@ namespace LordofTheReads.Controllers
         {
             try
             {
-                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdClaim))
+                {
+                    return Unauthorized("User ID claim not found in token");
+                }
+
+                if (!int.TryParse(userIdClaim, out int userId))
+                {
+                    return BadRequest("Invalid user ID format in token");
+                }
+
                 var isBookmarked = await _bookmarkService.IsBookmarkedAsync(userId, bookId);
                 return Ok(isBookmarked);
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"BookmarkController.IsBookmarked error: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
@@ -102,12 +166,28 @@ namespace LordofTheReads.Controllers
         {
             try
             {
-                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdClaim))
+                {
+                    return Unauthorized("User ID claim not found in token");
+                }
+
+                if (!int.TryParse(userIdClaim, out int userId))
+                {
+                    return BadRequest("Invalid user ID format in token");
+                }
+
                 await _bookmarkService.ClearBookmarksAsync(userId);
                 return NoContent();
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"BookmarkController.ClearBookmarks error: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }

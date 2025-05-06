@@ -66,10 +66,16 @@ namespace LordofTheReads.Database.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
@@ -85,12 +91,7 @@ namespace LordofTheReads.Database.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("CoverImageUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("cover_image_url");
-
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTime?>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
@@ -100,6 +101,11 @@ namespace LordofTheReads.Database.Migrations
                     b.Property<string>("ISBN")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
+
+                    b.Property<string>("ImageUrl")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("image_url");
 
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(10, 2)");
@@ -121,7 +127,7 @@ namespace LordofTheReads.Database.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<DateTime>("UpdatedAt")
+                    b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
@@ -315,10 +321,18 @@ namespace LordofTheReads.Database.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("CreatedAt");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("UpdatedAt");
 
                     b.HasKey("Id");
 

@@ -215,7 +215,7 @@ function BookDetails() {
                 </div>
               )}
               <img 
-                src={book.coverImageUrl || '/placeholder-book.png'} 
+                src={book.imageUrl || '/placeholder-book.png'} 
                 alt={book.title} 
                 className="w-full h-auto object-cover"
               />

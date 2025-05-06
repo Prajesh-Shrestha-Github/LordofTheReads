@@ -1,13 +1,13 @@
 // Backend/Services/IBookService.cs
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using LordofTheReads.DTOs;
+using LordofTheReads.DTOs.Book;
 
 namespace LordofTheReads.Services
 {
     public interface IBookService
     {
-        Task<IEnumerable<BookDTO>> GetBooksAsync();
-        Task<BookDTO> GetBookByIdAsync(int id);
+        Task<IEnumerable<BookDto>> GetBooksAsync();
+        Task<BookDto> GetBookByIdAsync(int id);
     }
 }

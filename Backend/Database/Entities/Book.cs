@@ -31,16 +31,22 @@ namespace LordofTheReads.Database.Entities
 
         [StringLength(100)]
         public string? Publisher { get; set; }
+        
+        [StringLength(255)]
+        [Column("image_url")]
+        public string? ImageUrl { get; set; }
 
-        [StringLength(500)]
-        [Column("cover_image_url")]
-        public string? CoverImageUrl { get; set; }
+        // Temporarily comment out this property until we add the column to the database
+        // [StringLength(500)]
+        // [Column("cover_image_url")]
+        // public string? CoverImageUrl { get; set; }
 
+        // Make timestamp fields nullable to avoid issues with database mismatches
         [Column("created_at")]
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
 
         [Column("updated_at")]
-        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? UpdatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation properties
         public virtual ICollection<BookAuthor> BookAuthors { get; set; } = new List<BookAuthor>();
