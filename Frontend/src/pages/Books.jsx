@@ -517,8 +517,8 @@ function Books() {
             {!loading && !error && filteredBooks.length > 0 && (
               <div className={viewMode === 'grid' ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" : "space-y-4"}>
                 {currentBooks.map(book => (
-                  <div key={book.id} className={`bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow ${viewMode === 'list' ? 'flex' : ''}`}>
-                    <Link to={`/book/${book.id}`} className={`relative ${viewMode === 'list' ? 'w-1/4 min-w-[100px]' : ''}`}>
+                  <div key={book.id} className={`bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow ${viewMode === 'list' ? 'flex' : ''} relative`}>
+                    <Link to={`/book/${book.id}`} className={`${viewMode === 'list' ? 'w-1/4 min-w-[100px]' : ''} relative`}>
                       {/* Bestseller Tag */}
                       {book.rating > 4 && (
                         <div className="absolute top-0 left-0 bg-gold text-navy text-xs font-bold px-2 py-1 z-10">
@@ -538,7 +538,7 @@ function Books() {
                     {/* Bookmark Button */}
                     <button 
                       onClick={() => handleBookmarkToggle(book)}
-                      className="absolute top-2 right-2 bg-white p-1.5 rounded-full shadow-sm hover:bg-gray-100 transition-colors"
+                      className="absolute top-2 right-2 bg-white p-1.5 rounded-full shadow-sm hover:bg-gold hover:text-white transition-colors z-10"
                     >
                       <Bookmark className="h-4 w-4 text-navy" fill={bookmarkStates[book.id] ? 'currentColor' : 'none'} />
                     </button>

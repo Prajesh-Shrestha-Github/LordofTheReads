@@ -151,7 +151,7 @@ function Navbar() {
             <div className="relative">
               <button 
                 onClick={toggleDropdown}
-                className="flex items-center text-navy gap-1 hover:text-gold transition-colors"
+                className="flex items-center gap-1 bg-navy text-white px-2 py-1 rounded-md hover:bg-gold hover:text-navy transition-colors"
               >
                 <User className="h-5 w-5" />
                 <span className="text-xs hidden sm:inline">{user?.firstName || 'User'}</span>
