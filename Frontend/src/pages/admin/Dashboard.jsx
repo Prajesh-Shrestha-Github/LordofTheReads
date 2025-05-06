@@ -1,21 +1,42 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { bookService, discountService, announcementService } from '../../services/adminService';
-import { Book, ShoppingCart, Users, BellRing, Percent } from 'lucide-react';
+import { Book, ShoppingCart, Users, BellRing, Percent, TrendingUp, Package, Plus, ListFilter } from 'lucide-react';
 
-const StatCard = ({ title, value, icon, color }) => {
+const StatCard = ({ title, value, icon, color, bgColor, borderColor, trend }) => {
   return (
-    <div className={`bg-white rounded-lg shadow-md p-6 ${color}`}>
+    <div className={`bg-white rounded-lg shadow-sm p-6 border-l-4 ${borderColor}`}>
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-gray-500">{title}</p>
-          <h3 className="text-3xl font-bold mt-1">{value}</h3>
+          <h3 className="text-3xl font-bold mt-1 text-gray-800">{value}</h3>
+          {trend && (
+            <p className={`text-xs flex items-center mt-2 ${trend.includes('+') ? 'text-teal-500' : 'text-orange-500'}`}>
+              <TrendingUp size={14} className="mr-1" />
+              {trend}
+            </p>
+          )}
         </div>
-        <div className={`p-3 rounded-full ${color.replace('border-l-4', 'bg-opacity-10 text-opacity-100')}`}>
+        <div className={`p-3 rounded-full ${bgColor} ${color}`}>
           {icon}
         </div>
       </div>
     </div>
+  );
+};
+
+const ActionCard = ({ title, description, icon, color, linkTo }) => {
+  return (
+    <Link 
+      to={linkTo}
+      className="block bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-all duration-200 border border-gray-100 hover:border-teal-100"
+    >
+      <div className={`w-12 h-12 rounded-lg mb-4 flex items-center justify-center ${color}`}>
+        {icon}
+      </div>
+      <h3 className="text-lg font-semibold mb-2 text-gray-800">{title}</h3>
+      <p className="text-sm text-gray-500">{description}</p>
+    </Link>
   );
 };
 
@@ -43,8 +64,7 @@ const Dashboard = () => {
           }));
         } catch (err) {
           console.error('Error fetching books:', err);
-          console.error('Error response:', err.response?.data);
-          setError('Failed to load books. Error: ' + (err.response?.data?.message || err.message));
+          setError('Failed to load books data');
         }
         
         // Fetch active discounts
@@ -86,93 +106,85 @@ const Dashboard = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-red-100 text-red-700 p-4 rounded-md">
-        <p>{error}</p>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
       </div>
     );
   }
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-6">Dashboard</h2>
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">Welcome Back, Administrator</h2>
+          <p className="text-gray-500 mt-1">Here's what's happening with your bookstore today.</p>
+        </div>
+        <div className="mt-4 md:mt-0">
+          <div className="flex space-x-3">
+            <Link 
+              to="/admin/books/create" 
+              className="inline-flex items-center px-4 py-2 bg-teal-500 text-white text-sm font-medium rounded-md hover:bg-teal-600 transition-colors"
+            >
+              <Plus size={16} className="mr-2" />
+              Add New Book
+            </Link>
+          </div>
+        </div>
+      </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <StatCard 
           title="Total Books" 
           value={stats.totalBooks} 
-          icon={<Book className="text-blue-500" size={24} />} 
-          color="border-l-4 border-blue-500"
+          icon={<Book className="text-teal-500" size={24} />}
+          color="text-teal-500"
+          bgColor="bg-teal-50"
+          borderColor="border-teal-500"
+          trend="+5% from last month"
         />
         <StatCard 
           title="Active Discounts" 
           value={stats.activeDiscounts} 
-          icon={<Percent className="text-green-500" size={24} />} 
-          color="border-l-4 border-green-500"
+          icon={<Percent className="text-teal-500" size={24} />}
+          color="text-teal-500"
+          bgColor="bg-teal-50"
+          borderColor="border-teal-500"
         />
         <StatCard 
           title="Active Announcements" 
           value={stats.activeAnnouncements} 
-          icon={<BellRing className="text-yellow-500" size={24} />} 
-          color="border-l-4 border-yellow-500"
+          icon={<BellRing className="text-orange-500" size={24} />}
+          color="text-orange-500"
+          bgColor="bg-orange-50"
+          borderColor="border-orange-500"
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
-          <div className="space-y-2">
-            <Link 
-              to="/admin/books" 
-              className="block w-full text-left px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-md transition"
-            >
-              Manage Books
-            </Link>
-            <Link 
-              to="/admin/discounts" 
-              className="block w-full text-left px-4 py-2 bg-green-50 text-green-700 hover:bg-green-100 rounded-md transition"
-            >
-              Manage Discounts
-            </Link>
-            <Link 
-              to="/admin/announcements" 
-              className="block w-full text-left px-4 py-2 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 rounded-md transition"
-            >
-              Manage Announcements
-            </Link>
-          </div>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold mb-4">System Info</h3>
-          <ul className="space-y-2 text-gray-600">
-            <li className="flex justify-between">
-              <span>Application:</span>
-              <span className="font-medium">Lord of The Reads</span>
-            </li>
-            <li className="flex justify-between">
-              <span>Environment:</span>
-              <span className="font-medium">Development</span>
-            </li>
-            <li className="flex justify-between">
-              <span>API Status:</span>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                Online
-              </span>
-            </li>
-            <li className="flex justify-between">
-              <span>Backend URL:</span>
-              <span className="font-medium">http://localhost:5253</span>
-            </li>
-          </ul>
-        </div>
+      <h3 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <ActionCard 
+          title="Manage Books" 
+          description="Add, edit, or remove books from your inventory" 
+          icon={<Book size={24} className="text-white" />}
+          color="bg-teal-500"
+          linkTo="/admin/books"
+        />
+        <ActionCard 
+          title="Manage Discounts" 
+          description="Create and manage promotional discounts" 
+          icon={<Percent size={24} className="text-white" />}
+          color="bg-teal-500"
+          linkTo="/admin/discounts"
+        />
+        <ActionCard 
+          title="Manage Announcements" 
+          description="Create and publish announcements for users" 
+          icon={<BellRing size={24} className="text-white" />}
+          color="bg-orange-500"
+          linkTo="/admin/announcements"
+        />
       </div>
+      
+      
     </div>
   );
 };

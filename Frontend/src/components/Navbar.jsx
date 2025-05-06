@@ -1,21 +1,27 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { BookOpen, ShoppingCart, Search, User, LogOut, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 function Navbar() {
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated, hasRole } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const navigate = useNavigate();
   
   const handleLogout = () => {
     logout();
-    // Optionally redirect to home or login page
-    window.location.href = '/';
+    navigate('/login');
   };
   
   const toggleDropdown = () => {
     setDropdownOpen(!dropdownOpen);
   };
+
+  // If user is admin, don't show the regular navbar
+  if (isAuthenticated() && hasRole('Admin')) {
+    return null;
+  }
+  
   return (
     <header className="bg-white py-3 border-b border-gray">
       <div className="container mx-auto px-4 flex items-center">

@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using LordofTheReads.DTOs.Author;
+using LordofTheReads.DTOs.Genre;
 
 namespace LordofTheReads.DTOs.Book
 {
@@ -33,5 +35,10 @@ namespace LordofTheReads.DTOs.Book
         public List<int>? AuthorIds { get; set; }
         
         public List<int>? GenreIds { get; set; }
+        
+        // New properties for creating authors and genres directly
+        public List<AuthorCreateDto>? NewAuthors { get; set; }
+        
+        public List<GenreCreateDto>? NewGenres { get; set; }
     }
 }

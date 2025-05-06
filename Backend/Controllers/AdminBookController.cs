@@ -1,6 +1,8 @@
 using LordofTheReads.Database;
 using LordofTheReads.Database.Entities;
 using LordofTheReads.DTOs.Book;
+using LordofTheReads.DTOs.Author;
+using LordofTheReads.DTOs.Genre;
 using LordofTheReads.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -147,15 +149,95 @@ namespace LordofTheReads.Controllers
                     return BadRequest(ModelState);
                 }
 
+                // Process new authors if provided
+                List<int> allAuthorIds = bookCreateDto.AuthorIds ?? new List<int>();
+                if (bookCreateDto.NewAuthors != null && bookCreateDto.NewAuthors.Any())
+                {
+                    foreach (var newAuthor in bookCreateDto.NewAuthors)
+                    {
+                        // Skip empty author names
+                        if (string.IsNullOrWhiteSpace(newAuthor.Name))
+                            continue;
+                            
+                        // Check if an author with the same name already exists
+                        var existingAuthor = await _context.Authors
+                            .FirstOrDefaultAsync(a => a.Name.ToLower() == newAuthor.Name.ToLower().Trim());
+                        
+                        if (existingAuthor != null)
+                        {
+                            // Use existing author
+                            if (!allAuthorIds.Contains(existingAuthor.Id))
+                            {
+                                allAuthorIds.Add(existingAuthor.Id);
+                            }
+                        }
+                        else
+                        {
+                            // Create new author
+                            var author = new Author
+                            {
+                                Name = newAuthor.Name.Trim(),
+                                CreatedAt = DateTime.UtcNow,
+                                UpdatedAt = DateTime.UtcNow
+                            };
+                            
+                            _context.Authors.Add(author);
+                            await _context.SaveChangesAsync();
+                            
+                            allAuthorIds.Add(author.Id);
+                        }
+                    }
+                }
+
+                // Process new genres if provided
+                List<int> allGenreIds = bookCreateDto.GenreIds ?? new List<int>();
+                if (bookCreateDto.NewGenres != null && bookCreateDto.NewGenres.Any())
+                {
+                    foreach (var newGenre in bookCreateDto.NewGenres)
+                    {
+                        // Skip empty genre names
+                        if (string.IsNullOrWhiteSpace(newGenre.Name))
+                            continue;
+                            
+                        // Check if a genre with the same name already exists
+                        var existingGenre = await _context.Genres
+                            .FirstOrDefaultAsync(g => g.Name.ToLower() == newGenre.Name.ToLower().Trim());
+                        
+                        if (existingGenre != null)
+                        {
+                            // Use existing genre
+                            if (!allGenreIds.Contains(existingGenre.Id))
+                            {
+                                allGenreIds.Add(existingGenre.Id);
+                            }
+                        }
+                        else
+                        {
+                            // Create new genre
+                            var genre = new Genre
+                            {
+                                Name = newGenre.Name.Trim(),
+                                CreatedAt = DateTime.UtcNow,
+                                UpdatedAt = DateTime.UtcNow
+                            };
+                            
+                            _context.Genres.Add(genre);
+                            await _context.SaveChangesAsync();
+                            
+                            allGenreIds.Add(genre.Id);
+                        }
+                    }
+                }
+
                 // Validate that the authors exist
-                if (bookCreateDto.AuthorIds != null && bookCreateDto.AuthorIds.Any())
+                if (allAuthorIds.Any())
                 {
                     var existingAuthorIds = await _context.Authors
-                        .Where(a => bookCreateDto.AuthorIds.Contains(a.Id))
+                        .Where(a => allAuthorIds.Contains(a.Id))
                         .Select(a => a.Id)
                         .ToListAsync();
 
-                    var missingAuthorIds = bookCreateDto.AuthorIds
+                    var missingAuthorIds = allAuthorIds
                         .Except(existingAuthorIds)
                         .ToList();
 
@@ -167,14 +249,14 @@ namespace LordofTheReads.Controllers
                 }
 
                 // Validate that the genres exist
-                if (bookCreateDto.GenreIds != null && bookCreateDto.GenreIds.Any())
+                if (allGenreIds.Any())
                 {
                     var existingGenreIds = await _context.Genres
-                        .Where(g => bookCreateDto.GenreIds.Contains(g.Id))
+                        .Where(g => allGenreIds.Contains(g.Id))
                         .Select(g => g.Id)
                         .ToListAsync();
 
-                    var missingGenreIds = bookCreateDto.GenreIds
+                    var missingGenreIds = allGenreIds
                         .Except(existingGenreIds)
                         .ToList();
 
@@ -206,9 +288,9 @@ namespace LordofTheReads.Controllers
                 await _context.SaveChangesAsync();
 
                 // Add authors if provided
-                if (bookCreateDto.AuthorIds != null && bookCreateDto.AuthorIds.Any())
+                if (allAuthorIds.Any())
                 {
-                    foreach (var authorId in bookCreateDto.AuthorIds)
+                    foreach (var authorId in allAuthorIds)
                     {
                         _context.BookAuthors.Add(new BookAuthor
                         {
@@ -220,9 +302,9 @@ namespace LordofTheReads.Controllers
                 }
 
                 // Add genres if provided
-                if (bookCreateDto.GenreIds != null && bookCreateDto.GenreIds.Any())
+                if (allGenreIds.Any())
                 {
-                    foreach (var genreId in bookCreateDto.GenreIds)
+                    foreach (var genreId in allGenreIds)
                     {
                         _context.BookGenres.Add(new BookGenre
                         {
@@ -260,133 +342,229 @@ namespace LordofTheReads.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateBook(int id, BookUpdateDto bookUpdateDto)
         {
-            // Check if user is admin
-            if (!await _adminAuthService.IsAdmin(User))
+            try
             {
-                return Forbid();
-            }
-
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            var book = await _context.Books.FindAsync(id);
-            if (book == null)
-            {
-                return NotFound();
-            }
-
-            // Check if ISBN is unique if provided and different from current
-            if (!string.IsNullOrEmpty(bookUpdateDto.ISBN) && 
-                bookUpdateDto.ISBN != book.ISBN && 
-                await _context.Books.AnyAsync(b => b.ISBN == bookUpdateDto.ISBN))
-            {
-                ModelState.AddModelError("ISBN", "ISBN must be unique");
-                return BadRequest(ModelState);
-            }
-
-            // Validate that the authors exist
-            if (bookUpdateDto.AuthorIds != null && bookUpdateDto.AuthorIds.Any())
-            {
-                var existingAuthorIds = await _context.Authors
-                    .Where(a => bookUpdateDto.AuthorIds.Contains(a.Id))
-                    .Select(a => a.Id)
-                    .ToListAsync();
-
-                var missingAuthorIds = bookUpdateDto.AuthorIds
-                    .Except(existingAuthorIds)
-                    .ToList();
-
-                if (missingAuthorIds.Any())
+                // Check if user is admin
+                if (!await _adminAuthService.IsAdmin(User))
                 {
-                    ModelState.AddModelError("AuthorIds", $"The following author IDs do not exist: {string.Join(", ", missingAuthorIds)}");
+                    return Forbid();
+                }
+
+                var book = await _context.Books
+                    .Include(b => b.BookAuthors)
+                    .Include(b => b.BookGenres)
+                    .FirstOrDefaultAsync(b => b.Id == id);
+
+                if (book == null)
+                {
+                    return NotFound();
+                }
+
+                // Check if ISBN is unique (if changed)
+                if (!string.IsNullOrEmpty(bookUpdateDto.ISBN) && 
+                    bookUpdateDto.ISBN != book.ISBN && 
+                    await _context.Books.AnyAsync(b => b.ISBN == bookUpdateDto.ISBN))
+                {
+                    ModelState.AddModelError("ISBN", "ISBN must be unique");
                     return BadRequest(ModelState);
                 }
-            }
 
-            // Validate that the genres exist
-            if (bookUpdateDto.GenreIds != null && bookUpdateDto.GenreIds.Any())
-            {
-                var existingGenreIds = await _context.Genres
-                    .Where(g => bookUpdateDto.GenreIds.Contains(g.Id))
-                    .Select(g => g.Id)
-                    .ToListAsync();
+                // Update book properties
+                book.Title = bookUpdateDto.Title;
+                book.ISBN = bookUpdateDto.ISBN;
+                book.Description = bookUpdateDto.Description;
+                book.Price = bookUpdateDto.Price;
+                book.PublicationDate = bookUpdateDto.PublicationDate;
+                book.StockQuantity = bookUpdateDto.StockQuantity;
+                book.Publisher = bookUpdateDto.Publisher;
+                book.ImageUrl = bookUpdateDto.ImageUrl;
+                book.UpdatedAt = DateTime.UtcNow;
 
-                var missingGenreIds = bookUpdateDto.GenreIds
-                    .Except(existingGenreIds)
-                    .ToList();
-
-                if (missingGenreIds.Any())
+                // Process new authors if provided
+                List<int> allAuthorIds = bookUpdateDto.AuthorIds ?? new List<int>();
+                if (bookUpdateDto.NewAuthors != null && bookUpdateDto.NewAuthors.Any())
                 {
-                    ModelState.AddModelError("GenreIds", $"The following genre IDs do not exist: {string.Join(", ", missingGenreIds)}");
-                    return BadRequest(ModelState);
-                }
-            }
-
-            // Update the book properties
-            book.Title = bookUpdateDto.Title;
-            book.ISBN = bookUpdateDto.ISBN;
-            book.Description = bookUpdateDto.Description;
-            book.Price = bookUpdateDto.Price;
-            book.PublicationDate = bookUpdateDto.PublicationDate.HasValue 
-                ? DateTime.SpecifyKind(bookUpdateDto.PublicationDate.Value, DateTimeKind.Utc) 
-                : null;
-            book.StockQuantity = bookUpdateDto.StockQuantity;
-            book.Publisher = bookUpdateDto.Publisher;
-            book.ImageUrl = bookUpdateDto.ImageUrl;
-            book.UpdatedAt = DateTime.UtcNow;
-
-            // Update authors if provided
-            if (bookUpdateDto.AuthorIds != null)
-            {
-                // Remove existing book authors
-                var existingBookAuthors = await _context.BookAuthors
-                    .Where(ba => ba.BookId == id)
-                    .ToListAsync();
-                
-                _context.BookAuthors.RemoveRange(existingBookAuthors);
-                await _context.SaveChangesAsync();
-
-                // Add new book authors
-                foreach (var authorId in bookUpdateDto.AuthorIds)
-                {
-                    _context.BookAuthors.Add(new BookAuthor
+                    foreach (var newAuthor in bookUpdateDto.NewAuthors)
                     {
-                        BookId = book.Id,
-                        AuthorId = authorId
+                        // Skip empty author names
+                        if (string.IsNullOrWhiteSpace(newAuthor.Name))
+                            continue;
+                            
+                        // Check if an author with the same name already exists
+                        var existingAuthor = await _context.Authors
+                            .FirstOrDefaultAsync(a => a.Name.ToLower() == newAuthor.Name.ToLower().Trim());
+                        
+                        if (existingAuthor != null)
+                        {
+                            // Use existing author
+                            if (!allAuthorIds.Contains(existingAuthor.Id))
+                            {
+                                allAuthorIds.Add(existingAuthor.Id);
+                            }
+                        }
+                        else
+                        {
+                            // Create new author
+                            var author = new Author
+                            {
+                                Name = newAuthor.Name.Trim(),
+                                CreatedAt = DateTime.UtcNow,
+                                UpdatedAt = DateTime.UtcNow
+                            };
+                            
+                            _context.Authors.Add(author);
+                            await _context.SaveChangesAsync();
+                            
+                            allAuthorIds.Add(author.Id);
+                        }
+                    }
+                }
+
+                // Process new genres if provided
+                List<int> allGenreIds = bookUpdateDto.GenreIds ?? new List<int>();
+                if (bookUpdateDto.NewGenres != null && bookUpdateDto.NewGenres.Any())
+                {
+                    foreach (var newGenre in bookUpdateDto.NewGenres)
+                    {
+                        // Skip empty genre names
+                        if (string.IsNullOrWhiteSpace(newGenre.Name))
+                            continue;
+                            
+                        // Check if a genre with the same name already exists
+                        var existingGenre = await _context.Genres
+                            .FirstOrDefaultAsync(g => g.Name.ToLower() == newGenre.Name.ToLower().Trim());
+                        
+                        if (existingGenre != null)
+                        {
+                            // Use existing genre
+                            if (!allGenreIds.Contains(existingGenre.Id))
+                            {
+                                allGenreIds.Add(existingGenre.Id);
+                            }
+                        }
+                        else
+                        {
+                            // Create new genre
+                            var genre = new Genre
+                            {
+                                Name = newGenre.Name.Trim(),
+                                CreatedAt = DateTime.UtcNow,
+                                UpdatedAt = DateTime.UtcNow
+                            };
+                            
+                            _context.Genres.Add(genre);
+                            await _context.SaveChangesAsync();
+                            
+                            allGenreIds.Add(genre.Id);
+                        }
+                    }
+                }
+
+                // Validate that the authors exist
+                if (allAuthorIds.Any())
+                {
+                    var existingAuthorIds = await _context.Authors
+                        .Where(a => allAuthorIds.Contains(a.Id))
+                        .Select(a => a.Id)
+                        .ToListAsync();
+
+                    var missingAuthorIds = allAuthorIds
+                        .Except(existingAuthorIds)
+                        .ToList();
+
+                    if (missingAuthorIds.Any())
+                    {
+                        ModelState.AddModelError("AuthorIds", $"The following author IDs do not exist: {string.Join(", ", missingAuthorIds)}");
+                        return BadRequest(ModelState);
+                    }
+                }
+
+                // Validate that the genres exist
+                if (allGenreIds.Any())
+                {
+                    var existingGenreIds = await _context.Genres
+                        .Where(g => allGenreIds.Contains(g.Id))
+                        .Select(g => g.Id)
+                        .ToListAsync();
+
+                    var missingGenreIds = allGenreIds
+                        .Except(existingGenreIds)
+                        .ToList();
+
+                    if (missingGenreIds.Any())
+                    {
+                        ModelState.AddModelError("GenreIds", $"The following genre IDs do not exist: {string.Join(", ", missingGenreIds)}");
+                        return BadRequest(ModelState);
+                    }
+                }
+
+                // Update authors if provided
+                if (bookUpdateDto.AuthorIds != null || bookUpdateDto.NewAuthors != null)
+                {
+                    // Remove existing book authors
+                    var existingBookAuthors = await _context.BookAuthors
+                        .Where(ba => ba.BookId == id)
+                        .ToListAsync();
+                    
+                    _context.BookAuthors.RemoveRange(existingBookAuthors);
+                    await _context.SaveChangesAsync();
+
+                    // Add new book authors
+                    foreach (var authorId in allAuthorIds)
+                    {
+                        _context.BookAuthors.Add(new BookAuthor
+                        {
+                            BookId = book.Id,
+                            AuthorId = authorId
+                        });
+                    }
+                }
+
+                // Update genres if provided
+                if (bookUpdateDto.GenreIds != null || bookUpdateDto.NewGenres != null)
+                {
+                    // Remove existing book genres
+                    var existingBookGenres = await _context.BookGenres
+                        .Where(bg => bg.BookId == id)
+                        .ToListAsync();
+                    
+                    _context.BookGenres.RemoveRange(existingBookGenres);
+                    await _context.SaveChangesAsync();
+
+                    // Add new book genres
+                    foreach (var genreId in allGenreIds)
+                    {
+                        _context.BookGenres.Add(new BookGenre
+                        {
+                            BookId = book.Id,
+                            GenreId = genreId
+                        });
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Book updated: {BookId}", book.Id);
+
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating book: {Message}", ex.Message);
+                
+                // Get more detailed info for DbUpdateException
+                if (ex is DbUpdateException dbEx)
+                {
+                    _logger.LogError("DbUpdateException details - Inner Exception: {InnerMessage}", 
+                        dbEx.InnerException?.Message);
+                    
+                    return StatusCode(500, new { 
+                        message = $"Database error: {dbEx.InnerException?.Message ?? dbEx.Message}", 
+                        stackTrace = ex.StackTrace 
                     });
                 }
-            }
-
-            // Update genres if provided
-            if (bookUpdateDto.GenreIds != null)
-            {
-                // Remove existing book genres
-                var existingBookGenres = await _context.BookGenres
-                    .Where(bg => bg.BookId == id)
-                    .ToListAsync();
                 
-                _context.BookGenres.RemoveRange(existingBookGenres);
-                await _context.SaveChangesAsync();
-
-                // Add new book genres
-                foreach (var genreId in bookUpdateDto.GenreIds)
-                {
-                    _context.BookGenres.Add(new BookGenre
-                    {
-                        BookId = book.Id,
-                        GenreId = genreId
-                    });
-                }
+                return StatusCode(500, new { message = ex.Message, stackTrace = ex.StackTrace });
             }
-
-            _context.Books.Update(book);
-            await _context.SaveChangesAsync();
-
-            _logger.LogInformation("Book updated: {BookId}", book.Id);
-
-            return NoContent();
         }
 
         [HttpDelete("{id}")]

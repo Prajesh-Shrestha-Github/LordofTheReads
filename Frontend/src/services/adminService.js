@@ -74,6 +74,31 @@ const bookService = {
   }
 };
 
+// Admin Authors and Genres API (for use with books)
+const authorGenreService = {
+  // Get all authors
+  getAllAuthors: async () => {
+    try {
+      // Assuming there's an endpoint to get all authors
+      const response = await axios.get('http://localhost:5253/api/authors');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Get all genres
+  getAllGenres: async () => {
+    try {
+      // Assuming there's an endpoint to get all genres
+      const response = await axios.get('http://localhost:5253/api/genres');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+};
+
 // Admin Discounts API
 const discountService = {
   // Get all discounts
@@ -180,4 +205,4 @@ const announcementService = {
   }
 };
 
-export { bookService, discountService, announcementService };
+export { bookService, discountService, announcementService, authorGenreService };

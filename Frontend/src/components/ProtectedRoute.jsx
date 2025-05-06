@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 const ProtectedRoute = ({ requiredRole, redirectPath = '/login' }) => {
   const { isAuthenticated, hasRole } = useAuth();
   
-  // Check if user is authenticated and has the required role
+  // Check if user is authenticated
   if (!isAuthenticated()) {
     return <Navigate to={redirectPath} replace />;
   }

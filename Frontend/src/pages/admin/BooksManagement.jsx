@@ -49,7 +49,7 @@ const BooksManagement = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
       </div>
     );
   }
@@ -57,17 +57,17 @@ const BooksManagement = () => {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Books Management</h2>
+        <h2 className="text-2xl font-bold text-gray-800">Books Management</h2>
         <Link 
           to="/admin/books/create" 
-          className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+          className="inline-flex items-center px-4 py-2 bg-teal-500 text-white rounded-md hover:bg-teal-600 transition-colors"
         >
           <Plus size={16} className="mr-1" /> Add Book
         </Link>
       </div>
 
       {error && (
-        <div className="bg-red-100 text-red-700 p-4 rounded-md mb-4">
+        <div className="bg-orange-50 border border-orange-200 text-orange-700 p-4 rounded-md mb-4">
           <p>{error}</p>
         </div>
       )}
@@ -80,16 +80,16 @@ const BooksManagement = () => {
           <input
             type="text"
             placeholder="Search books by title, ISBN, or publisher..."
-            className="pl-10 pr-4 py-2 border rounded-md w-full focus:ring-indigo-500 focus:border-indigo-500"
+            className="pl-10 pr-4 py-2 border border-gray-200 rounded-md w-full focus:ring-teal-400 focus:border-teal-400"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
       </div>
 
-      <div className="bg-white shadow-md rounded-lg overflow-hidden">
+      <div className="bg-white shadow-sm rounded-lg overflow-hidden border border-gray-100">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="min-w-full divide-y divide-gray-100">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image</th>
@@ -101,7 +101,7 @@ const BooksManagement = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-gray-100">
               {filteredBooks.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="px-6 py-4 text-center text-gray-500">
@@ -120,27 +120,27 @@ const BooksManagement = () => {
                             alt={book.title} 
                           />
                         ) : (
-                          <div className="h-12 w-12 rounded-md bg-gray-200 flex items-center justify-center text-gray-500">
+                          <div className="h-12 w-12 rounded-md bg-gray-100 flex items-center justify-center text-gray-500">
                             No Image
                           </div>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{book.title}</div>
+                      <div className="text-sm font-medium text-gray-800">{book.title}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-500">{book.isbn || 'N/A'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">${book.price.toFixed(2)}</div>
+                      <div className="text-sm text-gray-800">${book.price.toFixed(2)}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                         book.stockQuantity > 10 
-                          ? 'bg-green-100 text-green-800' 
+                          ? 'bg-teal-100 text-teal-800' 
                           : book.stockQuantity > 0 
-                            ? 'bg-yellow-100 text-yellow-800' 
+                            ? 'bg-orange-100 text-orange-800' 
                             : 'bg-red-100 text-red-800'
                       }`}>
                         {book.stockQuantity}
@@ -151,23 +151,17 @@ const BooksManagement = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
-                        <button
-                          onClick={() => navigate(`/admin/books/${book.id}`)}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="View Details"
-                        >
-                          <Eye size={18} />
-                        </button>
+                        
                         <button
                           onClick={() => navigate(`/admin/books/edit/${book.id}`)}
-                          className="text-indigo-600 hover:text-indigo-900"
+                          className="bg-white text-teal-600 hover:text-teal-800 transition-colors"
                           title="Edit"
                         >
                           <Edit size={18} />
                         </button>
                         <button
                           onClick={() => handleDelete(book.id)}
-                          className="text-red-600 hover:text-red-900"
+                          className="bg-white text-orange-600 hover:text-orange-800 transition-colors"
                           title="Delete"
                         >
                           <Trash2 size={18} />

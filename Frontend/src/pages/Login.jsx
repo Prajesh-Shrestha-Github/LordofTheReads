@@ -195,26 +195,6 @@ function Login() {
                 )}
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <input
-                    id="remember-me"
-                    name="remember-me"
-                    type="checkbox"
-                    className="h-4 w-4 text-gold focus:ring-gold border-gray rounded"
-                  />
-                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray">
-                    Remember me
-                  </label>
-                </div>
-
-                <div className="text-sm">
-                  <Link to="/forgot-password" className="text-gold hover:text-gold-dark">
-                    Forgot your password?
-                  </Link>
-                </div>
-              </div>
-
               <div>
                 <button
                   type="submit"
@@ -234,16 +214,18 @@ function Login() {
                   )}
                 </button>
               </div>
+
+              <div className="mt-6 text-center">
+                <p className="text-sm text-gray">
+                  Don't have an account?{' '}
+                  <Link to="/signup" className="text-gold hover:text-gold-dark font-medium">
+                    Sign up
+                  </Link>
+                </p>
+              </div>
             </form>
 
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray">
-                Don't have an account?{' '}
-                <Link to="/signup" className="text-gold hover:text-gold-dark font-medium">
-                  Sign up
-                </Link>
-              </p>
-            </div>
+            
           </div>
         </div>
       </div>
