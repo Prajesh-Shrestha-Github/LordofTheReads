@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using LordofTheReads.Database;
 using LordofTheReads.Database.Entities;
 using System.Text.Json;
+using System.Linq;
 
 namespace LordofTheReads.Controllers
 {
@@ -25,14 +26,7 @@ namespace LordofTheReads.Controllers
         {
             try
             {
-                // Return a hardcoded list for testing
-                var genres = new[]
-                {
-                    new { Id = 1, Name = "Fiction" },
-                    new { Id = 2, Name = "Non-Fiction" },
-                    new { Id = 3, Name = "Science Fiction" }
-                };
-
+                var genres = _context.Genres.Select(g => new { g.Id, g.Name }).ToList();
                 return Ok(genres);
             }
             catch (Exception ex)

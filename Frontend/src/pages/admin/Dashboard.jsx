@@ -139,7 +139,6 @@ const Dashboard = () => {
           color="text-teal-500"
           bgColor="bg-teal-50"
           borderColor="border-teal-500"
-          trend="+5% from last month"
         />
         <StatCard 
           title="Active Discounts" 

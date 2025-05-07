@@ -151,4 +151,22 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// Seed the database
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("SeedData");
+    
+    try
+    {
+        logger.LogInformation("Initializing seed data...");
+        await SeedData.Initialize(services, logger);
+        logger.LogInformation("Seed data initialization completed successfully");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "An error occurred while seeding the database");
+    }
+}
+
 app.Run();

@@ -32,6 +32,12 @@ namespace LordofTheReads.DTOs.Book
         [Url]
         public string? ImageUrl { get; set; }
 
+        [StringLength(50)]
+        public string? Language { get; set; }
+
+        [StringLength(100)]
+        public string? Format { get; set; }
+
         public List<int>? AuthorIds { get; set; }
         
         public List<int>? GenreIds { get; set; }
@@ -40,5 +46,7 @@ namespace LordofTheReads.DTOs.Book
         public List<AuthorCreateDto>? NewAuthors { get; set; }
         
         public List<GenreCreateDto>? NewGenres { get; set; }
+
+        public bool PhysicalLibraryAccess { get; set; } = false;
     }
 }
