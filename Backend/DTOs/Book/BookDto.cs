@@ -20,5 +20,6 @@ namespace LordofTheReads.DTOs.Book
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public List<string> Authors { get; set; } = new List<string>();
+        public List<string> Genres { get; set; } = new List<string>();
     }
 }

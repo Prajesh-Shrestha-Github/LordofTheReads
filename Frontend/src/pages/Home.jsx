@@ -203,11 +203,13 @@ function Home() {
                 ...books.filter(book => book.id < 8 || book.id > 12)].slice(0, 8).map(book => (
                 <div key={book.id} className="flex flex-col">
                   <div className="bg-beige aspect-[2/3] mb-3 flex items-center justify-center relative overflow-hidden">
-                    <img 
-                      src={book.imageUrl || `https://placehold.co/300x450?text=${encodeURIComponent(book.title)}`}
-                      alt={book.title}
-                      className="object-contain h-full w-full"
-                    />
+                    <Link to={`/book/${book.id}`} className="w-full h-full">
+                      <img 
+                        src={book.imageUrl || `https://placehold.co/300x450?text=${encodeURIComponent(book.title)}`}
+                        alt={book.title}
+                        className="object-contain h-full w-full"
+                      />
+                    </Link>
                     <button 
                       onClick={() => handleBookmarkToggle(book)}
                       className="absolute top-2 right-2 bg-white p-1.5 rounded-md shadow-md"
@@ -226,7 +228,9 @@ function Home() {
                     </button>
                   </div>
                   <div>
-                    <h3 className="text-xs font-medium text-navy">{book.title}</h3>
+                    <Link to={`/book/${book.id}`} className="hover:text-gold">
+                      <h3 className="text-xs font-medium text-navy">{book.title}</h3>
+                    </Link>
                     <p className="text-xs text-gray">{book.author || book.authors?.join(', ') || 'Unknown Author'}</p>
                     <div className="flex justify-between items-center mt-2">
                       <span className="text-xs font-bold text-navy">${(book.price || 0).toFixed(2)}</span>

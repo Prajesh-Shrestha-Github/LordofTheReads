@@ -54,7 +54,7 @@ namespace LordofTheReads.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Announcements");
+                    b.ToTable("Announcements", (string)null);
                 });
 
             modelBuilder.Entity("LordofTheReads.Database.Entities.Author", b =>
@@ -79,7 +79,7 @@ namespace LordofTheReads.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Authors");
+                    b.ToTable("Authors", (string)null);
                 });
 
             modelBuilder.Entity("LordofTheReads.Database.Entities.Book", b =>
@@ -98,6 +98,11 @@ namespace LordofTheReads.Database.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
+                    b.Property<string>("Format")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("format");
+
                     b.Property<string>("ISBN")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
@@ -106,6 +111,15 @@ namespace LordofTheReads.Database.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)")
                         .HasColumnName("image_url");
+
+                    b.Property<string>("Language")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("language");
+
+                    b.Property<bool>("PhysicalLibraryAccess")
+                        .HasColumnType("boolean")
+                        .HasColumnName("physical_library_access");
 
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(10, 2)");
@@ -136,7 +150,7 @@ namespace LordofTheReads.Database.Migrations
                     b.HasIndex("ISBN")
                         .IsUnique();
 
-                    b.ToTable("Books", t =>
+                    b.ToTable("Books", null, t =>
                         {
                             t.HasCheckConstraint("CK_Book_Price", "\"Price\" >= 0");
 
@@ -158,7 +172,7 @@ namespace LordofTheReads.Database.Migrations
 
                     b.HasIndex("AuthorId");
 
-                    b.ToTable("BookAuthors");
+                    b.ToTable("BookAuthors", (string)null);
                 });
 
             modelBuilder.Entity("LordofTheReads.Database.Entities.BookGenre", b =>
@@ -175,7 +189,7 @@ namespace LordofTheReads.Database.Migrations
 
                     b.HasIndex("GenreId");
 
-                    b.ToTable("BookGenres");
+                    b.ToTable("BookGenres", (string)null);
                 });
 
             modelBuilder.Entity("LordofTheReads.Database.Entities.Bookmark", b =>
@@ -206,7 +220,7 @@ namespace LordofTheReads.Database.Migrations
                     b.HasIndex("UserId", "BookId")
                         .IsUnique();
 
-                    b.ToTable("Bookmarks");
+                    b.ToTable("Bookmarks", (string)null);
                 });
 
             modelBuilder.Entity("LordofTheReads.Database.Entities.Cart", b =>
@@ -234,7 +248,7 @@ namespace LordofTheReads.Database.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Carts");
+                    b.ToTable("Carts", (string)null);
                 });
 
             modelBuilder.Entity("LordofTheReads.Database.Entities.CartItem", b =>
@@ -267,7 +281,7 @@ namespace LordofTheReads.Database.Migrations
 
                     b.HasIndex("CartId");
 
-                    b.ToTable("CartItems", t =>
+                    b.ToTable("CartItems", null, t =>
                         {
                             t.HasCheckConstraint("CK_CartItem_Quantity", "\"Quantity\" > 0");
                         });
@@ -306,7 +320,7 @@ namespace LordofTheReads.Database.Migrations
 
                     b.HasIndex("BookId");
 
-                    b.ToTable("Discounts", t =>
+                    b.ToTable("Discounts", null, t =>
                         {
                             t.HasCheckConstraint("CK_Discount_Percentage", "\"discount_percentage\" BETWEEN 0 AND 100");
                         });
@@ -322,8 +336,7 @@ namespace LordofTheReads.Database.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime?>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("CreatedAt");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -331,15 +344,14 @@ namespace LordofTheReads.Database.Migrations
                         .HasColumnType("character varying(50)");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("UpdatedAt");
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("Genres");
+                    b.ToTable("Genres", (string)null);
                 });
 
             modelBuilder.Entity("LordofTheReads.Database.Entities.Order", b =>
@@ -391,7 +403,7 @@ namespace LordofTheReads.Database.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Orders", t =>
+                    b.ToTable("Orders", null, t =>
                         {
                             t.HasCheckConstraint("CK_Order_DiscountAmount", "\"discount_amount\" >= 0");
 
@@ -429,7 +441,7 @@ namespace LordofTheReads.Database.Migrations
 
                     b.HasIndex("OrderId");
 
-                    b.ToTable("OrderItems", t =>
+                    b.ToTable("OrderItems", null, t =>
                         {
                             t.HasCheckConstraint("CK_OrderItem_PriceAtPurchase", "\"price_at_purchase\" >= 0");
 
@@ -471,7 +483,7 @@ namespace LordofTheReads.Database.Migrations
                     b.HasIndex("UserId", "BookId")
                         .IsUnique();
 
-                    b.ToTable("Reviews", t =>
+                    b.ToTable("Reviews", null, t =>
                         {
                             t.HasCheckConstraint("CK_Review_Rating", "\"Rating\" BETWEEN 1 AND 5");
                         });
@@ -530,7 +542,7 @@ namespace LordofTheReads.Database.Migrations
                     b.HasIndex("Username")
                         .IsUnique();
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("LordofTheReads.Database.Entities.UserDiscount", b =>
@@ -566,7 +578,7 @@ namespace LordofTheReads.Database.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserDiscounts", t =>
+                    b.ToTable("UserDiscounts", null, t =>
                         {
                             t.HasCheckConstraint("CK_UserDiscount_Percentage", "\"discount_percentage\" BETWEEN 0 AND 100");
                         });
