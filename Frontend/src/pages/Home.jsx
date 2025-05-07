@@ -6,14 +6,16 @@ import Footer from '../components/Footer';
 import { addBookmark, isBookmarked, removeBookmark } from '../services/bookmarkService';
 import cartService from '../services/cartService';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 function Home() {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState({ show: false, message: '', type: '' });
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated, hasRole } = useAuth();
   const [bookmarkStates, setBookmarkStates] = useState({});
+  const navigate = useNavigate();
 
   // Sample testimonials and categories (keep these)
   const testimonials = [
@@ -59,6 +61,12 @@ function Home() {
 
     fetchBooks();
   }, []);
+
+  useEffect(() => {
+    if (user && hasRole('Admin')) {
+      navigate('/admin', { replace: true });
+    }
+  }, [user, hasRole, navigate]);
 
   // Load bookmark states for all books
   useEffect(() => {
@@ -180,7 +188,9 @@ function Home() {
           </p>
           <div className="flex justify-center gap-4">
             <Link to="/books" className="bg-gold hover:bg-gold-dark text-navy px-6 py-3 rounded-md text-base font-medium transition-colors">Browse Collection</Link>
-            <Link to="/signup" className="bg-white hover:bg-beige text-navy px-6 py-3 rounded-md text-base font-medium transition-colors">Sign Up</Link>
+            {!isAuthenticated() && (
+              <Link to="/signup" className="bg-white hover:bg-beige text-navy px-6 py-3 rounded-md text-base font-medium transition-colors">Sign Up</Link>
+            )}
           </div>
         </div>
       </section>

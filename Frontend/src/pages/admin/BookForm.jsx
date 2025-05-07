@@ -160,14 +160,24 @@ const BookForm = () => {
             <div><label>Stock Quantity</label><input type="number" name="stockQuantity" value={formData.stockQuantity} onChange={handleChange} className="w-full p-2 border"/></div>
             <div><label>Publication Date</label><input type="date" name="publicationDate" value={formData.publicationDate} onChange={handleChange} className="w-full p-2 border"/></div>
             <div><label>Publisher</label><input name="publisher" value={formData.publisher} onChange={handleChange} className="w-full p-2 border"/></div>
-            <div><label>Language</label><select name="language" value={formData.language} onChange={handleChange} className="w-full p-2 border">
-              <option value="">Select language</option>
-              {languageOptions.map(lang => <option key={lang} value={lang}>{lang}</option>)}
-            </select></div>
-            <div><label>Format</label><select name="format" value={formData.format} onChange={handleChange} className="w-full p-2 border">
-              <option value="">Select format</option>
-              {formatOptions.map(fmt => <option key={fmt} value={fmt}>{fmt}</option>)}
-            </select></div>
+            <div><label>Language</label>
+              <CreatableSelect
+                isClearable
+                name="language"
+                onChange={opt => setFormData(prev => ({ ...prev, language: opt?.value || '' }))}
+                options={languageOptions.map(lang => ({ value: lang, label: lang }))}
+                value={formData.language ? { value: formData.language, label: formData.language } : null}
+              />
+            </div>
+            <div><label>Format</label>
+              <CreatableSelect
+                isMulti
+                name="format"
+                onChange={opts => setFormData(prev => ({ ...prev, format: opts.map(o => o.value).join(',') }))}
+                options={formatOptions.map(fmt => ({ value: fmt, label: fmt }))}
+                value={formData.format.split(',').filter(f=>f).map(f => ({ value: f, label: f }))}
+              />
+            </div>
             <div className="flex items-center gap-2">
               <label className="mr-2">Physical Library Access</label>
               <input

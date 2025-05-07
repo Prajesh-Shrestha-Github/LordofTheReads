@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import authService from '../services/authService';
 
 // Create auth context
@@ -98,6 +99,18 @@ export const AuthProvider = ({ children }) => {
     
     return () => {
       window.removeEventListener('focus', handleWindowFocus);
+    };
+  }, []);
+
+  // Auto-clear session on application shutdown
+  useEffect(() => {
+    const handleUnload = () => {
+      console.log('Application shutdown - clearing session');
+      authService.clearSession();
+    };
+    window.addEventListener('beforeunload', handleUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload);
     };
   }, []);
 
