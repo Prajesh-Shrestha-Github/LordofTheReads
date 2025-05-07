@@ -54,7 +54,9 @@ namespace LordofTheReads.Controllers
                         Publisher = b.Publisher,
                         ImageUrl = b.ImageUrl ?? "https://placehold.co/300x450?text=No+Cover",
                         CreatedAt = b.CreatedAt,
-                        UpdatedAt = b.UpdatedAt
+                        UpdatedAt = b.UpdatedAt,
+                        Language = b.Language,
+                        Format = b.Format
                     })
                     .ToListAsync();
 
@@ -107,6 +109,8 @@ namespace LordofTheReads.Controllers
                     ImageUrl = book.ImageUrl ?? "https://placehold.co/300x450?text=No+Cover",
                     CreatedAt = book.CreatedAt,
                     UpdatedAt = book.UpdatedAt,
+                    Language = book.Language,
+                    Format = book.Format,
                     Authors = book.BookAuthors?.Select(ba => new AuthorDto
                     {
                         Id = ba.Author.Id,
@@ -295,6 +299,8 @@ namespace LordofTheReads.Controllers
                     StockQuantity = bookCreateDto.StockQuantity,
                     Publisher = bookCreateDto.Publisher,
                     ImageUrl = bookCreateDto.ImageUrl,
+                    Language = bookCreateDto.Language,
+                    Format = bookCreateDto.Format,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
@@ -407,6 +413,8 @@ namespace LordofTheReads.Controllers
                 book.StockQuantity = bookUpdateDto.StockQuantity;
                 book.Publisher = bookUpdateDto.Publisher;
                 book.ImageUrl = bookUpdateDto.ImageUrl;
+                book.Language = bookUpdateDto.Language;
+                book.Format = bookUpdateDto.Format;
                 book.UpdatedAt = DateTime.UtcNow;
 
                 // Process new authors if provided
@@ -623,6 +631,8 @@ namespace LordofTheReads.Controllers
                         ImageUrl = updatedBook.ImageUrl ?? "https://placehold.co/300x450?text=No+Cover",
                         CreatedAt = updatedBook.CreatedAt,
                         UpdatedAt = updatedBook.UpdatedAt,
+                        Language = updatedBook.Language,
+                        Format = updatedBook.Format,
                         Authors = updatedBook.BookAuthors?.Select(ba => new AuthorDto
                         {
                             Id = ba.Author.Id,

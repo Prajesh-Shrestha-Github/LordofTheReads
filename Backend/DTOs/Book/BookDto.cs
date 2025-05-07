@@ -13,6 +13,8 @@ namespace LordofTheReads.DTOs.Book
         public int StockQuantity { get; set; }
         public string? Publisher { get; set; }
         public string? ImageUrl { get; set; }
+        public string? Language { get; set; }
+        public string? Format { get; set; }
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
     }

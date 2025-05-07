@@ -32,6 +32,14 @@ namespace LordofTheReads.Database.Entities
         [StringLength(100)]
         public string? Publisher { get; set; }
         
+        [Column("language")]
+        [StringLength(50)]
+        public string? Language { get; set; }
+
+        [Column("format")]
+        [StringLength(100)]
+        public string? Format { get; set; }
+        
         [StringLength(255)]
         [Column("image_url")]
         public string? ImageUrl { get; set; }

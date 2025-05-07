@@ -32,6 +32,12 @@ namespace LordofTheReads.DTOs.Book
         [Url]
         public string? ImageUrl { get; set; }
 
+        [StringLength(50)]
+        public string? Language { get; set; }
+
+        [StringLength(100)]
+        public string? Format { get; set; }
+
         public List<int>? AuthorIds { get; set; }
         
         public List<int>? GenreIds { get; set; }

@@ -12,7 +12,7 @@ const BookForm = () => {
   const [formData, setFormData] = useState({
     title: '', isbn: '', description: '', price: '',
     publicationDate: '', stockQuantity: '', publisher: '', imageUrl: '',
-    authorIds: [], genreIds: [], newAuthors: [], newGenres: []
+    authorIds: [], genreIds: [], newAuthors: [], newGenres: [], language: '', format: ''
   });
   const [authors, setAuthors] = useState([]);
   const [genres, setGenres] = useState([]);
@@ -20,6 +20,10 @@ const BookForm = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState('basic');
+
+  // Add static dropdown options for language and format
+  const languageOptions = ["English", "Spanish", "French", "German", "Chinese", "Japanese"];
+  const formatOptions = ["Paperback", "Hardcover", "Signed", "Limited", "First Edition", "Collector’s Edition", "Author’s Edition", "Deluxe Edition"];
 
   useEffect(() => {
     (async () => {
@@ -40,7 +44,7 @@ const BookForm = () => {
             publisher: book.publisher || '', imageUrl: book.imageUrl || '',
             authorIds: book.authors?.map(a => a.id) || [],
             genreIds: book.genres?.map(g => g.id) || [],
-            newAuthors: [], newGenres: []
+            newAuthors: [], newGenres: [], language: book.language || '', format: book.format || ''
           });
         }
       } catch (e) {
@@ -156,6 +160,14 @@ const BookForm = () => {
             <div><label>Stock Quantity</label><input type="number" name="stockQuantity" value={formData.stockQuantity} onChange={handleChange} className="w-full p-2 border"/></div>
             <div><label>Publication Date</label><input type="date" name="publicationDate" value={formData.publicationDate} onChange={handleChange} className="w-full p-2 border"/></div>
             <div><label>Publisher</label><input name="publisher" value={formData.publisher} onChange={handleChange} className="w-full p-2 border"/></div>
+            <div><label>Language</label><select name="language" value={formData.language} onChange={handleChange} className="w-full p-2 border">
+              <option value="">Select language</option>
+              {languageOptions.map(lang => <option key={lang} value={lang}>{lang}</option>)}
+            </select></div>
+            <div><label>Format</label><select name="format" value={formData.format} onChange={handleChange} className="w-full p-2 border">
+              <option value="">Select format</option>
+              {formatOptions.map(fmt => <option key={fmt} value={fmt}>{fmt}</option>)}
+            </select></div>
             <div><label>Image URL</label><input name="imageUrl" value={formData.imageUrl} onChange={handleChange} className="w-full p-2 border"/></div>
             {formData.imageUrl && (
               <img
