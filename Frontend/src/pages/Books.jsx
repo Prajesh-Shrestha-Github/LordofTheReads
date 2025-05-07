@@ -22,6 +22,7 @@ function Books() {
     category: 'all',
     price: 'all',
     rating: 'all',
+    sale: 'all',
   });
   const [sortBy, setSortBy] = useState('popularity');
   const [searchQuery, setSearchQuery] = useState('');
@@ -246,6 +247,9 @@ function Books() {
       if (book.rating < minRating) return false;
     }
     
+    // On Sale filter
+    if (filters.sale === 'sale' && !book.onSaleFlag) return false;
+    
     // Search query
     if (appliedSearchQuery) {
       const query = appliedSearchQuery.toLowerCase();
@@ -317,7 +321,7 @@ function Books() {
                 <h2 className="font-medium text-navy">Filters</h2>
                 <button 
                   onClick={() => {
-                    setFilters({ category: 'all', price: 'all', rating: 'all' });
+                    setFilters({ category: 'all', price: 'all', rating: 'all', sale: 'all' });
                     setSearchQuery('');
                     setAppliedSearchQuery('');
                     setCurrentPage(1);
@@ -400,6 +404,21 @@ function Books() {
                       </label>
                     </div>
                   ))}
+                </div>
+              </div>
+              
+              {/* On Sale */}
+              <div className="mb-6">
+                <h3 className="font-medium text-navy mb-2">On Sale</h3>
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="filter-sale"
+                    checked={filters.sale === 'sale'}
+                    onChange={() => handleFilterChange('sale', filters.sale === 'sale' ? 'all' : 'sale')}
+                    className="mr-2"
+                  />
+                  <label htmlFor="filter-sale" className="text-sm text-gray-600">On Sale</label>
                 </div>
               </div>
             </div>
@@ -501,7 +520,7 @@ function Books() {
                 <p className="text-gray-600 mb-4">Try adjusting your filters or search query</p>
                 <button
                   onClick={() => {
-                    setFilters({ category: 'all', price: 'all', rating: 'all' });
+                    setFilters({ category: 'all', price: 'all', rating: 'all', sale: 'all' });
                     setSearchQuery('');
                     setAppliedSearchQuery('');
                     setSortBy('popularity');
@@ -525,7 +544,12 @@ function Books() {
                           Bestseller
                         </div>
                       )}
-                      
+                      {/* Sale Tag */}
+                      {book.onSaleFlag && (
+                        <div className="absolute top-0 left-0 bg-red-500 text-white text-xs font-bold px-2 py-1 z-10">
+                          {book.discountPercentage}% Off
+                        </div>
+                      )}
                       <div className={`${viewMode === 'grid' ? 'aspect-[3/4]' : 'h-full'} bg-gray-100 flex items-center justify-center`}>
                         <img 
                           src={book.imageUrl || `https://via.placeholder.com/300x450?text=${encodeURIComponent(book.title)}`}
@@ -552,7 +576,14 @@ function Books() {
                       </Link>
                       
                       <div className="flex justify-between items-center">
-                        <span className="text-sm font-bold text-navy">${(book.price || 0).toFixed(2)}</span>
+                        {book.onSaleFlag ? (
+                          <div className="flex items-baseline space-x-2">
+                            <span className="text-sm text-gray-500 line-through">${book.price.toFixed(2)}</span>
+                            <span className="text-sm font-bold text-navy">${(book.price * (1 - book.discountPercentage/100)).toFixed(2)}</span>
+                          </div>
+                        ) : (
+                          <span className="text-sm font-bold text-navy">${book.price.toFixed(2)}</span>
+                        )}
                         <button 
                           className="bg-navy text-white text-xs px-2 py-1 rounded-sm hover:bg-gold transition-colors"
                           onClick={() => handleAddToCart(book)}

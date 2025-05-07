@@ -209,6 +209,11 @@ function BookDetails() {
           {/* Book cover image */}
           <div className="md:w-1/3 lg:w-1/4">
             <div className="bg-gray-100 rounded-md overflow-hidden relative">
+              {book.onSaleFlag && (
+                <div className="absolute top-0 left-0 bg-red-500 text-white text-xs font-bold px-2 py-1 z-10">
+                  {book.discountPercentage}% Off
+                </div>
+              )}
               {book.rating > 4 && (
                 <div className="absolute top-2 left-2 bg-gold text-navy text-xs font-bold px-2 py-1 rounded">
                   Bestseller
@@ -240,7 +245,15 @@ function BookDetails() {
             </div>
             
             {/* Price */}
-            <div className="text-xl font-bold text-navy mb-6">${book.price?.toFixed(2)}</div>
+            {book.onSaleFlag ? (
+              <div className="flex items-baseline space-x-2 mb-6">
+                <span className="text-xl text-gray-500 line-through">${book.price?.toFixed(2)}</span>
+                <span className="text-2xl font-bold text-navy">${(book.price * (1 - book.discountPercentage/100)).toFixed(2)}</span>
+                <span className="text-sm text-red-500">{book.discountPercentage}% off</span>
+              </div>
+            ) : (
+              <div className="text-xl font-bold text-navy mb-6">${book.price?.toFixed(2)}</div>
+            )}
             
             {/* Description */}
             <p className="text-navy mb-6">{book.description}</p>

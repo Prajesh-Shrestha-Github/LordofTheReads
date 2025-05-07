@@ -25,10 +25,12 @@ namespace LordofTheReads.Services
         {
             try
             {
+                var now = DateTime.UtcNow;
                 // Include BookAuthors and the related Author entities
                 var books = await _context.Books
                     .Include(b => b.BookAuthors)
                     .ThenInclude(ba => ba.Author)
+                    .Include(b => b.Discounts)
                     .Select(b => new BookDto
                     {
                         Id = b.Id,
@@ -44,7 +46,9 @@ namespace LordofTheReads.Services
                         CreatedAt = b.CreatedAt,
                         UpdatedAt = b.UpdatedAt,
                         // Map author names from the navigation property
-                        Authors = b.BookAuthors.Select(ba => ba.Author.Name).ToList()
+                        Authors = b.BookAuthors.Select(ba => ba.Author.Name).ToList(),
+                        DiscountPercentage = b.Discounts.Where(d => d.OnSaleFlag).Select(d => d.DiscountPercentage).FirstOrDefault(),
+                        OnSaleFlag = b.Discounts.Any(d => d.OnSaleFlag)
                     })
                     .ToListAsync();
 
@@ -62,9 +66,11 @@ namespace LordofTheReads.Services
         {
             try
             {
+                var now = DateTime.UtcNow;
                 var book = await _context.Books
                     .Include(b => b.BookAuthors)
                     .ThenInclude(ba => ba.Author)
+                    .Include(b => b.Discounts)
                     .Where(b => b.Id == id)
                     .Select(b => new BookDto
                     {
@@ -81,7 +87,9 @@ namespace LordofTheReads.Services
                         CreatedAt = b.CreatedAt,
                         UpdatedAt = b.UpdatedAt,
                         // Map author names from the navigation property
-                        Authors = b.BookAuthors.Select(ba => ba.Author.Name).ToList()
+                        Authors = b.BookAuthors.Select(ba => ba.Author.Name).ToList(),
+                        DiscountPercentage = b.Discounts.Where(d => d.OnSaleFlag).Select(d => d.DiscountPercentage).FirstOrDefault(),
+                        OnSaleFlag = b.Discounts.Any(d => d.OnSaleFlag)
                     })
                     .FirstOrDefaultAsync();
 
