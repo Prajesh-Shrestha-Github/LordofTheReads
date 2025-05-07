@@ -14,11 +14,11 @@ namespace LordofTheReads.Database.Entities
         [StringLength(50)]
         public required string Name { get; set; }
 
-        // Remove Column attribute and make nullable to avoid issues with missing database columns
-        // [Column("created_at")]
+        // Add Column attribute to match existing database column
+        [Column("CreatedAt")]
         public DateTime? CreatedAt { get; set; }
 
-        // [Column("updated_at")]
+        [Column("UpdatedAt")]
         public DateTime? UpdatedAt { get; set; }
 
         // Navigation property

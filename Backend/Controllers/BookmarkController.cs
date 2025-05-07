@@ -1,133 +1,195 @@
 using LordofTheReads.Database;
 using LordofTheReads.Database.Entities;
+using LordofTheReads.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace LordofTheReads.Controllers
 {
-    [ApiController]
     [Route("api/[controller]")]
+    [ApiController]
+    [Authorize]
     public class BookmarkController : ControllerBase
     {
-        private readonly AppDbContext _context;
-        private readonly ILogger<BookmarkController> _logger;
+        private readonly IBookmarkService _bookmarkService;
 
-        public BookmarkController(AppDbContext context, ILogger<BookmarkController> logger)
+        public BookmarkController(IBookmarkService bookmarkService)
         {
-            _context = context;
-            _logger = logger;
+            _bookmarkService = bookmarkService;
         }
 
-        // Get all bookmarks for the current user
+        // GET: api/Bookmark
         [HttpGet]
-        [Authorize]
         public async Task<ActionResult<IEnumerable<Bookmark>>> GetBookmarks()
         {
-            var userId = GetUserId();
-            if (userId == 0) return Unauthorized();
-
-            var bookmarks = await _context.Bookmarks
-                .Where(b => b.UserId == userId)
-                .Include(b => b.Book)
-                .ToListAsync();
-
-            return Ok(bookmarks);
-        }
-
-        // Add a bookmark
-        [HttpPost("{bookId}")]
-        [Authorize]
-        public async Task<ActionResult> AddBookmark(int bookId)
-        {
-            var userId = GetUserId();
-            if (userId == 0) return Unauthorized();
-
-            var book = await _context.Books.FindAsync(bookId);
-            if (book == null) return NotFound("Book not found");
-
-            var existingBookmark = await _context.Bookmarks
-                .FirstOrDefaultAsync(b => b.UserId == userId && b.BookId == bookId);
-
-            if (existingBookmark != null)
+            try
             {
-                return Ok(); // Already bookmarked
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdClaim))
+                {
+                    return Unauthorized("User ID claim not found in token");
+                }
+
+                if (!int.TryParse(userIdClaim, out int userId))
+                {
+                    return BadRequest("Invalid user ID format in token");
+                }
+
+                var bookmarks = await _bookmarkService.GetBookmarksAsync(userId);
+                return Ok(bookmarks);
             }
-
-            var bookmark = new Bookmark
+            catch (Exception ex)
             {
-                UserId = userId,
-                BookId = bookId,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _context.Bookmarks.Add(bookmark);
-            await _context.SaveChangesAsync();
-
-            return Ok();
+                Console.WriteLine($"BookmarkController.GetBookmarks error: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
 
-        // Remove a bookmark
-        [HttpDelete("{bookId}")]
-        [Authorize]
-        public async Task<ActionResult> RemoveBookmark(int bookId)
+        // POST: api/Bookmark/{bookId}
+        [HttpPost("{bookId}")]
+        public async Task<ActionResult<Bookmark>> AddBookmark(int bookId)
         {
-            var userId = GetUserId();
-            if (userId == 0) return Unauthorized();
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdClaim))
+                {
+                    return Unauthorized("User ID claim not found in token");
+                }
 
-            var bookmark = await _context.Bookmarks
-                .FirstOrDefaultAsync(b => b.UserId == userId && b.BookId == bookId);
+                if (!int.TryParse(userIdClaim, out int userId))
+                {
+                    return BadRequest("Invalid user ID format in token");
+                }
 
-            if (bookmark == null) return NotFound("Bookmark not found");
-
-            _context.Bookmarks.Remove(bookmark);
-            await _context.SaveChangesAsync();
-
-            return Ok();
+                var bookmark = await _bookmarkService.AddBookmarkAsync(userId, bookId);
+                return CreatedAtAction(nameof(GetBookmarks), new { id = bookmark.Id }, bookmark);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"BookmarkController.AddBookmark error: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
 
-        // Check if a book is bookmarked
+        // DELETE: api/Bookmark/{bookId}
+        [HttpDelete("{bookId}")]
+        public async Task<IActionResult> RemoveBookmark(int bookId)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdClaim))
+                {
+                    return Unauthorized("User ID claim not found in token");
+                }
+
+                if (!int.TryParse(userIdClaim, out int userId))
+                {
+                    return BadRequest("Invalid user ID format in token");
+                }
+
+                await _bookmarkService.RemoveBookmarkAsync(userId, bookId);
+                return NoContent();
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"BookmarkController.RemoveBookmark error: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
+        // GET: api/Bookmark/check/{bookId}
         [HttpGet("check/{bookId}")]
-        [Authorize]
         public async Task<ActionResult<bool>> IsBookmarked(int bookId)
         {
-            var userId = GetUserId();
-            if (userId == 0) return Unauthorized();
-
-            var bookmark = await _context.Bookmarks
-                .AnyAsync(b => b.UserId == userId && b.BookId == bookId);
-
-            return Ok(bookmark);
-        }
-
-        // Clear all bookmarks
-        [HttpDelete]
-        [Authorize]
-        public async Task<ActionResult> ClearBookmarks()
-        {
-            var userId = GetUserId();
-            if (userId == 0) return Unauthorized();
-
-            var bookmarks = await _context.Bookmarks
-                .Where(b => b.UserId == userId)
-                .ToListAsync();
-
-            _context.Bookmarks.RemoveRange(bookmarks);
-            await _context.SaveChangesAsync();
-
-            return Ok();
-        }
-
-        // Helper method to get the current user ID
-        private int GetUserId()
-        {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
+            try
             {
-                return userId;
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdClaim))
+                {
+                    return Unauthorized("User ID claim not found in token");
+                }
+
+                if (!int.TryParse(userIdClaim, out int userId))
+                {
+                    return BadRequest("Invalid user ID format in token");
+                }
+
+                var isBookmarked = await _bookmarkService.IsBookmarkedAsync(userId, bookId);
+                return Ok(isBookmarked);
             }
-            return 0;
+            catch (Exception ex)
+            {
+                Console.WriteLine($"BookmarkController.IsBookmarked error: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
+        // DELETE: api/Bookmark
+        [HttpDelete]
+        public async Task<IActionResult> ClearBookmarks()
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdClaim))
+                {
+                    return Unauthorized("User ID claim not found in token");
+                }
+
+                if (!int.TryParse(userIdClaim, out int userId))
+                {
+                    return BadRequest("Invalid user ID format in token");
+                }
+
+                await _bookmarkService.ClearBookmarksAsync(userId);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"BookmarkController.ClearBookmarks error: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
     }
 }

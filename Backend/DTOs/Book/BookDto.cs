@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace LordofTheReads.DTOs.Book
@@ -18,5 +19,6 @@ namespace LordofTheReads.DTOs.Book
         public bool PhysicalLibraryAccess { get; set; }
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
+        public List<string> Authors { get; set; } = new List<string>();
     }
 }

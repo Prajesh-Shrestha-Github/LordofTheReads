@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using System.Text;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,7 +27,13 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddControllers();
+// Configure JSON serialization to handle circular references
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+    });
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 
@@ -109,9 +116,10 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddScoped<IBookService, BookService>();
-// Commented out for now - will be used when implementing database storage
-// builder.Services.AddScoped<ICartService, CartService>();
-// builder.Services.AddScoped<IBookmarkService, BookmarkService>();
+// Register cart service
+builder.Services.AddScoped<ICartService, CartService>();
+// Register bookmark service
+builder.Services.AddScoped<IBookmarkService, BookmarkService>();
 
 var app = builder.Build();
 

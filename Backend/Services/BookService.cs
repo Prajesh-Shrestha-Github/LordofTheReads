@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using LordofTheReads.Database;
-using LordofTheReads.DTOs;
+using LordofTheReads.DTOs.Book;
 using Microsoft.Extensions.Logging;
 
 namespace LordofTheReads.Services
@@ -21,13 +21,15 @@ namespace LordofTheReads.Services
             _logger = logger;
         }
 
-        public async Task<IEnumerable<BookDTO>> GetBooksAsync()
+        public async Task<IEnumerable<BookDto>> GetBooksAsync()
         {
             try
             {
-                // Start with a simple query to diagnose the issue
+                // Include BookAuthors and the related Author entities
                 var books = await _context.Books
-                    .Select(b => new BookDTO
+                    .Include(b => b.BookAuthors)
+                    .ThenInclude(ba => ba.Author)
+                    .Select(b => new BookDto
                     {
                         Id = b.Id,
                         Title = b.Title ?? "Unknown Title",
@@ -37,9 +39,12 @@ namespace LordofTheReads.Services
                         PublicationDate = b.PublicationDate,
                         StockQuantity = b.StockQuantity,
                         Publisher = b.Publisher,
-                        Authors = new List<string>(),
-                        Genres = new List<string>(),
-                        ImageUrl = b.ImageUrl ?? "https://placehold.co/300x450?text=No+Cover"
+                        // Use the actual image URL if it exists
+                        ImageUrl = b.ImageUrl ?? "https://placehold.co/300x450?text=No+Cover",
+                        CreatedAt = b.CreatedAt,
+                        UpdatedAt = b.UpdatedAt,
+                        // Map author names from the navigation property
+                        Authors = b.BookAuthors.Select(ba => ba.Author.Name).ToList()
                     })
                     .ToListAsync();
 
@@ -49,17 +54,19 @@ namespace LordofTheReads.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in GetBooksAsync: {Message}", ex.Message);
-                throw; // Rethrow for proper error handling in controller
+                throw;
             }
         }
 
-        public async Task<BookDTO> GetBookByIdAsync(int id)
+        public async Task<BookDto> GetBookByIdAsync(int id)
         {
             try
             {
                 var book = await _context.Books
+                    .Include(b => b.BookAuthors)
+                    .ThenInclude(ba => ba.Author)
                     .Where(b => b.Id == id)
-                    .Select(b => new BookDTO
+                    .Select(b => new BookDto
                     {
                         Id = b.Id,
                         Title = b.Title ?? "Unknown Title",
@@ -69,9 +76,12 @@ namespace LordofTheReads.Services
                         PublicationDate = b.PublicationDate,
                         StockQuantity = b.StockQuantity,
                         Publisher = b.Publisher,
-                        Authors = new List<string>(),
-                        Genres = new List<string>(),
-                        ImageUrl = b.ImageUrl ?? "https://placehold.co/300x450?text=No+Cover"
+                        // Use the actual image URL if it exists
+                        ImageUrl = b.ImageUrl ?? "https://placehold.co/300x450?text=No+Cover",
+                        CreatedAt = b.CreatedAt,
+                        UpdatedAt = b.UpdatedAt,
+                        // Map author names from the navigation property
+                        Authors = b.BookAuthors.Select(ba => ba.Author.Name).ToList()
                     })
                     .FirstOrDefaultAsync();
 
@@ -79,8 +89,8 @@ namespace LordofTheReads.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in GetBookByIdAsync for book {Id}: {Message}", id, ex.Message);
-                throw; // Rethrow for proper error handling in controller
+                _logger.LogError(ex, "Error in GetBookByIdAsync: {Message}", ex.Message);
+                throw;
             }
         }
     }

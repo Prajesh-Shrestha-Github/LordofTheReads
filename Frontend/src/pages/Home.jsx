@@ -4,12 +4,16 @@ import axios from 'axios';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { addBookmark, isBookmarked, removeBookmark } from '../services/bookmarkService';
+import cartService from '../services/cartService';
+import { useAuth } from '../context/AuthContext';
 
 function Home() {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState({ show: false, message: '', type: '' });
+  const { isAuthenticated } = useAuth();
+  const [bookmarkStates, setBookmarkStates] = useState({});
 
   // Sample testimonials and categories (keep these)
   const testimonials = [
@@ -56,6 +60,112 @@ function Home() {
     fetchBooks();
   }, []);
 
+  // Load bookmark states for all books
+  useEffect(() => {
+    const loadBookmarkStates = async () => {
+      if (isAuthenticated() && books.length > 0) {
+        const states = {};
+        for (const book of books) {
+          try {
+            states[book.id] = await isBookmarked(book.id);
+          } catch (error) {
+            console.error(`Error checking bookmark state for book ${book.id}:`, error);
+            states[book.id] = false;
+          }
+        }
+        setBookmarkStates(states);
+      }
+    };
+
+    loadBookmarkStates();
+  }, [books, isAuthenticated]);
+
+  // Handle adding to cart
+  const handleAddToCart = async (book) => {
+    try {
+      if (!isAuthenticated()) {
+        // If user is not authenticated, show notification to login
+        setNotification({
+          show: true,
+          message: 'Please login to add items to your cart',
+          type: 'login'
+        });
+        return;
+      }
+
+      // Add to cart using the cart service
+      await cartService.addToCart(book.id, 1);
+      
+      // Show notification
+      setNotification({
+        show: true,
+        message: `${book.title} added to cart!`,
+        type: 'cart'
+      });
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      setNotification({
+        show: true,
+        message: 'Failed to add item to cart. Please try again.',
+        type: 'error'
+      });
+    }
+    
+    // Hide notification after 3 seconds
+    setTimeout(() => {
+      setNotification({ show: false, message: '', type: '' });
+    }, 3000);
+  };
+
+  // Handle bookmark toggle
+  const handleBookmarkToggle = async (book) => {
+    try {
+      if (!isAuthenticated()) {
+        // If user is not authenticated, show notification to login
+        setNotification({
+          show: true,
+          message: 'Please login to bookmark books',
+          type: 'login'
+        });
+        return;
+      }
+
+      const isCurrentlyBookmarked = bookmarkStates[book.id];
+
+      if (isCurrentlyBookmarked) {
+        // Remove bookmark
+        await removeBookmark(book.id);
+        setBookmarkStates(prev => ({ ...prev, [book.id]: false }));
+        setNotification({
+          show: true,
+          message: `${book.title} removed from bookmarks!`,
+          type: 'bookmark'
+        });
+      } else {
+        // Add bookmark
+        await addBookmark(book.id);
+        setBookmarkStates(prev => ({ ...prev, [book.id]: true }));
+        setNotification({
+          show: true,
+          message: `${book.title} added to bookmarks!`,
+          type: 'bookmark'
+        });
+      }
+    } catch (error) {
+      console.error('Error toggling bookmark:', error);
+      setNotification({
+        show: true,
+        message: 'Failed to update bookmark. Please try again.',
+        type: 'error'
+      });
+    }
+    
+    // Hide notification after 3 seconds
+    setTimeout(() => {
+      setNotification({ show: false, message: '', type: '' });
+    }, 3000);
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-beige">
       {/* Navbar Component */}
@@ -94,43 +204,21 @@ function Home() {
                 <div key={book.id} className="flex flex-col">
                   <div className="bg-beige aspect-[2/3] mb-3 flex items-center justify-center relative overflow-hidden">
                     <img 
-                      src={book.coverImageUrl || `https://placehold.co/300x450?text=${encodeURIComponent(book.title)}`}
+                      src={book.imageUrl || `https://placehold.co/300x450?text=${encodeURIComponent(book.title)}`}
                       alt={book.title}
                       className="object-contain h-full w-full"
                     />
                     <button 
-                      onClick={() => {
-                        // Toggle bookmark
-                        if (isBookmarked(book.id)) {
-                          removeBookmark(book.id);
-                          setNotification({ 
-                            show: true, 
-                            message: `${book.title} removed from bookmarks!`,
-                            type: 'bookmark'
-                          });
-                        } else {
-                          addBookmark(book);
-                          setNotification({ 
-                            show: true, 
-                            message: `${book.title} added to bookmarks!`,
-                            type: 'bookmark'
-                          });
-                        }
-                        
-                        // Hide notification after 3 seconds
-                        setTimeout(() => {
-                          setNotification({ show: false, message: '', type: '' });
-                        }, 3000);
-                      }}
+                      onClick={() => handleBookmarkToggle(book)}
                       className="absolute top-2 right-2 bg-white p-1.5 rounded-md shadow-md"
-                      aria-label={isBookmarked(book.id) ? "Remove from bookmarks" : "Add to bookmarks"}
+                      aria-label={bookmarkStates[book.id] ? "Remove from bookmarks" : "Add to bookmarks"}
                     >
                       <svg 
                         xmlns="http://www.w3.org/2000/svg" 
                         className="h-5 w-5" 
-                        fill={isBookmarked(book.id) ? "#2563EB" : "none"} 
+                        fill={bookmarkStates[book.id] ? "#2563EB" : "none"} 
                         viewBox="0 0 24 24" 
-                        stroke={isBookmarked(book.id) ? "#2563EB" : "#1E2B38"} 
+                        stroke={bookmarkStates[book.id] ? "#2563EB" : "#1E2B38"} 
                         strokeWidth={2}
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
@@ -144,35 +232,8 @@ function Home() {
                       <span className="text-xs font-bold text-navy">${(book.price || 0).toFixed(2)}</span>
                       <div className="flex space-x-2">
                         <button 
-                          onClick={() => {
-                            // Add to cart using localStorage
-                            const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-                            const existingItem = cart.find(item => item.bookId === book.id);
-                            
-                            if (existingItem) {
-                              existingItem.quantity += 1;
-                            } else {
-                              cart.push({ bookId: book.id, quantity: 1 });
-                            }
-                            
-                            localStorage.setItem('cart', JSON.stringify(cart));
-                            
-                            // Dispatch event to update cart count in navbar
-                            window.dispatchEvent(new Event('cartUpdated'));
-                            
-                            // Show notification
-                            setNotification({ 
-                              show: true, 
-                              message: `${book.title} added to cart!`,
-                              type: 'cart'
-                            });
-                            
-                            // Hide notification after 3 seconds
-                            setTimeout(() => {
-                              setNotification({ show: false, message: '', type: '' });
-                            }, 3000);
-                          }}
-                          className="bg-navy text-white text-xs px-3 py-1 rounded-sm hover:bg-gold transition-colors"
+                          onClick={() => handleAddToCart(book)}
+                          className="text-xs bg-navy text-white px-2 py-1 rounded-sm hover:bg-gold hover:text-navy transition-colors"
                         >
                           Add to Cart
                         </button>
@@ -232,32 +293,41 @@ function Home() {
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
             <span>{notification.message}</span>
-            <Link 
-              to={notification.type === 'bookmark' ? "/bookmarks" : "/cart"}
-              className="ml-4 text-white hover:text-gold"
-            >
-              {notification.type === 'bookmark' ? (
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  className="h-5 w-5" 
-                  fill="currentColor" 
-                  viewBox="0 0 24 24" 
-                  stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                </svg>
-              ) : (
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  className="h-5 w-5" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
-                  stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              )}
-            </Link>
+            {notification.type === 'login' ? (
+              <Link 
+                to="/login" 
+                className="ml-4 text-white hover:text-gold"
+              >
+                Login
+              </Link>
+            ) : (
+              <Link 
+                to={notification.type === 'bookmark' ? "/bookmarks" : "/cart"}
+                className="ml-4 text-white hover:text-gold"
+              >
+                {notification.type === 'bookmark' ? (
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="h-5 w-5" 
+                    fill="currentColor" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                  </svg>
+                ) : (
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="h-5 w-5" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                )}
+              </Link>
+            )}
           </div>
         </div>
       )}

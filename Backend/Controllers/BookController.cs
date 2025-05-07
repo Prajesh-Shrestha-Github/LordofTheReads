@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using LordofTheReads.Services;
-using LordofTheReads.DTOs;
+using LordofTheReads.DTOs.Book; // Update the namespace to use the new BookDto
 using Microsoft.Extensions.Logging;
 
 namespace LordofTheReads.Controllers
@@ -23,7 +23,7 @@ namespace LordofTheReads.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<BookDTO>>> GetBooks()
+        public async Task<ActionResult<IEnumerable<BookDto>>> GetBooks()
         {
             try
             {
@@ -38,7 +38,7 @@ namespace LordofTheReads.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<BookDTO>> GetBook(int id)
+        public async Task<ActionResult<BookDto>> GetBook(int id)
         {
             try
             {

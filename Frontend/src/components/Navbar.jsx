@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BookOpen, ShoppingCart, Search, Bookmark, User, LogOut, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import cartService from '../services/cartService';
+import { getBookmarkCount } from '../services/bookmarkService';
+import { searchBooks } from '../services/bookService';
 
 function Navbar() {
   const { user, logout, isAuthenticated, hasRole } = useAuth();
@@ -10,6 +13,10 @@ function Navbar() {
   const [cartItemCount, setCartItemCount] = useState(0);
   const [bookmarkCount, setBookmarkCount] = useState(0);
   const [showNavbar, setShowNavbar] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const searchRef = useRef(null);
   
   const handleLogout = () => {
     logout();
@@ -20,6 +27,56 @@ function Navbar() {
     setDropdownOpen(!dropdownOpen);
   };
 
+  // Handle search input change
+  const handleSearchChange = async (e) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    
+    if (query.trim().length > 1) {
+      try {
+        const results = await searchBooks(query);
+        setSearchResults(results.slice(0, 5)); // Limit to 5 results
+        setShowSearchResults(true);
+      } catch (error) {
+        console.error('Error searching books:', error);
+        setSearchResults([]);
+      }
+    } else {
+      setSearchResults([]);
+      setShowSearchResults(false);
+    }
+  };
+
+  // Handle search form submission
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/books?search=${encodeURIComponent(searchQuery)}`);
+      setShowSearchResults(false);
+    }
+  };
+
+  // Handle clicking on a search result
+  const handleResultClick = (bookId) => {
+    navigate(`/book/${bookId}`);
+    setSearchQuery('');
+    setShowSearchResults(false);
+  };
+
+  // Close search results when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setShowSearchResults(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   // Check if user is admin and update showNavbar state
   useEffect(() => {
     if (isAuthenticated() && hasRole('Admin')) {
@@ -29,66 +86,81 @@ function Navbar() {
     }
   }, [isAuthenticated, hasRole]);
 
-  // Update cart count whenever localStorage changes
+  // Update cart count from the database
   useEffect(() => {
-    const updateCartCount = () => {
-      try {
-        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-        const itemCount = cart.reduce((total, item) => total + item.quantity, 0);
-        setCartItemCount(itemCount);
-      } catch (error) {
-        console.error('Error reading cart from localStorage:', error);
+    const fetchCartCount = async () => {
+      if (isAuthenticated()) {
+        try {
+          const count = await cartService.getCartCount();
+          setCartItemCount(count);
+        } catch (error) {
+          console.error('Error fetching cart count:', error);
+          setCartItemCount(0);
+        }
+      } else {
         setCartItemCount(0);
       }
     };
 
-    // Initial count
-    updateCartCount();
+    // Initial fetch
+    fetchCartCount();
 
-    // Listen for storage events (when localStorage changes)
-    window.addEventListener('storage', updateCartCount);
+    // Set up polling to refresh cart count every 30 seconds
+    const intervalId = setInterval(fetchCartCount, 30000);
 
-    // Custom event for cart updates from within the same window
-    window.addEventListener('cartUpdated', updateCartCount);
+    // Listen for cart updates
+    const handleCartUpdate = () => {
+      fetchCartCount();
+    };
+
+    window.addEventListener('cartUpdated', handleCartUpdate);
 
     return () => {
-      window.removeEventListener('storage', updateCartCount);
-      window.removeEventListener('cartUpdated', updateCartCount);
+      clearInterval(intervalId);
+      window.removeEventListener('cartUpdated', handleCartUpdate);
     };
-  }, []);
+  }, [isAuthenticated]);
 
-  // Update bookmark count whenever localStorage changes
+  // Update bookmark count from the database
   useEffect(() => {
-    const updateBookmarkCount = () => {
-      try {
-        const bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]');
-        setBookmarkCount(bookmarks.length);
-      } catch (error) {
-        console.error('Error reading bookmarks from localStorage:', error);
+    const fetchBookmarkCount = async () => {
+      if (isAuthenticated()) {
+        try {
+          const count = await getBookmarkCount();
+          setBookmarkCount(count);
+        } catch (error) {
+          console.error('Error fetching bookmark count:', error);
+          setBookmarkCount(0);
+        }
+      } else {
         setBookmarkCount(0);
       }
     };
 
-    // Initial count
-    updateBookmarkCount();
+    // Initial fetch
+    fetchBookmarkCount();
 
-    // Listen for storage events (when localStorage changes)
-    window.addEventListener('storage', updateBookmarkCount);
+    // Set up polling to refresh bookmark count every 30 seconds
+    const intervalId = setInterval(fetchBookmarkCount, 30000);
 
-    // Custom event for bookmark updates from within the same window
-    window.addEventListener('bookmarksUpdated', updateBookmarkCount);
+    // Also listen for bookmark updates
+    const handleBookmarkUpdate = () => {
+      fetchBookmarkCount();
+    };
+
+    window.addEventListener('bookmarksUpdated', handleBookmarkUpdate);
 
     return () => {
-      window.removeEventListener('storage', updateBookmarkCount);
-      window.removeEventListener('bookmarksUpdated', updateBookmarkCount);
+      clearInterval(intervalId);
+      window.removeEventListener('bookmarksUpdated', handleBookmarkUpdate);
     };
-  }, []);
-  
+  }, [isAuthenticated]);
+
   // If we shouldn't show the navbar, return null but after all hooks have been called
   if (!showNavbar) {
     return null;
   }
-  
+
   return (
     <header className="bg-white py-3 border-b border-gray">
       <div className="container mx-auto px-4 flex items-center">
@@ -114,15 +186,57 @@ function Navbar() {
         {/* Search and Actions */}
         <div className="flex items-center gap-4 flex-1 justify-end">
           {/* Search */}
-          <div className="relative hidden md:block">
-            <div className="relative flex items-center">
-              <input 
-                type="search" 
-                placeholder="Search books..." 
-                className="w-40 text-xs py-1 px-2 pl-7 border border-gray rounded-md focus:outline-none focus:ring-1 focus:ring-gold"
-              />
-              <Search className="absolute left-2 h-3 w-3 text-gray" />
-            </div>
+          <div className="relative hidden md:block" ref={searchRef}>
+            <form onSubmit={handleSearchSubmit}>
+              <div className="relative flex items-center">
+                <input 
+                  type="search" 
+                  placeholder="Search books..." 
+                  className="w-40 text-xs py-1 px-2 pl-7 border border-gray rounded-md focus:outline-none focus:ring-1 focus:ring-gold"
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
+                />
+                <Search className="absolute left-2 h-3 w-3 text-gray" />
+              </div>
+            </form>
+            
+            {/* Search Results Dropdown */}
+            {showSearchResults && searchResults.length > 0 && (
+              <div className="absolute mt-1 w-64 bg-white border border-gray rounded-md shadow-lg z-20">
+                <ul className="py-1">
+                  {searchResults.map(book => (
+                    <li key={book.id} className="px-2 py-1 hover:bg-beige cursor-pointer">
+                      <div 
+                        onClick={() => handleResultClick(book.id)}
+                        className="flex items-center gap-2"
+                      >
+                        <div className="w-8 h-12 bg-gray-100 flex-shrink-0">
+                          <img 
+                            src={book.imageUrl || `https://placehold.co/32x48?text=${encodeURIComponent(book.title?.charAt(0) || 'B')}`} 
+                            alt={book.title} 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="overflow-hidden">
+                          <p className="text-xs font-medium text-navy truncate">{book.title}</p>
+                          <p className="text-xs text-gray truncate">{book.authors?.join(', ') || 'Unknown Author'}</p>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                  <li className="border-t border-gray px-2 py-1">
+                    <Link 
+                      to={`/books?search=${encodeURIComponent(searchQuery)}`}
+                      className="text-xs text-gold hover:underline block text-center"
+                      onClick={() => setShowSearchResults(false)}
+                    >
+                      View all results
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            )}
           </div>
           
           {/* Bookmarks */}
@@ -149,7 +263,7 @@ function Navbar() {
             <div className="relative">
               <button 
                 onClick={toggleDropdown}
-                className="flex items-center text-navy gap-1 hover:text-gold transition-colors"
+                className="flex items-center gap-1 bg-navy text-white px-2 py-1 rounded-md hover:bg-gold hover:text-navy transition-colors"
               >
                 <User className="h-5 w-5" />
                 <span className="text-xs hidden sm:inline">{user?.firstName || 'User'}</span>

@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { Search, Filter, ChevronDown, Star, StarHalf, Grid, List, Bookmark } from 'lucide-react';
+import { Search, Filter, ChevronDown, Star, StarHalf, Grid, List, Bookmark, ShoppingCart } from 'lucide-react';
 import { addBookmark, isBookmarked, removeBookmark } from '../services/bookmarkService';
+import cartService from '../services/cartService';
+import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 
 function Books() {
@@ -12,6 +14,8 @@ function Books() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState({ show: false, message: '', type: '' });
+  const { isAuthenticated } = useAuth();
+  const [bookmarkStates, setBookmarkStates] = useState({});
   
   // Filter and sort states
   const [filters, setFilters] = useState({
@@ -28,7 +32,7 @@ function Books() {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const booksPerPage = 12;
-  
+
   // Categories
   const categories = [
     { id: 'all', name: 'All Categories' },
@@ -87,58 +91,111 @@ function Books() {
     fetchBooks();
   }, []);
 
-  // Filter books based on current filters and search query
-  const filteredBooks = books.filter(book => {
-    // Category filter
-    if (filters.category !== 'all' && book.category !== filters.category) {
-      return false;
-    }
+  // Load bookmark states when books are loaded
+  useEffect(() => {
+    const loadBookmarkStates = async () => {
+      if (isAuthenticated() && books.length > 0) {
+        const states = {};
+        for (const book of books) {
+          try {
+            states[book.id] = await isBookmarked(book.id);
+          } catch (error) {
+            console.error(`Error checking bookmark state for book ${book.id}:`, error);
+            states[book.id] = false;
+          }
+        }
+        setBookmarkStates(states);
+      }
+    };
     
-    // Price filter
-    if (filters.price !== 'all') {
-      if (filters.price === 'under-10' && book.price >= 10) return false;
-      if (filters.price === '10-20' && (book.price < 10 || book.price >= 20)) return false;
-      if (filters.price === '20-30' && (book.price < 20 || book.price >= 30)) return false;
-      if (filters.price === 'over-30' && book.price < 30) return false;
-    }
-    
-    // Rating filter
-    if (filters.rating !== 'all') {
-      const minRating = parseInt(filters.rating.split('-')[0]);
-      if (book.rating < minRating) return false;
-    }
-    
-    // Search query
-    if (appliedSearchQuery) {
-      const query = appliedSearchQuery.toLowerCase();
-      const titleMatch = book.title?.toLowerCase().includes(query) || false;
-      const authorMatch = book.author?.toLowerCase().includes(query) || 
-                         (book.authors && book.authors.some(author => author.toLowerCase().includes(query))) || 
-                         false;
-      if (!titleMatch && !authorMatch) return false;
-    }
-    
-    return true;
-  });
+    loadBookmarkStates();
+  }, [books, isAuthenticated]);
 
-  // Sort books
-  const sortedBooks = [...filteredBooks].sort((a, b) => {
-    if (sortBy === 'price-low') return a.price - b.price;
-    if (sortBy === 'price-high') return b.price - a.price;
-    if (sortBy === 'newest') return new Date(b.publicationDate) - new Date(a.publicationDate);
-    if (sortBy === 'rating') return b.rating - a.rating;
-    // Default: popularity (by id for this example)
-    return a.id - b.id;
-  });
+  // Handle adding to cart
+  const handleAddToCart = async (book) => {
+    try {
+      if (!isAuthenticated()) {
+        // If user is not authenticated, show notification to login
+        setNotification({
+          show: true,
+          message: 'Please login to add items to your cart',
+          type: 'login'
+        });
+        return;
+      }
 
-  // Get current books for pagination
-  const indexOfLastBook = currentPage * booksPerPage;
-  const indexOfFirstBook = indexOfLastBook - booksPerPage;
-  const currentBooks = sortedBooks.slice(indexOfFirstBook, indexOfLastBook);
-  const totalPages = Math.ceil(sortedBooks.length / booksPerPage);
+      // Add to cart using the cart service
+      await cartService.addToCart(book.id, 1);
+      
+      // Show notification
+      setNotification({
+        show: true,
+        message: `${book.title} added to cart!`,
+        type: 'cart'
+      });
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      setNotification({
+        show: true,
+        message: 'Failed to add item to cart. Please try again.',
+        type: 'error'
+      });
+    }
+    
+    // Hide notification after 3 seconds
+    setTimeout(() => {
+      setNotification({ show: false, message: '', type: '' });
+    }, 3000);
+  };
 
-  // Change page
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  // Handle bookmark toggle
+  const handleBookmarkToggle = async (book) => {
+    try {
+      if (!isAuthenticated()) {
+        // If user is not authenticated, show notification to login
+        setNotification({
+          show: true,
+          message: 'Please login to bookmark books',
+          type: 'login'
+        });
+        return;
+      }
+
+      const isCurrentlyBookmarked = bookmarkStates[book.id];
+
+      if (isCurrentlyBookmarked) {
+        // Remove bookmark
+        await removeBookmark(book.id);
+        setBookmarkStates(prev => ({ ...prev, [book.id]: false }));
+        setNotification({
+          show: true,
+          message: `${book.title} removed from bookmarks!`,
+          type: 'bookmark'
+        });
+      } else {
+        // Add bookmark
+        await addBookmark(book.id);
+        setBookmarkStates(prev => ({ ...prev, [book.id]: true }));
+        setNotification({
+          show: true,
+          message: `${book.title} added to bookmarks!`,
+          type: 'bookmark'
+        });
+      }
+    } catch (error) {
+      console.error('Error toggling bookmark:', error);
+      setNotification({
+        show: true,
+        message: 'Failed to update bookmark. Please try again.',
+        type: 'error'
+      });
+    }
+    
+    // Hide notification after 3 seconds
+    setTimeout(() => {
+      setNotification({ show: false, message: '', type: '' });
+    }, 3000);
+  };
 
   // Handle filter changes
   const handleFilterChange = (filterType, value) => {
@@ -168,75 +225,56 @@ function Books() {
     setViewMode(mode);
   };
 
-  // Handle bookmark toggle
-  const handleBookmarkToggle = async (book) => {
-    try {
-      const bookmarked = await isBookmarked(book.id);
-      
-      if (bookmarked) {
-        await removeBookmark(book.id);
-        setNotification({
-          show: true,
-          message: `${book.title} removed from bookmarks`,
-          type: 'success'
-        });
-      } else {
-        await addBookmark(book);
-        setNotification({
-          show: true,
-          message: `${book.title} added to bookmarks`,
-          type: 'success'
-        });
-      }
-      
-      // Trigger custom event to update bookmark count in navbar
-      window.dispatchEvent(new Event('bookmarksUpdated'));
-      
-      // Hide notification after 3 seconds
-      setTimeout(() => {
-        setNotification({ show: false, message: '', type: '' });
-      }, 3000);
-    } catch (error) {
-      console.error('Error toggling bookmark:', error);
-      setNotification({
-        show: true,
-        message: 'Failed to update bookmarks',
-        type: 'error'
-      });
-      
-      // Hide notification after 3 seconds
-      setTimeout(() => {
-        setNotification({ show: false, message: '', type: '' });
-      }, 3000);
+  // Filter books based on current filters and search query
+  const filteredBooks = books.filter(book => {
+    // Category filter
+    if (filters.category !== 'all' && book.category !== filters.category) {
+      return false;
     }
-  };
+    
+    // Price filter
+    if (filters.price !== 'all') {
+      if (filters.price === 'under-10' && book.price >= 10) return false;
+      if (filters.price === '10-20' && (book.price < 10 || book.price >= 20)) return false;
+      if (filters.price === '20-30' && (book.price < 20 || book.price >= 30)) return false;
+      if (filters.price === 'over-30' && book.price < 30) return false;
+    }
+    
+    // Rating filter
+    if (filters.rating !== 'all') {
+      const minRating = parseInt(filters.rating.split('-')[0]);
+      if (book.rating < minRating) return false;
+    }
+    
+    // Search query
+    if (appliedSearchQuery) {
+      const query = appliedSearchQuery.toLowerCase();
+      const titleMatch = book.title?.toLowerCase().includes(query) || false;
+      const authorMatch = book.authors?.some(author => author.toLowerCase().includes(query)) || false;
+      if (!titleMatch && !authorMatch) return false;
+    }
+    
+    return true;
+  });
 
-  // Render star ratings
-  const renderRating = (rating) => {
-    const stars = [];
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 >= 0.5;
-    
-    for (let i = 0; i < fullStars; i++) {
-      stars.push(<Star key={`star-${i}`} className="w-4 h-4 fill-gold text-gold" />);
-    }
-    
-    if (hasHalfStar) {
-      stars.push(<StarHalf key="half-star" className="w-4 h-4 fill-gold text-gold" />);
-    }
-    
-    const emptyStars = 5 - stars.length;
-    for (let i = 0; i < emptyStars; i++) {
-      stars.push(<Star key={`empty-star-${i}`} className="w-4 h-4 text-gray-300" />);
-    }
-    
-    return (
-      <div className="flex items-center">
-        {stars}
-        <span className="ml-1 text-xs text-gray-600">{rating.toFixed(1)}</span>
-      </div>
-    );
-  };
+  // Sort books
+  const sortedBooks = [...filteredBooks].sort((a, b) => {
+    if (sortBy === 'price-low') return a.price - b.price;
+    if (sortBy === 'price-high') return b.price - a.price;
+    if (sortBy === 'newest') return new Date(b.publicationDate) - new Date(a.publicationDate);
+    if (sortBy === 'rating') return b.rating - a.rating;
+    // Default: popularity (by id for this example)
+    return a.id - b.id;
+  });
+
+  // Get current books for pagination
+  const indexOfLastBook = currentPage * booksPerPage;
+  const indexOfFirstBook = indexOfLastBook - booksPerPage;
+  const currentBooks = sortedBooks.slice(indexOfFirstBook, indexOfLastBook);
+  const totalPages = Math.ceil(sortedBooks.length / booksPerPage);
+
+  // Change page
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   return (
     <div className="min-h-screen flex flex-col bg-beige">
@@ -246,41 +284,17 @@ function Books() {
       {notification.show && (
         <div className="fixed bottom-4 right-4 bg-navy text-white px-4 py-3 rounded-md shadow-lg z-50 animate-fade-in-up">
           <div className="flex items-center">
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              className="h-5 w-5 mr-2 text-gold" 
-              viewBox="0 0 20 20" 
-              fill="currentColor"
-            >
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
             <span>{notification.message}</span>
-            <Link 
-              to={notification.type === 'bookmark' || notification.type === 'success' && notification.message.includes('bookmark') ? "/bookmarks" : "/cart"}
-              className="ml-4 text-white hover:text-gold"
-            >
-              {notification.type === 'bookmark' || (notification.type === 'success' && notification.message.includes('bookmark')) ? (
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  className="h-5 w-5" 
-                  fill="currentColor" 
-                  viewBox="0 0 24 24" 
-                  stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                </svg>
-              ) : (
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  className="h-5 w-5" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
-                  stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              )}
-            </Link>
+            {notification.type === 'login' ? (
+              <Link to="/login" className="ml-4 text-gold hover:underline">Login</Link>
+            ) : (
+              <Link 
+                to={notification.type === 'bookmark' || notification.message.includes('bookmark') ? "/bookmarks" : "/cart"}
+                className="ml-4 text-gold hover:underline"
+              >
+                View {notification.type === 'bookmark' || notification.message.includes('bookmark') ? "Bookmarks" : "Cart"}
+              </Link>
+            )}
           </div>
         </div>
       )}
@@ -328,7 +342,7 @@ function Books() {
                         className="mr-2"
                       />
                       <label htmlFor={`category-${category.id}`} className="text-sm text-gray-600">
-                        {category.name} {category.id !== 'all' && `(${filteredBooks.filter(book => book.category === category.id).length})`}
+                        {category.name}
                       </label>
                     </div>
                   ))}
@@ -388,29 +402,6 @@ function Books() {
                   ))}
                 </div>
               </div>
-              
-              {/* Availability */}
-              <div>
-                <h3 className="font-medium text-navy mb-2">Availability</h3>
-                <div className="space-y-2">
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="in-stock"
-                      className="mr-2"
-                    />
-                    <label htmlFor="in-stock" className="text-sm text-gray-600">In Stock</label>
-                  </div>
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="pre-order"
-                      className="mr-2"
-                    />
-                    <label htmlFor="pre-order" className="text-sm text-gray-600">Pre-Order</label>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
           
@@ -432,7 +423,7 @@ function Books() {
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                     <button
                       type="submit"
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-navy text-white px-3 py-1 rounded-md hover:bg-gold transition-colors"
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-navy text-white px-3 py-1 rounded-md text-xs hover:bg-gold transition-colors"
                     >
                       Search
                     </button>
@@ -526,8 +517,8 @@ function Books() {
             {!loading && !error && filteredBooks.length > 0 && (
               <div className={viewMode === 'grid' ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" : "space-y-4"}>
                 {currentBooks.map(book => (
-                  <div key={book.id} className={`bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow ${viewMode === 'list' ? 'flex' : ''}`}>
-                    <div className={`relative ${viewMode === 'list' ? 'w-1/4 min-w-[100px]' : ''}`}>
+                  <div key={book.id} className={`bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow ${viewMode === 'list' ? 'flex' : ''} relative`}>
+                    <Link to={`/book/${book.id}`} className={`${viewMode === 'list' ? 'w-1/4 min-w-[100px]' : ''} relative`}>
                       {/* Bestseller Tag */}
                       {book.rating > 4 && (
                         <div className="absolute top-0 left-0 bg-gold text-navy text-xs font-bold px-2 py-1 z-10">
@@ -537,70 +528,34 @@ function Books() {
                       
                       <div className={`${viewMode === 'grid' ? 'aspect-[3/4]' : 'h-full'} bg-gray-100 flex items-center justify-center`}>
                         <img 
-                          src={book.imageUrl || `https://placehold.co/300x450?text=${encodeURIComponent(book.title)}`}
+                          src={book.imageUrl || `https://via.placeholder.com/300x450?text=${encodeURIComponent(book.title)}`}
                           alt={book.title} 
                           className="w-full h-full object-cover"
-                          onError={(e) => {
-                            // Use placehold.co as a fallback
-                            e.target.src = `https://placehold.co/300x450/e2e8f0/1e293b?text=No+Cover`;
-                          }}
                         />
                       </div>
+                    </Link>
                       
-                      {/* Bookmark Button */}
-                      <button 
-                        onClick={() => handleBookmarkToggle(book)}
-                        className="absolute top-2 right-2 bg-white p-1.5 rounded-full shadow-sm hover:bg-gray-100 transition-colors"
-                      >
-                        <Bookmark className="h-4 w-4 text-navy" fill={isBookmarked(book.id) ? 'currentColor' : 'none'} />
-                      </button>
-                    </div>
+                    {/* Bookmark Button */}
+                    <button 
+                      onClick={() => handleBookmarkToggle(book)}
+                      className="absolute top-2 right-2 bg-white p-1.5 rounded-full shadow-sm hover:bg-gold hover:text-white transition-colors z-10"
+                    >
+                      <Bookmark className="h-4 w-4 text-navy" fill={bookmarkStates[book.id] ? 'currentColor' : 'none'} />
+                    </button>
                     
                     <div className={`p-4 ${viewMode === 'list' ? 'flex-1 flex flex-col justify-between' : ''}`}>
-                      <h3 className="font-medium text-navy text-sm truncate">{book.title}</h3>
-                      <p className="text-xs text-gray-600 mb-1 truncate">
-                        {book.author || (book.authors && book.authors.join(', '))}
-                      </p>
-                      
-                      <div className="flex items-center mb-2">
-                        {renderRating(book.rating || 0)}
-                      </div>
+                      <Link to={`/book/${book.id}`} className="hover:text-gold transition-colors">
+                        <h3 className="font-medium text-navy text-sm truncate">{book.title}</h3>
+                        <p className="text-xs text-gray-600 mb-1 truncate">
+                          {book.authors?.join(', ') || 'Unknown Author'}
+                        </p>
+                      </Link>
                       
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-bold text-navy">${(book.price || 0).toFixed(2)}</span>
                         <button 
                           className="bg-navy text-white text-xs px-2 py-1 rounded-sm hover:bg-gold transition-colors"
-                          onClick={() => {
-                            // Add to cart logic
-                            const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-                            const existingItem = cart.find(item => item.bookId === book.id);
-                            
-                            if (existingItem) {
-                              existingItem.quantity += 1;
-                            } else {
-                              cart.push({
-                                bookId: book.id,
-                                id: book.id,
-                                title: book.title,
-                                price: book.price || 0,
-                                imageUrl: book.imageUrl,
-                                quantity: 1
-                              });
-                            }
-                            
-                            localStorage.setItem('cart', JSON.stringify(cart));
-                            window.dispatchEvent(new Event('cartUpdated'));
-                            
-                            setNotification({
-                              show: true,
-                              message: `${book.title} added to cart`,
-                              type: 'success'
-                            });
-                            
-                            setTimeout(() => {
-                              setNotification({ show: false, message: '', type: '' });
-                            }, 3000);
-                          }}
+                          onClick={() => handleAddToCart(book)}
                         >
                           Add to Cart
                         </button>
@@ -615,42 +570,55 @@ function Books() {
             {!loading && !error && totalPages > 1 && (
               <div className="mt-8 flex justify-center">
                 <nav className="flex items-center gap-1">
+                  {/* Previous button */}
                   <button
                     onClick={() => paginate(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
-                    className={`px-3 py-1 rounded-md ${
-                      currentPage === 1
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        : 'bg-white text-navy hover:bg-gray-100'
-                    }`}
+                    className="w-8 h-8 flex items-center justify-center rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Prev
+                    &lt;
                   </button>
                   
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(number => (
-                    <button
-                      key={number}
-                      onClick={() => paginate(number)}
-                      className={`px-3 py-1 rounded-md ${
-                        currentPage === number
-                          ? 'bg-navy text-white'
-                          : 'bg-white text-navy hover:bg-gray-100'
-                      }`}
-                    >
-                      {number}
-                    </button>
-                  ))}
+                  {/* Page numbers */}
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    // Show pages around current page
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      // If 5 or fewer pages, show all
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      // If near start, show first 5 pages
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      // If near end, show last 5 pages
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      // Otherwise show current page and 2 pages on each side
+                      pageNum = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => paginate(pageNum)}
+                        className={`w-8 h-8 flex items-center justify-center rounded-md ${
+                          currentPage === pageNum
+                            ? 'bg-navy text-white'
+                            : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
                   
+                  {/* Next button */}
                   <button
                     onClick={() => paginate(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
-                    className={`px-3 py-1 rounded-md ${
-                      currentPage === totalPages
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        : 'bg-white text-navy hover:bg-gray-100'
-                    }`}
+                    className="w-8 h-8 flex items-center justify-center rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Next
+                    &gt;
                   </button>
                 </nav>
               </div>
