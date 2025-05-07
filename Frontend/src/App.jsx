@@ -7,6 +7,7 @@ import Signup from "./pages/Signup";
 import Books from "./pages/Books";
 import Bookmarks from "./pages/Bookmarks";
 import BookDetails from "./pages/BookDetails";
+import About from "./pages/About";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import UserOnlyRoute from "./components/UserOnlyRoute";
@@ -102,6 +103,11 @@ const AppRoutes = () => {
       <Route path="/" element={
         <AdminRedirectWrapper>
           <Home />
+        </AdminRedirectWrapper>
+      } />
+      <Route path="/about" element={
+        <AdminRedirectWrapper>
+          <About />
         </AdminRedirectWrapper>
       } />
       <Route path="/cart" element={
