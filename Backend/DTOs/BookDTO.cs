@@ -19,5 +19,8 @@ namespace LordofTheReads.DTOs
         public string? ImageUrl { get; set; } = "https://placehold.co/300x450?text=No+Cover";
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
+        public string? Language { get; set; }
+        public string? Format { get; set; }
+        public bool PhysicalLibraryAccess { get; set; }
     }
 }

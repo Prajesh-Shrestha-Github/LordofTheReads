@@ -46,5 +46,7 @@ namespace LordofTheReads.DTOs.Book
         public List<AuthorCreateDto>? NewAuthors { get; set; }
         
         public List<GenreCreateDto>? NewGenres { get; set; }
+
+        public bool PhysicalLibraryAccess { get; set; } = false;
     }
 }

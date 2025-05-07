@@ -12,7 +12,7 @@ const BookForm = () => {
   const [formData, setFormData] = useState({
     title: '', isbn: '', description: '', price: '',
     publicationDate: '', stockQuantity: '', publisher: '', imageUrl: '',
-    authorIds: [], genreIds: [], newAuthors: [], newGenres: [], language: '', format: ''
+    authorIds: [], genreIds: [], newAuthors: [], newGenres: [], language: '', format: '', physicalLibraryAccess: false
   });
   const [authors, setAuthors] = useState([]);
   const [genres, setGenres] = useState([]);
@@ -44,7 +44,7 @@ const BookForm = () => {
             publisher: book.publisher || '', imageUrl: book.imageUrl || '',
             authorIds: book.authors?.map(a => a.id) || [],
             genreIds: book.genres?.map(g => g.id) || [],
-            newAuthors: [], newGenres: [], language: book.language || '', format: book.format || ''
+            newAuthors: [], newGenres: [], language: book.language || '', format: book.format || '', physicalLibraryAccess: book.physicalLibraryAccess
           });
         }
       } catch (e) {
@@ -168,6 +168,15 @@ const BookForm = () => {
               <option value="">Select format</option>
               {formatOptions.map(fmt => <option key={fmt} value={fmt}>{fmt}</option>)}
             </select></div>
+            <div className="flex items-center gap-2">
+              <label className="mr-2">Physical Library Access</label>
+              <input
+                type="checkbox"
+                name="physicalLibraryAccess"
+                checked={formData.physicalLibraryAccess}
+                onChange={e => setFormData(prev => ({ ...prev, physicalLibraryAccess: e.target.checked }))}
+              />
+            </div>
             <div><label>Image URL</label><input name="imageUrl" value={formData.imageUrl} onChange={handleChange} className="w-full p-2 border"/></div>
             {formData.imageUrl && (
               <img

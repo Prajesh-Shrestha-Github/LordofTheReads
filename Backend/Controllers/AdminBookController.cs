@@ -56,7 +56,8 @@ namespace LordofTheReads.Controllers
                         CreatedAt = b.CreatedAt,
                         UpdatedAt = b.UpdatedAt,
                         Language = b.Language,
-                        Format = b.Format
+                        Format = b.Format,
+                        PhysicalLibraryAccess = b.PhysicalLibraryAccess
                     })
                     .ToListAsync();
 
@@ -111,6 +112,7 @@ namespace LordofTheReads.Controllers
                     UpdatedAt = book.UpdatedAt,
                     Language = book.Language,
                     Format = book.Format,
+                    PhysicalLibraryAccess = book.PhysicalLibraryAccess,
                     Authors = book.BookAuthors?.Select(ba => new AuthorDto
                     {
                         Id = ba.Author.Id,
@@ -301,6 +303,7 @@ namespace LordofTheReads.Controllers
                     ImageUrl = bookCreateDto.ImageUrl,
                     Language = bookCreateDto.Language,
                     Format = bookCreateDto.Format,
+                    PhysicalLibraryAccess = bookCreateDto.PhysicalLibraryAccess,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
@@ -415,6 +418,7 @@ namespace LordofTheReads.Controllers
                 book.ImageUrl = bookUpdateDto.ImageUrl;
                 book.Language = bookUpdateDto.Language;
                 book.Format = bookUpdateDto.Format;
+                book.PhysicalLibraryAccess = bookUpdateDto.PhysicalLibraryAccess;
                 book.UpdatedAt = DateTime.UtcNow;
 
                 // Process new authors if provided
@@ -633,6 +637,7 @@ namespace LordofTheReads.Controllers
                         UpdatedAt = updatedBook.UpdatedAt,
                         Language = updatedBook.Language,
                         Format = updatedBook.Format,
+                        PhysicalLibraryAccess = updatedBook.PhysicalLibraryAccess,
                         Authors = updatedBook.BookAuthors?.Select(ba => new AuthorDto
                         {
                             Id = ba.Author.Id,
