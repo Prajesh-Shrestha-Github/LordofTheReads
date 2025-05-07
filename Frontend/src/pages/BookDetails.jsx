@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Bookmark } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import bookService from '../services/bookService';
 import cartService from '../services/cartService';
 import { addBookmark, isBookmarked as checkBookmarkStatus } from '../services/bookmarkService';
+import { getAllGenres } from '../services/genreService';
 import { useAuth } from '../context/AuthContext';
 
 function BookDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [book, setBook] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -332,7 +334,21 @@ function BookDetails() {
                 </div>
                 <div>
                   <p className="text-gray text-sm">Genre</p>
-                  <p className="text-navy">{book.genres && book.genres.length > 0 ? book.genres.join(', ') : 'Unknown'}</p>
+                  <p className="text-navy">
+                    {book.genres && book.genres.length > 0 ? (
+                      book.genres.map((genre, index) => (
+                        <React.Fragment key={genre}>
+                          <Link 
+                            to={`/books?genre=${encodeURIComponent(genre)}`}
+                            className="hover:text-gold hover:underline transition-colors"
+                          >
+                            {genre}
+                          </Link>
+                          {index < book.genres.length - 1 ? ', ' : ''}
+                        </React.Fragment>
+                      ))
+                    ) : 'Unknown'}
+                  </p>
                 </div>
                 <div>
                   <p className="text-gray text-sm">ISBN</p>

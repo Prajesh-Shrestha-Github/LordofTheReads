@@ -1,17 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Search, Filter, ChevronDown, Star, StarHalf, Grid, List, Bookmark, ShoppingCart } from 'lucide-react';
 import { addBookmark, isBookmarked, removeBookmark } from '../services/bookmarkService';
 import cartService from '../services/cartService';
+import { getAllGenres } from '../services/genreService';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 
 function Books() {
+  // Get search parameters from URL
+  const [searchParams] = useSearchParams();
+  const genreParam = searchParams.get('genre');
+  
   // Books data
   const [books, setBooks] = useState([]);
+  const [filteredBooks, setFilteredBooks] = useState([]);
+  const [genres, setGenres] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [genresLoading, setGenresLoading] = useState(true);
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState({ show: false, message: '', type: '' });
   const { isAuthenticated } = useAuth();
@@ -19,7 +27,7 @@ function Books() {
   
   // Filter and sort states
   const [filters, setFilters] = useState({
-    category: 'all',
+    category: genreParam || 'all',
     price: 'all',
     rating: 'all',
   });
@@ -91,6 +99,23 @@ function Books() {
     fetchBooks();
   }, []);
 
+  // Fetch genres from the database
+  useEffect(() => {
+    const fetchGenres = async () => {
+      try {
+        setGenresLoading(true);
+        const data = await getAllGenres();
+        setGenres(data);
+      } catch (err) {
+        console.error('Error fetching genres:', err);
+      } finally {
+        setGenresLoading(false);
+      }
+    };
+
+    fetchGenres();
+  }, []);
+
   // Load bookmark states when books are loaded
   useEffect(() => {
     const loadBookmarkStates = async () => {
@@ -110,6 +135,80 @@ function Books() {
     
     loadBookmarkStates();
   }, [books, isAuthenticated]);
+
+  // Apply filters and search to books
+  useEffect(() => {
+    if (!books.length) return;
+
+    let result = [...books];
+
+    // Apply category/genre filter
+    if (filters.category !== 'all') {
+      result = result.filter(book => 
+        book.genres && book.genres.some(genre => 
+          genre.toLowerCase() === filters.category.toLowerCase()
+        )
+      );
+    }
+
+    // Apply price filter
+    if (filters.price !== 'all') {
+      switch (filters.price) {
+        case 'under-10':
+          result = result.filter(book => book.price < 10);
+          break;
+        case '10-20':
+          result = result.filter(book => book.price >= 10 && book.price <= 20);
+          break;
+        case '20-30':
+          result = result.filter(book => book.price > 20 && book.price <= 30);
+          break;
+        case 'over-30':
+          result = result.filter(book => book.price > 30);
+          break;
+        default:
+          break;
+      }
+    }
+
+    // Apply rating filter
+    if (filters.rating !== 'all') {
+      const minRating = parseInt(filters.rating.split('-')[0]);
+      result = result.filter(book => (book.rating || 0) >= minRating);
+    }
+
+    // Apply search query
+    if (appliedSearchQuery) {
+      const query = appliedSearchQuery.toLowerCase();
+      result = result.filter(book => 
+        book.title.toLowerCase().includes(query) || 
+        (book.authors && book.authors.some(author => author.toLowerCase().includes(query)))
+      );
+    }
+
+    // Apply sorting
+    switch (sortBy) {
+      case 'price-low':
+        result.sort((a, b) => a.price - b.price);
+        break;
+      case 'price-high':
+        result.sort((a, b) => b.price - a.price);
+        break;
+      case 'newest':
+        result.sort((a, b) => new Date(b.publicationDate || 0) - new Date(a.publicationDate || 0));
+        break;
+      case 'rating':
+        result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        break;
+      case 'popularity':
+      default:
+        // Assuming higher IDs are more popular (or you could use another field)
+        result.sort((a, b) => b.id - a.id);
+        break;
+    }
+
+    setFilteredBooks(result);
+  }, [books, filters, sortBy, appliedSearchQuery]);
 
   // Handle adding to cart
   const handleAddToCart = async (book) => {
@@ -225,53 +324,11 @@ function Books() {
     setViewMode(mode);
   };
 
-  // Filter books based on current filters and search query
-  const filteredBooks = books.filter(book => {
-    // Category filter
-    if (filters.category !== 'all' && book.category !== filters.category) {
-      return false;
-    }
-    
-    // Price filter
-    if (filters.price !== 'all') {
-      if (filters.price === 'under-10' && book.price >= 10) return false;
-      if (filters.price === '10-20' && (book.price < 10 || book.price >= 20)) return false;
-      if (filters.price === '20-30' && (book.price < 20 || book.price >= 30)) return false;
-      if (filters.price === 'over-30' && book.price < 30) return false;
-    }
-    
-    // Rating filter
-    if (filters.rating !== 'all') {
-      const minRating = parseInt(filters.rating.split('-')[0]);
-      if (book.rating < minRating) return false;
-    }
-    
-    // Search query
-    if (appliedSearchQuery) {
-      const query = appliedSearchQuery.toLowerCase();
-      const titleMatch = book.title?.toLowerCase().includes(query) || false;
-      const authorMatch = book.authors?.some(author => author.toLowerCase().includes(query)) || false;
-      if (!titleMatch && !authorMatch) return false;
-    }
-    
-    return true;
-  });
-
-  // Sort books
-  const sortedBooks = [...filteredBooks].sort((a, b) => {
-    if (sortBy === 'price-low') return a.price - b.price;
-    if (sortBy === 'price-high') return b.price - a.price;
-    if (sortBy === 'newest') return new Date(b.publicationDate) - new Date(a.publicationDate);
-    if (sortBy === 'rating') return b.rating - a.rating;
-    // Default: popularity (by id for this example)
-    return a.id - b.id;
-  });
-
   // Get current books for pagination
   const indexOfLastBook = currentPage * booksPerPage;
   const indexOfFirstBook = indexOfLastBook - booksPerPage;
-  const currentBooks = sortedBooks.slice(indexOfFirstBook, indexOfLastBook);
-  const totalPages = Math.ceil(sortedBooks.length / booksPerPage);
+  const currentBooks = filteredBooks.slice(indexOfFirstBook, indexOfLastBook);
+  const totalPages = Math.ceil(filteredBooks.length / booksPerPage);
 
   // Change page
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
@@ -332,20 +389,36 @@ function Books() {
               <div className="mb-6">
                 <h3 className="font-medium text-navy mb-2">Categories</h3>
                 <div className="space-y-2">
-                  {categories.map(category => (
-                    <div key={category.id} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        id={`category-${category.id}`}
-                        checked={filters.category === category.id}
-                        onChange={() => handleFilterChange('category', filters.category === category.id ? 'all' : category.id)}
-                        className="mr-2"
-                      />
-                      <label htmlFor={`category-${category.id}`} className="text-sm text-gray-600">
-                        {category.name}
-                      </label>
-                    </div>
-                  ))}
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="category-all"
+                      checked={filters.category === 'all'}
+                      onChange={() => handleFilterChange('category', 'all')}
+                      className="mr-2"
+                    />
+                    <label htmlFor="category-all" className="text-sm text-gray-600">
+                      All Categories
+                    </label>
+                  </div>
+                  {genresLoading ? (
+                    <div className="text-sm text-gray-500">Loading genres...</div>
+                  ) : (
+                    genres.map(genre => (
+                      <div key={genre.id} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id={`category-${genre.id}`}
+                          checked={filters.category === genre.name}
+                          onChange={() => handleFilterChange('category', genre.name)}
+                          className="mr-2"
+                        />
+                        <label htmlFor={`category-${genre.id}`} className="text-sm text-gray-600">
+                          {genre.name}
+                        </label>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
               

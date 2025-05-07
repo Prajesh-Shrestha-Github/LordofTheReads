@@ -5,17 +5,20 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { addBookmark, isBookmarked, removeBookmark } from '../services/bookmarkService';
 import cartService from '../services/cartService';
+import { getAllGenres } from '../services/genreService';
 import { useAuth } from '../context/AuthContext';
 
 function Home() {
   const [books, setBooks] = useState([]);
+  const [genres, setGenres] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [genresLoading, setGenresLoading] = useState(true);
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState({ show: false, message: '', type: '' });
   const { isAuthenticated } = useAuth();
   const [bookmarkStates, setBookmarkStates] = useState({});
 
-  // Sample testimonials and categories (keep these)
+  // Sample testimonials
   const testimonials = [
     {
       id: 1,
@@ -34,15 +37,6 @@ function Home() {
     }
   ];
 
-  const categories = [
-    { id: 1, name: 'Fantasy' },
-    { id: 2, name: 'Science Fiction' },
-    { id: 3, name: 'Mystery' },
-    { id: 4, name: 'Romance' },
-    { id: 5, name: 'Non-Fiction' },
-    { id: 6, name: "Children's Books" }
-  ];
-
   useEffect(() => {
     const fetchBooks = async () => {
       try {
@@ -58,6 +52,23 @@ function Home() {
     };
 
     fetchBooks();
+  }, []);
+
+  // Fetch genres from the database
+  useEffect(() => {
+    const fetchGenres = async () => {
+      try {
+        setGenresLoading(true);
+        const data = await getAllGenres();
+        setGenres(data);
+      } catch (err) {
+        console.error('Error fetching genres:', err);
+      } finally {
+        setGenresLoading(false);
+      }
+    };
+
+    fetchGenres();
   }, []);
 
   // Load bookmark states for all books
@@ -258,14 +269,26 @@ function Home() {
       {/* Categories Section */}
       <section className="py-12 bg-beige">
         <div className="container mx-auto px-4">
-          <h2 className="text-xl font-bold text-navy text-center mb-8">Browse by Category</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {categories.map(category => (
-              <div key={category.id} className="bg-navy text-white p-6 rounded-md flex items-center justify-center hover:bg-gold hover:text-navy transition-colors">
-                <h3 className="text-sm font-medium">{category.name}</h3>
-              </div>
-            ))}
-          </div>
+          <h2 className="text-xl font-bold text-navy text-center mb-8">Browse by Genre</h2>
+          {genresLoading ? (
+            <div className="flex justify-center items-center h-40">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-navy"></div>
+            </div>
+          ) : genres.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {genres.map(genre => (
+                <Link 
+                  key={genre.id} 
+                  to={`/books?genre=${encodeURIComponent(genre.name)}`}
+                  className="bg-navy text-white p-6 rounded-md flex items-center justify-center hover:bg-gold hover:text-navy transition-colors"
+                >
+                  <h3 className="text-sm font-medium">{genre.name}</h3>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-navy">No genres available</div>
+          )}
         </div>
       </section>
 
