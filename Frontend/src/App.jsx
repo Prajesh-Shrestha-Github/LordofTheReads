@@ -8,6 +8,7 @@ import Books from "./pages/Books";
 import Bookmarks from "./pages/Bookmarks";
 import BookDetails from "./pages/BookDetails";
 import About from "./pages/About";
+import Notifications from "./pages/Notifications";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import UserOnlyRoute from "./components/UserOnlyRoute";
@@ -133,6 +134,11 @@ const AppRoutes = () => {
       <Route path="/book/:id" element={
         <UserOnlyRoute>
           <BookDetails />
+        </UserOnlyRoute>
+      } />
+      <Route path="/notifications" element={
+        <UserOnlyRoute>
+          <Notifications />
         </UserOnlyRoute>
       } />
       

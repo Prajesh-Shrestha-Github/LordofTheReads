@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BookOpen, ShoppingCart, Search, Bookmark, User, LogOut, ChevronDown } from 'lucide-react';
+import { BookOpen, ShoppingCart, Search, Bookmark, User, LogOut, ChevronDown, BellRing } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import cartService from '../services/cartService';
 import { getBookmarkCount } from '../services/bookmarkService';
@@ -238,6 +238,13 @@ function Navbar() {
               </div>
             )}
           </div>
+          
+          {/* Notifications */}
+          {isAuthenticated() && (
+            <Link to="/notifications" className="text-navy hover:text-gold transition-colors relative">
+              <BellRing className="h-5 w-5" />
+            </Link>
+          )}
           
           {/* Bookmarks */}
           <Link to="/bookmarks" className="text-navy hover:text-gold transition-colors relative">
