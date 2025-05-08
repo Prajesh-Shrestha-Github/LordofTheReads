@@ -1,8 +1,9 @@
-// Merged Books.jsx with full UI and backend integration + author filter
+// Books.jsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { Bookmark, ShoppingCart } from 'lucide-react';
 import axios from 'axios';
 
 function Books() {
@@ -12,15 +13,14 @@ function Books() {
 
   const [filters, setFilters] = useState({
     genre: 'all',
-    author: 'all', // ✅ new state for author
+    author: 'all',
     price: 'all',
-    rating: 'all'
+    rating: 'all',
   });
-  const [authors, setAuthors] = useState([]); // ✅ list of authors
+  const [authors, setAuthors] = useState([]);
   const [sortBy, setSortBy] = useState('popularity');
   const [searchQuery, setSearchQuery] = useState('');
   const [appliedSearchQuery, setAppliedSearchQuery] = useState('');
-
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const booksPerPage = 12;
@@ -32,7 +32,7 @@ function Books() {
         const params = new URLSearchParams();
 
         if (filters.genre !== 'all') params.append('genre', filters.genre);
-        if (filters.author !== 'all') params.append('author', filters.author); // ✅ add author filter
+        if (filters.author !== 'all') params.append('author', filters.author);
         if (filters.price !== 'all') {
           if (filters.price === 'under-10') params.append('maxPrice', '10');
           else if (filters.price === '10-20') {
@@ -41,7 +41,9 @@ function Books() {
           } else if (filters.price === '20-30') {
             params.append('minPrice', '20');
             params.append('maxPrice', '30');
-          } else if (filters.price === 'over-30') params.append('minPrice', '30');
+          } else if (filters.price === 'over-30') {
+            params.append('minPrice', '30');
+          }
         }
         if (filters.rating !== 'all') {
           const minRating = parseInt(filters.rating.split('-')[0]);
@@ -82,7 +84,7 @@ function Books() {
   useEffect(() => {
     const fetchAuthors = async () => {
       try {
-        const response = await axios.get('http://localhost:5253/api/authors'); // ✅ assumes this endpoint exists
+        const response = await axios.get('http://localhost:5253/api/authors');
         setAuthors(response.data);
       } catch (err) {
         console.error('Error fetching authors:', err);
@@ -100,6 +102,14 @@ function Books() {
     e.preventDefault();
     setAppliedSearchQuery(searchQuery);
     setCurrentPage(1);
+  };
+
+  const handleAddToCart = (book) => {
+    console.log(`Add to cart: ${book.title}`);
+  };
+
+  const handleBookmarkToggle = (book) => {
+    console.log(`Toggle bookmark: ${book.title}`);
   };
 
   return (
@@ -166,6 +176,20 @@ function Books() {
                   <h2 className="text-lg font-bold text-navy mb-2">{book.title}</h2>
                   <p className="text-sm text-gray-600 mb-1">{book.authors?.join(', ')}</p>
                   <p className="text-sm text-gray-800 font-semibold">${book.price.toFixed(2)}</p>
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      className="px-3 py-1 bg-navy text-white text-sm rounded hover:bg-gold transition"
+                      onClick={() => handleAddToCart(book)}
+                    >
+                      <ShoppingCart className="inline-block w-4 h-4 mr-1" /> Add to Cart
+                    </button>
+                    <button
+                      className="px-3 py-1 bg-gray-200 text-navy text-sm rounded hover:bg-gold transition"
+                      onClick={() => handleBookmarkToggle(book)}
+                    >
+                      <Bookmark className="inline-block w-4 h-4 mr-1" /> Wishlist
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
