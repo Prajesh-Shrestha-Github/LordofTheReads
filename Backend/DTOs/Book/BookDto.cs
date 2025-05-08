@@ -20,8 +20,13 @@ namespace LordofTheReads.DTOs.Book
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public List<string> Authors { get; set; } = new List<string>();
+
         // Discount information
         public decimal DiscountPercentage { get; set; }
         public bool OnSaleFlag { get; set; }
+
+        public List<string> Genres { get; set; } = new List<string>();
+        // Number of reviews for the book
+        public int ReviewCount { get; set; }
     }
 }

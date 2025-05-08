@@ -177,8 +177,8 @@ function Navbar() {
           <div className="flex items-center space-x-6">
             <Link to="/" className="text-xs font-medium text-navy hover:text-gold transition-colors">Home</Link>
             <Link to="/books" className="text-xs font-medium text-navy hover:text-gold transition-colors">Books</Link>
-            <Link to="/categories" className="text-xs font-medium text-navy hover:text-gold transition-colors">Categories</Link>
             <Link to="/about" className="text-xs font-medium text-navy hover:text-gold transition-colors">About</Link>
+            <Link to="/categories" className="text-xs font-medium text-navy hover:text-gold transition-colors">Categories</Link>
             <Link to="/contact" className="text-xs font-medium text-navy hover:text-gold transition-colors">Contact</Link>
           </div>
         </nav>

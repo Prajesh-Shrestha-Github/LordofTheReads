@@ -5,19 +5,22 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { addBookmark, isBookmarked, removeBookmark } from '../services/bookmarkService';
 import cartService from '../services/cartService';
+import { getAllGenres } from '../services/genreService';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 function Home() {
   const [books, setBooks] = useState([]);
+  const [genres, setGenres] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [genresLoading, setGenresLoading] = useState(true);
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState({ show: false, message: '', type: '' });
   const { user, isAuthenticated, hasRole } = useAuth();
   const [bookmarkStates, setBookmarkStates] = useState({});
   const navigate = useNavigate();
 
-  // Sample testimonials and categories (keep these)
+  // Sample testimonials
   const testimonials = [
     {
       id: 1,
@@ -34,15 +37,6 @@ function Home() {
       text: '"Their vast collection is second to none! I found a rare edition I\'d been searching for years. Absolutely thrilled!"',
       author: 'Jennifer Williams'
     }
-  ];
-
-  const categories = [
-    { id: 1, name: 'Fantasy' },
-    { id: 2, name: 'Science Fiction' },
-    { id: 3, name: 'Mystery' },
-    { id: 4, name: 'Romance' },
-    { id: 5, name: 'Non-Fiction' },
-    { id: 6, name: "Children's Books" }
   ];
 
   useEffect(() => {
@@ -62,11 +56,29 @@ function Home() {
     fetchBooks();
   }, []);
 
+  // Redirect Admin users
   useEffect(() => {
     if (user && hasRole('Admin')) {
       navigate('/admin', { replace: true });
     }
   }, [user, hasRole, navigate]);
+
+  // Fetch genres from the database
+  useEffect(() => {
+    const fetchGenres = async () => {
+      try {
+        setGenresLoading(true);
+        const data = await getAllGenres();
+        setGenres(data);
+      } catch (err) {
+        console.error('Error fetching genres:', err);
+      } finally {
+        setGenresLoading(false);
+      }
+    };
+
+    fetchGenres();
+  }, []);
 
   // Load bookmark states for all books
   useEffect(() => {
@@ -213,11 +225,13 @@ function Home() {
                 ...books.filter(book => book.id < 8 || book.id > 12)].slice(0, 8).map(book => (
                 <div key={book.id} className="flex flex-col">
                   <div className="bg-beige aspect-[2/3] mb-3 flex items-center justify-center relative overflow-hidden">
-                    <img 
-                      src={book.imageUrl || `https://placehold.co/300x450?text=${encodeURIComponent(book.title)}`}
-                      alt={book.title}
-                      className="object-contain h-full w-full"
-                    />
+                    <Link to={`/book/${book.id}`} className="w-full h-full">
+                      <img 
+                        src={book.imageUrl || `https://placehold.co/300x450?text=${encodeURIComponent(book.title)}`}
+                        alt={book.title}
+                        className="object-contain h-full w-full"
+                      />
+                    </Link>
                     <button 
                       onClick={() => handleBookmarkToggle(book)}
                       className="absolute top-2 right-2 bg-white p-1.5 rounded-md shadow-md"
@@ -236,7 +250,9 @@ function Home() {
                     </button>
                   </div>
                   <div>
-                    <h3 className="text-xs font-medium text-navy">{book.title}</h3>
+                    <Link to={`/book/${book.id}`} className="hover:text-gold">
+                      <h3 className="text-xs font-medium text-navy">{book.title}</h3>
+                    </Link>
                     <p className="text-xs text-gray">{book.author || book.authors?.join(', ') || 'Unknown Author'}</p>
                     <div className="flex justify-between items-center mt-2">
                       <span className="text-xs font-bold text-navy">${(book.price || 0).toFixed(2)}</span>
@@ -264,14 +280,26 @@ function Home() {
       {/* Categories Section */}
       <section className="py-12 bg-beige">
         <div className="container mx-auto px-4">
-          <h2 className="text-xl font-bold text-navy text-center mb-8">Browse by Category</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {categories.map(category => (
-              <div key={category.id} className="bg-navy text-white p-6 rounded-md flex items-center justify-center hover:bg-gold hover:text-navy transition-colors">
-                <h3 className="text-sm font-medium">{category.name}</h3>
-              </div>
-            ))}
-          </div>
+          <h2 className="text-xl font-bold text-navy text-center mb-8">Browse by Genre</h2>
+          {genresLoading ? (
+            <div className="flex justify-center items-center h-40">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-navy"></div>
+            </div>
+          ) : genres.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {genres.map(genre => (
+                <Link 
+                  key={genre.id} 
+                  to={`/books?genre=${encodeURIComponent(genre.name)}`}
+                  className="bg-navy text-white p-6 rounded-md flex items-center justify-center hover:bg-gold hover:text-navy transition-colors"
+                >
+                  <h3 className="text-sm font-medium">{genre.name}</h3>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-navy">No genres available</div>
+          )}
         </div>
       </section>
 

@@ -1,21 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Bookmark } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import bookService from '../services/bookService';
 import cartService from '../services/cartService';
-import { addBookmark, isBookmarked } from '../services/bookmarkService';
+import { addBookmark, isBookmarked as checkBookmarkStatus } from '../services/bookmarkService';
+import { getAllGenres } from '../services/genreService';
 import { useAuth } from '../context/AuthContext';
 
 function BookDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [book, setBook] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [isBookmarked, setIsBookmarked] = useState(false);
-  const [selectedFormat, setSelectedFormat] = useState('Paperback');
+  const [selectedFormat, setSelectedFormat] = useState('');
+  const [availableFormats, setAvailableFormats] = useState([]);
   const [notification, setNotification] = useState({ show: false, message: '', type: '' });
   const { isAuthenticated } = useAuth();
   
@@ -25,6 +28,17 @@ function BookDetails() {
         setLoading(true);
         const data = await bookService.getBookById(id);
         setBook(data);
+        
+        // Set the format from the database as the selected format
+        if (data.format) {
+          setSelectedFormat(data.format);
+          
+          // Only use the exact format from the database
+          setAvailableFormats([data.format]);
+        } else {
+          // Fallback formats if no format is specified in the database
+          setAvailableFormats(['Paperback', 'Hardcover', 'E-Book']);
+        }
       } catch (err) {
         console.error('Error fetching book details:', err);
         setError('Failed to load book details. Please try again later.');
@@ -38,10 +52,10 @@ function BookDetails() {
   
   // Check if book is bookmarked
   useEffect(() => {
-    const checkBookmarkStatus = async () => {
+    const verifyBookmarkStatus = async () => {
       if (isAuthenticated() && book) {
         try {
-          const bookmarked = await isBookmarked(book.id);
+          const bookmarked = await checkBookmarkStatus(book.id);
           setIsBookmarked(bookmarked);
         } catch (err) {
           console.error('Error checking bookmark status:', err);
@@ -49,7 +63,7 @@ function BookDetails() {
       }
     };
     
-    checkBookmarkStatus();
+    verifyBookmarkStatus();
   }, [book, isAuthenticated]);
   
   const decrementQuantity = () => {
@@ -262,48 +276,15 @@ function BookDetails() {
             <div className="mb-6">
               <h3 className="font-medium mb-2">Format</h3>
               <div className="flex flex-wrap gap-2">
-                <button 
-                  onClick={() => setSelectedFormat('Paperback')}
-                  className={`px-3 py-1 flex items-center justify-center ${selectedFormat === 'Paperback' ? 'bg-navy text-white' : 'bg-gray-100 text-navy'} rounded-md hover:bg-gold hover:text-navy transition-colors`}
-                >
-                  Paperback
-                </button>
-                <button 
-                  onClick={() => setSelectedFormat('Hardcover')}
-                  className={`px-3 py-1 flex items-center justify-center ${selectedFormat === 'Hardcover' ? 'bg-navy text-white' : 'bg-gray-100 text-navy'} rounded-md hover:bg-gold hover:text-navy transition-colors`}
-                >
-                  Hardcover
-                </button>
-                <button 
-                  onClick={() => setSelectedFormat('E-Book')}
-                  className={`px-3 py-1 flex items-center justify-center ${selectedFormat === 'E-Book' ? 'bg-navy text-white' : 'bg-gray-100 text-navy'} rounded-md hover:bg-gold hover:text-navy transition-colors`}
-                >
-                  E-Book
-                </button>
-                <button 
-                  onClick={() => setSelectedFormat('Audiobook')}
-                  className={`px-3 py-1 flex items-center justify-center ${selectedFormat === 'Audiobook' ? 'bg-navy text-white' : 'bg-gray-100 text-navy'} rounded-md hover:bg-gold hover:text-navy transition-colors`}
-                >
-                  Audiobook
-                </button>
-                <button 
-                  onClick={() => setSelectedFormat('Signed Edition')}
-                  className={`px-3 py-1 flex items-center justify-center ${selectedFormat === 'Signed Edition' ? 'bg-navy text-white' : 'bg-gray-100 text-navy'} rounded-md hover:bg-gold hover:text-navy transition-colors`}
-                >
-                  Signed Edition
-                </button>
-                <button 
-                  onClick={() => setSelectedFormat('Collector\'s Edition')}
-                  className={`px-3 py-1 flex items-center justify-center ${selectedFormat === 'Collector\'s Edition' ? 'bg-navy text-white' : 'bg-gray-100 text-navy'} rounded-md hover:bg-gold hover:text-navy transition-colors`}
-                >
-                  Collector's Edition
-                </button>
-                <button 
-                  onClick={() => setSelectedFormat('Deluxe Edition')}
-                  className={`px-3 py-1 flex items-center justify-center ${selectedFormat === 'Deluxe Edition' ? 'bg-navy text-white' : 'bg-gray-100 text-navy'} rounded-md hover:bg-gold hover:text-navy transition-colors`}
-                >
-                  Deluxe Edition
-                </button>
+                {availableFormats.map((format) => (
+                  <button 
+                    key={format}
+                    onClick={() => setSelectedFormat(format)}
+                    className={`px-3 py-1 flex items-center justify-center ${selectedFormat === format ? 'bg-navy text-white' : 'bg-gray-100 text-navy'} rounded-md hover:bg-gold hover:text-navy transition-colors`}
+                  >
+                    {format}
+                  </button>
+                ))}
               </div>
             </div>
             
@@ -362,11 +343,29 @@ function BookDetails() {
                 </div>
                 <div>
                   <p className="text-gray text-sm">Publication Date</p>
-                  <p className="text-navy">{book.publicationDate || 'Unknown'}</p>
+                  <p className="text-navy">{book.publicationDate ? new Date(book.publicationDate).toLocaleDateString() : 'Unknown'}</p>
                 </div>
                 <div>
-                  <p className="text-gray text-sm">Pages</p>
-                  <p className="text-navy">{book.pageCount || 'Unknown'}</p>
+                  <p className="text-gray text-sm">Genre</p>
+                  <p className="text-navy">
+                    {book.genres && book.genres.length > 0 ? (
+                      book.genres.map((genre, index) => (
+                        <React.Fragment key={genre}>
+                          <Link 
+                            to={`/books?genre=${encodeURIComponent(genre)}`}
+                            className="hover:text-gold hover:underline transition-colors"
+                          >
+                            {genre}
+                          </Link>
+                          {index < book.genres.length - 1 ? ', ' : ''}
+                        </React.Fragment>
+                      ))
+                    ) : 'Unknown'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray text-sm">Format</p>
+                  <p className="text-navy">{selectedFormat || book.format || 'Unknown'}</p>
                 </div>
                 <div>
                   <p className="text-gray text-sm">ISBN</p>
@@ -378,7 +377,7 @@ function BookDetails() {
                 </div>
                 <div>
                   <p className="text-gray text-sm">Availability</p>
-                  <p className="text-navy">{book.inStock ? 'In Stock' : 'Out of Stock'}</p>
+                  <p className="text-navy">{book.stockQuantity > 0 ? 'In Stock' : 'Out of Stock'}</p>
                 </div>
               </div>
             </div>

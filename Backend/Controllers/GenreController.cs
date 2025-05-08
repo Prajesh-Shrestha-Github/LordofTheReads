@@ -42,8 +42,16 @@ namespace LordofTheReads.Controllers
         {
             try
             {
-                // Return a hardcoded item for testing
-                var genre = new { Id = id, Name = "Test Genre" };
+                var genre = _context.Genres
+                    .Where(g => g.Id == id)
+                    .Select(g => new { g.Id, g.Name })
+                    .FirstOrDefault();
+                    
+                if (genre == null)
+                {
+                    return NotFound(new { message = $"Genre with ID {id} not found." });
+                }
+                
                 return Ok(genre);
             }
             catch (Exception ex)
