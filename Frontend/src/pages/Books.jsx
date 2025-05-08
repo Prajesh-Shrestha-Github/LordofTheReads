@@ -1,4 +1,4 @@
-// Merged Books.jsx with full UI and backend integration + title sorting
+// Merged Books.jsx with full UI and backend integration + author filter
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
@@ -12,9 +12,11 @@ function Books() {
 
   const [filters, setFilters] = useState({
     genre: 'all',
+    author: 'all', // ✅ new state for author
     price: 'all',
     rating: 'all'
   });
+  const [authors, setAuthors] = useState([]); // ✅ list of authors
   const [sortBy, setSortBy] = useState('popularity');
   const [searchQuery, setSearchQuery] = useState('');
   const [appliedSearchQuery, setAppliedSearchQuery] = useState('');
@@ -30,6 +32,7 @@ function Books() {
         const params = new URLSearchParams();
 
         if (filters.genre !== 'all') params.append('genre', filters.genre);
+        if (filters.author !== 'all') params.append('author', filters.author); // ✅ add author filter
         if (filters.price !== 'all') {
           if (filters.price === 'under-10') params.append('maxPrice', '10');
           else if (filters.price === '10-20') {
@@ -76,6 +79,18 @@ function Books() {
     fetchBooks();
   }, [appliedSearchQuery, filters, sortBy, currentPage]);
 
+  useEffect(() => {
+    const fetchAuthors = async () => {
+      try {
+        const response = await axios.get('http://localhost:5253/api/authors'); // ✅ assumes this endpoint exists
+        setAuthors(response.data);
+      } catch (err) {
+        console.error('Error fetching authors:', err);
+      }
+    };
+    fetchAuthors();
+  }, []);
+
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
     setCurrentPage(1);
@@ -101,11 +116,18 @@ function Books() {
           <button type="submit" className="ml-2 px-4 py-2 bg-navy text-white rounded-md">Search</button>
         </form>
 
-        <div className="mb-4 flex gap-4">
+        <div className="mb-4 flex gap-4 flex-wrap">
           <select onChange={(e) => handleFilterChange('genre', e.target.value)} value={filters.genre} className="px-4 py-2 border rounded-md">
             <option value="all">All Genres</option>
             <option value="1">Fiction</option>
             <option value="2">Fantasy</option>
+          </select>
+
+          <select onChange={(e) => handleFilterChange('author', e.target.value)} value={filters.author} className="px-4 py-2 border rounded-md">
+            <option value="all">All Authors</option>
+            {authors.map(author => (
+              <option key={author.id} value={author.id}>{author.name}</option>
+            ))}
           </select>
 
           <select onChange={(e) => handleFilterChange('price', e.target.value)} value={filters.price} className="px-4 py-2 border rounded-md">
