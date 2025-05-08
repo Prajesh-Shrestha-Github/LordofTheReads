@@ -169,6 +169,8 @@ const announcementService = {
   createAnnouncement: async (announcementData) => {
     try {
       const response = await api.post('/admin/announcements', announcementData);
+      // Dispatch event to update announcement counters in real-time
+      window.dispatchEvent(new CustomEvent('announcementsUpdated'));
       return response.data;
     } catch (error) {
       console.error('Error creating announcement:', error);
@@ -180,6 +182,8 @@ const announcementService = {
   updateAnnouncement: async (id, announcementData) => {
     try {
       const response = await api.put(`/admin/announcements/${id}`, announcementData);
+      // Dispatch event to update announcement counters in real-time
+      window.dispatchEvent(new CustomEvent('announcementsUpdated'));
       return response.data;
     } catch (error) {
       console.error(`Error updating announcement ${id}:`, error);
@@ -191,6 +195,8 @@ const announcementService = {
   deleteAnnouncement: async (id) => {
     try {
       const response = await api.delete(`/admin/announcements/${id}`);
+      // Dispatch event to update announcement counters in real-time
+      window.dispatchEvent(new CustomEvent('announcementsUpdated'));
       return response.data;
     } catch (error) {
       console.error(`Error deleting announcement ${id}:`, error);

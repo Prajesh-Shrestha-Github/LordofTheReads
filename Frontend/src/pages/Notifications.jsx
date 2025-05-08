@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { BellRing } from 'lucide-react';
+import { BellRing, Check } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { getAllAnnouncements } from '../services/announcementService';
+import { getAllAnnouncements, markAllAnnouncementsAsRead, getReadAnnouncementIds } from '../services/announcementService';
 
 function Notifications() {
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [readAnnouncementIds, setReadAnnouncementIds] = useState([]);
 
   useEffect(() => {
     const fetchAnnouncements = async () => {
@@ -16,6 +17,9 @@ function Notifications() {
         setLoading(true);
         const data = await getAllAnnouncements();
         setAnnouncements(data);
+        // Get read announcement IDs
+        const readIds = getReadAnnouncementIds();
+        setReadAnnouncementIds(readIds);
       } catch (err) {
         console.error('Error fetching announcements:', err);
         setError('Failed to load announcements. Please try again later.');
@@ -25,6 +29,9 @@ function Notifications() {
     };
 
     fetchAnnouncements();
+    
+    // Mark all announcements as read when the page is visited
+    markAllAnnouncementsAsRead();
   }, []);
 
   // Format date to be more readable
@@ -42,13 +49,23 @@ function Notifications() {
       <Navbar />
       
       <div className="container mx-auto px-4 py-8 flex-grow">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-navy flex items-center">
-            <BellRing className="mr-2" /> Notifications
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Stay updated with the latest announcements and news from Lord of the Reads
-          </p>
+        <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-navy flex items-center">
+              <BellRing className="mr-2" /> Notifications
+            </h1>
+            <p className="text-gray-600 mt-2">
+              Stay updated with the latest announcements and news from Lord of the Reads
+            </p>
+          </div>
+          {announcements.length > 0 && (
+            <div className="mt-4 md:mt-0">
+              <div className="flex items-center text-sm text-navy">
+                <Check className="h-4 w-4 mr-1" />
+                <span>All notifications marked as read</span>
+              </div>
+            </div>
+          )}
         </div>
         
         {loading ? (

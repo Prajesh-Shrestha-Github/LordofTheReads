@@ -20,26 +20,16 @@ function Footer() {
             </div>
           </div>
           
-          <div className="grid grid-cols-3 gap-8">
+          <div className="grid grid-cols-2 gap-8">
             <div>
               <h3 className="text-sm font-medium mb-3">Quick Links</h3>
               <ul className="space-y-1">
                 <li><Link to="/" className="text-xs text-gray hover:text-white transition-colors">Home</Link></li>
                 <li><Link to="/books" className="text-xs text-gray hover:text-white transition-colors">Books</Link></li>
-                <li><Link to="/categories" className="text-xs text-gray hover:text-white transition-colors">Categories</Link></li>
                 <li><Link to="/about" className="text-xs text-gray hover:text-white transition-colors">About</Link></li>
               </ul>
             </div>
             
-            <div>
-              <h3 className="text-sm font-medium mb-3">Customer Service</h3>
-              <ul className="space-y-1">
-                <li><Link to="/contact" className="text-xs text-gray hover:text-white transition-colors">Contact Us</Link></li>
-                <li><Link to="/faq" className="text-xs text-gray hover:text-white transition-colors">FAQs</Link></li>
-                <li><Link to="/shipping" className="text-xs text-gray hover:text-white transition-colors">Shipping Policy</Link></li>
-                <li><Link to="/returns" className="text-xs text-gray hover:text-white transition-colors">Returns & Refunds</Link></li>
-              </ul>
-            </div>
             
             <div>
               <h3 className="text-sm font-medium mb-3">Contact Information</h3>
