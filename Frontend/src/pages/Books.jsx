@@ -1,4 +1,4 @@
-// Books.jsx
+// Books.jsx with full backend-integrated filtering UI
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
@@ -16,8 +16,18 @@ function Books() {
     author: 'all',
     price: 'all',
     rating: 'all',
+    availability: 'all',
+    language: 'all',
+    format: 'all',
+    publisher: 'all'
   });
+
   const [authors, setAuthors] = useState([]);
+  const [genres, setGenres] = useState([]);
+  const [languages, setLanguages] = useState([]);
+  const [formats, setFormats] = useState([]);
+  const [publishers, setPublishers] = useState([]);
+
   const [sortBy, setSortBy] = useState('popularity');
   const [searchQuery, setSearchQuery] = useState('');
   const [appliedSearchQuery, setAppliedSearchQuery] = useState('');
@@ -31,24 +41,9 @@ function Books() {
       try {
         const params = new URLSearchParams();
 
-        if (filters.genre !== 'all') params.append('genre', filters.genre);
-        if (filters.author !== 'all') params.append('author', filters.author);
-        if (filters.price !== 'all') {
-          if (filters.price === 'under-10') params.append('maxPrice', '10');
-          else if (filters.price === '10-20') {
-            params.append('minPrice', '10');
-            params.append('maxPrice', '20');
-          } else if (filters.price === '20-30') {
-            params.append('minPrice', '20');
-            params.append('maxPrice', '30');
-          } else if (filters.price === 'over-30') {
-            params.append('minPrice', '30');
-          }
-        }
-        if (filters.rating !== 'all') {
-          const minRating = parseInt(filters.rating.split('-')[0]);
-          params.append('minRating', minRating);
-        }
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== 'all') params.append(key, value);
+        });
 
         if (appliedSearchQuery) params.append('query', appliedSearchQuery);
 
@@ -82,15 +77,25 @@ function Books() {
   }, [appliedSearchQuery, filters, sortBy, currentPage]);
 
   useEffect(() => {
-    const fetchAuthors = async () => {
+    const fetchFilters = async () => {
       try {
-        const response = await axios.get('http://localhost:5253/api/authors');
-        setAuthors(response.data);
+        const [authorRes, genreRes, langRes, formatRes, pubRes] = await Promise.all([
+          axios.get('http://localhost:5253/api/authors'),
+          axios.get('http://localhost:5253/api/genres'),
+          axios.get('http://localhost:5253/api/languages'),
+          axios.get('http://localhost:5253/api/formats'),
+          axios.get('http://localhost:5253/api/publishers')
+        ]);
+        setAuthors(authorRes.data);
+        setGenres(genreRes.data);
+        setLanguages(langRes.data);
+        setFormats(formatRes.data);
+        setPublishers(pubRes.data);
       } catch (err) {
-        console.error('Error fetching authors:', err);
+        console.error('Error loading filter options:', err);
       }
     };
-    fetchAuthors();
+    fetchFilters();
   }, []);
 
   const handleFilterChange = (key, value) => {
@@ -109,7 +114,7 @@ function Books() {
   };
 
   const handleBookmarkToggle = (book) => {
-    console.log(`Toggle bookmark: ${book.title}`);
+    console.log(`Bookmark: ${book.title}`);
   };
 
   return (
@@ -129,15 +134,12 @@ function Books() {
         <div className="mb-4 flex gap-4 flex-wrap">
           <select onChange={(e) => handleFilterChange('genre', e.target.value)} value={filters.genre} className="px-4 py-2 border rounded-md">
             <option value="all">All Genres</option>
-            <option value="1">Fiction</option>
-            <option value="2">Fantasy</option>
+            {genres.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
           </select>
 
           <select onChange={(e) => handleFilterChange('author', e.target.value)} value={filters.author} className="px-4 py-2 border rounded-md">
             <option value="all">All Authors</option>
-            {authors.map(author => (
-              <option key={author.id} value={author.id}>{author.name}</option>
-            ))}
+            {authors.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
           </select>
 
           <select onChange={(e) => handleFilterChange('price', e.target.value)} value={filters.price} className="px-4 py-2 border rounded-md">
@@ -154,6 +156,27 @@ function Books() {
             <option value="3-up">3 & Up</option>
             <option value="2-up">2 & Up</option>
             <option value="1-up">1 & Up</option>
+          </select>
+
+          <select onChange={(e) => handleFilterChange('availability', e.target.value)} value={filters.availability} className="px-4 py-2 border rounded-md">
+            <option value="all">All Availability</option>
+            <option value="stockOnly">In Stock</option>
+            <option value="physicalOnly">Physical Access</option>
+          </select>
+
+          <select onChange={(e) => handleFilterChange('language', e.target.value)} value={filters.language} className="px-4 py-2 border rounded-md">
+            <option value="all">All Languages</option>
+            {languages.map(l => <option key={l} value={l}>{l}</option>)}
+          </select>
+
+          <select onChange={(e) => handleFilterChange('format', e.target.value)} value={filters.format} className="px-4 py-2 border rounded-md">
+            <option value="all">All Formats</option>
+            {formats.map(f => <option key={f} value={f}>{f}</option>)}
+          </select>
+
+          <select onChange={(e) => handleFilterChange('publisher', e.target.value)} value={filters.publisher} className="px-4 py-2 border rounded-md">
+            <option value="all">All Publishers</option>
+            {publishers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
 
           <select onChange={(e) => setSortBy(e.target.value)} value={sortBy} className="px-4 py-2 border rounded-md">
@@ -177,17 +200,11 @@ function Books() {
                   <p className="text-sm text-gray-600 mb-1">{book.authors?.join(', ')}</p>
                   <p className="text-sm text-gray-800 font-semibold">${book.price.toFixed(2)}</p>
                   <div className="mt-2 flex gap-2">
-                    <button
-                      className="px-3 py-1 bg-navy text-white text-sm rounded hover:bg-gold transition"
-                      onClick={() => handleAddToCart(book)}
-                    >
-                      <ShoppingCart className="inline-block w-4 h-4 mr-1" /> Add to Cart
+                    <button className="px-3 py-1 bg-navy text-white text-sm rounded" onClick={() => handleAddToCart(book)}>
+                      <ShoppingCart className="inline w-4 h-4 mr-1" /> Add to Cart
                     </button>
-                    <button
-                      className="px-3 py-1 bg-gray-200 text-navy text-sm rounded hover:bg-gold transition"
-                      onClick={() => handleBookmarkToggle(book)}
-                    >
-                      <Bookmark className="inline-block w-4 h-4 mr-1" /> Wishlist
+                    <button className="px-3 py-1 bg-gray-200 text-navy text-sm rounded" onClick={() => handleBookmarkToggle(book)}>
+                      <Bookmark className="inline w-4 h-4 mr-1" /> Wishlist
                     </button>
                   </div>
                 </div>
