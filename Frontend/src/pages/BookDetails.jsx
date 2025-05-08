@@ -363,10 +363,7 @@ function BookDetails() {
                     ) : 'Unknown'}
                   </p>
                 </div>
-                <div>
-                  <p className="text-gray text-sm">Format</p>
-                  <p className="text-navy">{selectedFormat || book.format || 'Unknown'}</p>
-                </div>
+                
                 <div>
                   <p className="text-gray text-sm">ISBN</p>
                   <p className="text-navy">{book.isbn || 'Unknown'}</p>
