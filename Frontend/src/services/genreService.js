@@ -1,11 +1,9 @@
-import axios from 'axios';
-
-const API_URL = 'http://localhost:5253/api';
+import api from './api';
 
 // Get all genres
 const getAllGenres = async () => {
   try {
-    const response = await axios.get(`${API_URL}/genres`);
+    const response = await api.get('/genres');
     return response.data;
   } catch (error) {
     console.error('Error fetching genres:', error);
@@ -17,7 +15,7 @@ const getAllGenres = async () => {
 const getBooksByGenre = async (genreId) => {
   try {
     // This endpoint might need to be implemented in the backend
-    const response = await axios.get(`${API_URL}/book?genreId=${genreId}`);
+    const response = await api.get(`/book?genreId=${genreId}`);
     return response.data;
   } catch (error) {
     console.error(`Error fetching books for genre ${genreId}:`, error);

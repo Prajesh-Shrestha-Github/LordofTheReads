@@ -1,11 +1,9 @@
-import axios from 'axios';
-
-const API_URL = 'http://localhost:5253/api';
+import api from './api';
 
 // Get all books
 const getAllBooks = async () => {
   try {
-    const response = await axios.get(`${API_URL}/book`);
+    const response = await api.get('/book');
     return response.data;
   } catch (error) {
     console.error('Error fetching all books:', error);
@@ -16,7 +14,7 @@ const getAllBooks = async () => {
 // Get book by ID
 const getBookById = async (id) => {
   try {
-    const response = await axios.get(`${API_URL}/book/${id}`);
+    const response = await api.get(`/book/${id}`);
     return response.data;
   } catch (error) {
     console.error(`Error fetching book with ID ${id}:`, error);
@@ -28,7 +26,7 @@ const getBookById = async (id) => {
 const searchBooks = async (query) => {
   try {
     // Since we don't have a dedicated search endpoint, we'll fetch all books and filter client-side
-    const response = await axios.get(`${API_URL}/book`);
+    const response = await api.get('/book');
     const books = response.data;
     
     if (!query) return [];
@@ -51,20 +49,8 @@ const searchBooks = async (query) => {
 // Bookmark a book
 const bookmarkBook = async (bookId) => {
   try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('Authentication required');
-    }
-    
-    const response = await axios.post(
-      `${API_URL}/bookmark/add/${bookId}`,
-      {},
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    );
+    // No need to manually handle token as api.js interceptor does this
+    const response = await api.post(`/bookmark/add/${bookId}`, {});
     
     return response.data;
   } catch (error) {
