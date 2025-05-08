@@ -79,22 +79,46 @@ function Books() {
   useEffect(() => {
     const fetchFilters = async () => {
       try {
-        const [authorRes, genreRes, langRes, formatRes, pubRes] = await Promise.all([
-          axios.get('http://localhost:5253/api/authors'),
-          axios.get('http://localhost:5253/api/genres'),
-          axios.get('http://localhost:5253/api/languages'),
-          axios.get('http://localhost:5253/api/formats'),
-          axios.get('http://localhost:5253/api/publishers')
-        ]);
+        const authorRes = await axios.get('http://localhost:5253/api/authors');
+        console.log('Authors:', authorRes.data);
         setAuthors(authorRes.data);
+      } catch (err) {
+        console.error('Error loading authors:', err);
+      }
+
+      try {
+        const genreRes = await axios.get('http://localhost:5253/api/genres');
+        console.log('Genres:', genreRes.data);
         setGenres(genreRes.data);
+      } catch (err) {
+        console.error('Error loading genres:', err);
+      }
+
+      try {
+        const langRes = await axios.get('http://localhost:5253/api/languages');
+        console.log('Languages:', langRes.data);
         setLanguages(langRes.data);
+      } catch (err) {
+        console.error('Error loading languages:', err);
+      }
+
+      try {
+        const formatRes = await axios.get('http://localhost:5253/api/formats');
+        console.log('Formats:', formatRes.data);
         setFormats(formatRes.data);
+      } catch (err) {
+        console.error('Error loading formats:', err);
+      }
+
+      try {
+        const pubRes = await axios.get('http://localhost:5253/api/publishers');
+        console.log('Publishers:', pubRes.data);
         setPublishers(pubRes.data);
       } catch (err) {
-        console.error('Error loading filter options:', err);
+        console.error('Error loading publishers:', err);
       }
     };
+
     fetchFilters();
   }, []);
 
