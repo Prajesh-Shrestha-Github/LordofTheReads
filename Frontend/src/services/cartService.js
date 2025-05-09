@@ -14,11 +14,12 @@ const cartService = {
   },
   
   // Add item to cart
-  addToCart: async (bookId, quantity = 1) => {
+  addToCart: async (bookId, quantity = 1, format = null) => {
     try {
       const response = await api.post('/Cart/items', {
         bookId,
-        quantity
+        quantity,
+        format
       });
       // Dispatch event to update cart count in navbar
       window.dispatchEvent(new Event('cartUpdated'));

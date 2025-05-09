@@ -622,6 +622,11 @@ namespace LordofTheReads.Controllers
                         .Include(b => b.Discounts)
                         .FirstOrDefaultAsync(b => b.Id == id);
                     
+                    if (updatedBook == null)
+                    {
+                        return NotFound($"Book with ID {id} not found");
+                    }
+                    
                     var bookDetailDto = new BookDetailDto
                     {
                         Id = updatedBook.Id,

@@ -7,7 +7,7 @@ import { addBookmark, isBookmarked, removeBookmark } from '../services/bookmarkS
 import cartService from '../services/cartService';
 import { getAllGenres } from '../services/genreService';
 import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
+import { getAllBooks, getBookById, filterBooks } from '../services/bookService';
 
 function Books() {
   // Get search parameters from URL
@@ -17,6 +17,7 @@ function Books() {
   // Books data
   const [books, setBooks] = useState([]);
   const [filteredBooks, setFilteredBooks] = useState([]);
+  const [allBooks, setAllBooks] = useState([]); // Store all books for filter options
   const [genres, setGenres] = useState([]);
   const [loading, setLoading] = useState(true);
   const [genresLoading, setGenresLoading] = useState(true);
@@ -25,6 +26,11 @@ function Books() {
   const { isAuthenticated } = useAuth();
   const [bookmarkStates, setBookmarkStates] = useState({});
   
+  // Filter options data
+  const [availableAuthors, setAvailableAuthors] = useState([]);
+  const [availableLanguages, setAvailableLanguages] = useState([]);
+  const [availablePublishers, setAvailablePublishers] = useState([]);
+  
   // Filter and sort states
   const [filters, setFilters] = useState({
     category: genreParam || 'all',
@@ -32,6 +38,13 @@ function Books() {
     rating: 'all',
     sale: 'all',
     access: 'all',
+    author: 'all',
+    language: 'all',
+    format: 'all',
+    publisher: 'all',
+    newRelease: false,
+    newArrival: false,
+    comingSoon: false,
   });
   const [sortBy, setSortBy] = useState('popularity');
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,14 +55,16 @@ function Books() {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const booksPerPage = 12;
+  const [totalBooks, setTotalBooks] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   
   // Price ranges
   const priceRanges = [
     { id: 'all', name: 'All Prices' },
-    { id: 'under-10', name: 'Under $10' },
+    { id: '0-10', name: 'Under $10' },
     { id: '10-20', name: '$10 - $20' },
     { id: '20-30', name: '$20 - $30' },
-    { id: 'over-30', name: 'Over $30' },
+    { id: '30-100', name: 'Over $30' },
   ];
   
   // Rating options
@@ -70,24 +85,195 @@ function Books() {
     { id: 'rating', name: 'Average Rating' },
   ];
 
-  // Fetch books data
-  useEffect(() => {
-    const fetchBooks = async () => {
-      setLoading(true);
-      try {
-        const response = await axios.get('http://localhost:5253/api/book');
-        console.log('API Response:', response.data);
-        setBooks(response.data);
-        setLoading(false);
-      } catch (err) {
-        console.error('Error fetching books:', err);
-        setError('Failed to fetch books. Please make sure the backend server is running.');
-        setLoading(false);
+  // Fetch books with filters
+  const fetchFilteredBooks = async () => {
+    setLoading(true);
+    try {
+      console.log('Fetching all books from the regular endpoint');
+      
+      // Use the regular book endpoint directly
+      const response = await fetch('http://localhost:5253/api/book');
+      if (!response.ok) {
+        throw new Error(`API responded with status: ${response.status}`);
       }
-    };
-    
-    fetchBooks();
-  }, []);
+      
+      const fetchedBooks = await response.json();
+      console.log('Fetched all books:', fetchedBooks);
+      
+      // Store all books for filter options
+      setAllBooks(fetchedBooks);
+      
+      // Extract unique filter options once when all books are loaded
+      if (availableAuthors.length === 0) {
+        const authors = [...new Set(fetchedBooks.flatMap(book => book.authors || []))].sort();
+        setAvailableAuthors(authors);
+      }
+      
+      if (availableLanguages.length === 0) {
+        const languages = [...new Set(fetchedBooks.map(book => book.language).filter(Boolean))].sort();
+        setAvailableLanguages(languages);
+      }
+      
+      if (availablePublishers.length === 0) {
+        const publishers = [...new Set(fetchedBooks.map(book => book.publisher).filter(Boolean))].sort();
+        setAvailablePublishers(publishers);
+      }
+      
+      // Apply filters on the client side
+      let filteredResults = [...fetchedBooks];
+      
+      // Apply category filter
+      if (filters.category !== 'all') {
+        filteredResults = filteredResults.filter(book => 
+          book.genres && book.genres.some(genre => 
+            genre.toLowerCase() === filters.category.toLowerCase()
+          )
+        );
+      }
+      
+      // Apply search filter
+      if (appliedSearchQuery) {
+        const query = appliedSearchQuery.toLowerCase();
+        filteredResults = filteredResults.filter(book => 
+          (book.title && book.title.toLowerCase().includes(query)) ||
+          (book.description && book.description.toLowerCase().includes(query)) ||
+          (book.authors && book.authors.some(author => author.toLowerCase().includes(query)))
+        );
+      }
+      
+      // Apply rating filter
+      if (filters.rating !== 'all') {
+        const minRating = parseInt(filters.rating.split('-')[0]);
+        filteredResults = filteredResults.filter(book => 
+          book.rating >= minRating
+        );
+      }
+      
+      // Apply sale filter
+      if (filters.sale === 'sale') {
+        filteredResults = filteredResults.filter(book => 
+          book.onSaleFlag === true
+        );
+      }
+      
+      // Apply library access filter
+      if (filters.access === 'library') {
+        filteredResults = filteredResults.filter(book => 
+          book.physicalLibraryAccess === true
+        );
+      }
+      
+      // Apply price filter
+      if (filters.price !== 'all') {
+        const [minPrice, maxPrice] = filters.price.split('-').map(p => parseFloat(p));
+        filteredResults = filteredResults.filter(book => 
+          book.price >= minPrice && book.price <= maxPrice
+        );
+      }
+      
+      // Apply author filter
+      if (filters.author !== 'all') {
+        filteredResults = filteredResults.filter(book => 
+          book.authors && book.authors.some(author => 
+            author.toLowerCase() === filters.author.toLowerCase()
+          )
+        );
+      }
+      
+      // Apply language filter
+      if (filters.language !== 'all') {
+        filteredResults = filteredResults.filter(book => 
+          book.language && book.language.toLowerCase() === filters.language.toLowerCase()
+        );
+      }
+      
+      // Apply format filter
+      if (filters.format !== 'all') {
+        // For format filtering, we need to be more flexible since formats might be stored differently
+        // or a book might be available in multiple formats
+        filteredResults = filteredResults.filter(book => {
+          if (!book.format) return false;
+          
+          // Check if the format is contained within the book's format string
+          // This handles cases where format might be stored as "Hardcover, Paperback" etc.
+          return book.format.toLowerCase().includes(filters.format.toLowerCase());
+        });
+      }
+      
+      // Apply publisher filter
+      if (filters.publisher !== 'all') {
+        filteredResults = filteredResults.filter(book => 
+          book.publisher && book.publisher.toLowerCase() === filters.publisher.toLowerCase()
+        );
+      }
+      
+      // Apply new release filter
+      if (filters.newRelease) {
+        // New releases are books published in the last 3 months
+        const threeMonthsAgo = new Date();
+        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+        filteredResults = filteredResults.filter(book => 
+          book.publicationDate && new Date(book.publicationDate) >= threeMonthsAgo
+        );
+      }
+      
+      // Apply new arrival filter
+      if (filters.newArrival) {
+        // New arrivals are books added to the store in the last month
+        // Assuming createdAt field exists, otherwise we'll use publicationDate as a fallback
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+        filteredResults = filteredResults.filter(book => 
+          (book.createdAt && new Date(book.createdAt) >= oneMonthAgo) ||
+          (book.publicationDate && new Date(book.publicationDate) >= oneMonthAgo)
+        );
+      }
+      
+      // Apply coming soon filter
+      if (filters.comingSoon) {
+        // Coming soon books have a future publication date
+        const today = new Date();
+        filteredResults = filteredResults.filter(book => 
+          book.publicationDate && new Date(book.publicationDate) > today
+        );
+      }
+      
+      // Apply pagination
+      const totalCount = filteredResults.length;
+      const startIndex = (currentPage - 1) * booksPerPage;
+      const paginatedResults = filteredResults.slice(startIndex, startIndex + booksPerPage);
+      
+      console.log('Filtered and paginated results:', paginatedResults);
+      
+      // Update state with filtered results
+      setBooks(paginatedResults);
+      setFilteredBooks(paginatedResults);
+      setTotalBooks(totalCount);
+      setTotalPages(Math.ceil(totalCount / booksPerPage));
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching books:', err);
+      setError('Failed to fetch books. Please make sure the backend server is running.');
+      setLoading(false);
+    }
+  };
+  
+  // Map frontend sort options to API sort parameters
+  const mapSortByToApi = (sortOption) => {
+    switch (sortOption) {
+      case 'price-low': return 'price_asc';
+      case 'price-high': return 'price_desc';
+      case 'newest': return 'date_desc';
+      case 'rating': return 'rating';
+      case 'popularity': return 'popularity';
+      default: return 'title_asc';
+    }
+  };
+
+  // Fetch books when filters or pagination changes
+  useEffect(() => {
+    fetchFilteredBooks();
+  }, [currentPage, filters, sortBy, appliedSearchQuery]);
 
   // Fetch genres from the database
   useEffect(() => {
@@ -127,89 +313,18 @@ function Books() {
     loadBookmarkStates();
   }, [books, isAuthenticated]);
 
-  // Apply filters and search to books
+  // We no longer need to apply filters on the frontend since we're using backend filtering
+  // This useEffect is kept for reference but is not active anymore
+  /*
   useEffect(() => {
     if (!books.length) return;
 
-    let result = [...books];
-
-    // Apply category/genre filter
-    if (filters.category !== 'all') {
-      result = result.filter(book => 
-        book.genres && book.genres.some(genre => 
-          genre.toLowerCase() === filters.category.toLowerCase()
-        )
-      );
-    }
-
-    // Apply price filter
-    if (filters.price !== 'all') {
-      switch (filters.price) {
-        case 'under-10':
-          result = result.filter(book => book.price < 10);
-          break;
-        case '10-20':
-          result = result.filter(book => book.price >= 10 && book.price <= 20);
-          break;
-        case '20-30':
-          result = result.filter(book => book.price > 20 && book.price <= 30);
-          break;
-        case 'over-30':
-          result = result.filter(book => book.price > 30);
-          break;
-        default:
-          break;
-      }
-    }
-
-    // Apply rating filter
-    if (filters.rating !== 'all') {
-      const minRating = parseInt(filters.rating.split('-')[0]);
-      result = result.filter(book => (book.rating || 0) >= minRating);
-    }
-
-    // Apply sale filter
-    if (filters.sale === 'sale') {
-      result = result.filter(book => book.onSaleFlag);
-    }
-
-    // Apply library access filter
-    if (filters.access === 'library') {
-      result = result.filter(book => book.physicalLibraryAccess === true);
-    }
-
-    // Apply search query
-    if (appliedSearchQuery) {
-      const query = appliedSearchQuery.toLowerCase();
-      result = result.filter(book => 
-        book.title.toLowerCase().includes(query) || 
-        (book.authors && book.authors.some(author => author.toLowerCase().includes(query)))
-      );
-    }
-
-    // Apply sorting
-    switch (sortBy) {
-      case 'price-low':
-        result.sort((a, b) => a.price - b.price);
-        break;
-      case 'price-high':
-        result.sort((a, b) => b.price - a.price);
-        break;
-      case 'newest':
-        result.sort((a, b) => new Date(b.publicationDate || 0) - new Date(a.publicationDate || 0));
-        break;
-      case 'rating':
-        result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-        break;
-      case 'popularity':
-      default:
-        // Assuming higher IDs are more popular (or you could use another field)
-        result.sort((a, b) => b.id - a.id);
-        break;
-    }
-
-    setFilteredBooks(result);
-  }, [books, filters, sortBy, appliedSearchQuery]);
+    // All filtering is now handled by the backend API
+    // The frontend just displays the filtered results
+    
+    setFilteredBooks(books);
+  }, [books]);
+  */
 
   // Handle adding to cart
   const handleAddToCart = async (book) => {
@@ -325,11 +440,9 @@ function Books() {
     setViewMode(mode);
   };
 
-  // Get current books for pagination
-  const indexOfLastBook = currentPage * booksPerPage;
-  const indexOfFirstBook = indexOfLastBook - booksPerPage;
-  const currentBooks = filteredBooks.slice(indexOfFirstBook, indexOfLastBook);
-  const totalPages = Math.ceil(filteredBooks.length / booksPerPage);
+  // Display pagination info
+  const indexOfLastBook = Math.min(currentPage * booksPerPage, totalBooks);
+  const indexOfFirstBook = (currentPage - 1) * booksPerPage + 1;
 
   // Change page
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
@@ -375,7 +488,20 @@ function Books() {
                 <h2 className="font-medium text-navy">Filters</h2>
                 <button 
                   onClick={() => {
-                    setFilters({ category: 'all', price: 'all', rating: 'all', sale: 'all', access: 'all' });
+                    setFilters({ 
+                      category: 'all', 
+                      price: 'all', 
+                      rating: 'all', 
+                      sale: 'all', 
+                      access: 'all',
+                      author: 'all',
+                      language: 'all',
+                      format: 'all',
+                      publisher: 'all',
+                      newRelease: false,
+                      newArrival: false,
+                      comingSoon: false
+                    });
                     setSearchQuery('');
                     setAppliedSearchQuery('');
                     setCurrentPage(1);
@@ -435,10 +561,10 @@ function Books() {
                   onChange={(e) => {
                     const value = parseInt(e.target.value);
                     let priceFilter = 'all';
-                    if (value === 0) priceFilter = 'under-10';
+                    if (value === 0) priceFilter = '0-10';
                     else if (value === 10) priceFilter = '10-20';
                     else if (value === 20) priceFilter = '20-30';
-                    else if (value === 30) priceFilter = 'over-30';
+                    else if (value === 30) priceFilter = '30-100';
                     handleFilterChange('price', priceFilter);
                   }}
                   className="w-full accent-gold"
@@ -504,6 +630,182 @@ function Books() {
                     className="mr-2"
                   />
                   <label htmlFor="filter-access" className="text-sm text-gray-600">Physical Library Access</label>
+                </div>
+              </div>
+              
+              {/* Authors */}
+              <div className="mb-6">
+                <h3 className="font-medium text-navy mb-2">Authors</h3>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="author-all"
+                      checked={filters.author === 'all'}
+                      onChange={() => handleFilterChange('author', 'all')}
+                      className="mr-2"
+                    />
+                    <label htmlFor="author-all" className="text-sm text-gray-600">
+                      All Authors
+                    </label>
+                  </div>
+                  {/* Use the pre-extracted authors list */}
+                  {availableAuthors.map((author, index) => (
+                        <div key={`author-${index}`} className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id={`author-${index}`}
+                            checked={filters.author === author}
+                            onChange={() => handleFilterChange('author', author)}
+                            className="mr-2"
+                          />
+                          <label htmlFor={`author-${index}`} className="text-sm text-gray-600">
+                            {author}
+                          </label>
+                        </div>
+                      ))
+                  }
+                </div>
+              </div>
+              
+              {/* Languages */}
+              <div className="mb-6">
+                <h3 className="font-medium text-navy mb-2">Language</h3>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="language-all"
+                      checked={filters.language === 'all'}
+                      onChange={() => handleFilterChange('language', 'all')}
+                      className="mr-2"
+                    />
+                    <label htmlFor="language-all" className="text-sm text-gray-600">
+                      All Languages
+                    </label>
+                  </div>
+                  {/* Use the pre-extracted languages list */}
+                  {availableLanguages.map((language, index) => (
+                        <div key={`language-${index}`} className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id={`language-${index}`}
+                            checked={filters.language === language}
+                            onChange={() => handleFilterChange('language', language)}
+                            className="mr-2"
+                          />
+                          <label htmlFor={`language-${index}`} className="text-sm text-gray-600">
+                            {language}
+                          </label>
+                        </div>
+                      ))
+                  }
+                </div>
+              </div>
+              
+              {/* Formats */}
+              <div className="mb-6">
+                <h3 className="font-medium text-navy mb-2">Format</h3>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="format-all"
+                      checked={filters.format === 'all'}
+                      onChange={() => handleFilterChange('format', 'all')}
+                      className="mr-2"
+                    />
+                    <label htmlFor="format-all" className="text-sm text-gray-600">
+                      All Formats
+                    </label>
+                  </div>
+                  {/* Predefined formats */}
+                  {['Hardcover', 'Paperback', 'E-Book', 'Audiobook', 'Limited Edition', 'Signed Copy', 'First Edition', 'Collector\'s Edition'].map((format, index) => (
+                    <div key={`format-${index}`} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id={`format-${index}`}
+                        checked={filters.format === format}
+                        onChange={() => handleFilterChange('format', format)}
+                        className="mr-2"
+                      />
+                      <label htmlFor={`format-${index}`} className="text-sm text-gray-600">
+                        {format}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Publishers */}
+              <div className="mb-6">
+                <h3 className="font-medium text-navy mb-2">Publisher</h3>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="publisher-all"
+                      checked={filters.publisher === 'all'}
+                      onChange={() => handleFilterChange('publisher', 'all')}
+                      className="mr-2"
+                    />
+                    <label htmlFor="publisher-all" className="text-sm text-gray-600">
+                      All Publishers
+                    </label>
+                  </div>
+                  {/* Use the pre-extracted publishers list */}
+                  {availablePublishers.map((publisher, index) => (
+                        <div key={`publisher-${index}`} className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id={`publisher-${index}`}
+                            checked={filters.publisher === publisher}
+                            onChange={() => handleFilterChange('publisher', publisher)}
+                            className="mr-2"
+                          />
+                          <label htmlFor={`publisher-${index}`} className="text-sm text-gray-600">
+                            {publisher}
+                          </label>
+                        </div>
+                      ))
+                  }
+                </div>
+              </div>
+              
+              {/* New Releases & Arrivals */}
+              <div className="mb-6">
+                <h3 className="font-medium text-navy mb-2">Special Categories</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="filter-new-release"
+                      checked={filters.newRelease}
+                      onChange={() => handleFilterChange('newRelease', !filters.newRelease)}
+                      className="mr-2"
+                    />
+                    <label htmlFor="filter-new-release" className="text-sm text-gray-600">New Releases</label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="filter-new-arrival"
+                      checked={filters.newArrival}
+                      onChange={() => handleFilterChange('newArrival', !filters.newArrival)}
+                      className="mr-2"
+                    />
+                    <label htmlFor="filter-new-arrival" className="text-sm text-gray-600">New Arrivals</label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="filter-coming-soon"
+                      checked={filters.comingSoon}
+                      onChange={() => handleFilterChange('comingSoon', !filters.comingSoon)}
+                      className="mr-2"
+                    />
+                    <label htmlFor="filter-coming-soon" className="text-sm text-gray-600">Coming Soon</label>
+                  </div>
                 </div>
               </div>
             </div>
@@ -573,39 +875,40 @@ function Books() {
             {/* Results Summary */}
             <div className="flex justify-between items-center mb-6">
               <p className="text-sm text-gray-600">
-                Showing {filteredBooks.length > 0 ? indexOfFirstBook + 1 : 0}-
-                {Math.min(indexOfLastBook, filteredBooks.length)} of {filteredBooks.length} results
+                Showing {filteredBooks.length > 0 ? indexOfFirstBook : 0}-
+                {Math.min(indexOfLastBook, totalBooks)} of {totalBooks} results
               </p>
             </div>
             
-            {/* Loading State */}
-            {loading && (
-              <div className="flex justify-center items-center py-20">
+            {/* Books Grid/List */}
+            {loading ? (
+              <div className="flex justify-center items-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-navy"></div>
               </div>
-            )}
-            
-            {/* Error State */}
-            {error && !loading && (
-              <div className="bg-red-100 text-red-700 p-4 rounded-md mb-6">
-                {error}
-                <button 
-                  className="ml-4 underline"
-                  onClick={() => window.location.reload()}
-                >
-                  Try Again
-                </button>
+            ) : error ? (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                <strong className="font-bold">Error!</strong>
+                <span className="block sm:inline"> {error}</span>
               </div>
-            )}
-            
-            {/* Empty State */}
-            {!loading && !error && filteredBooks.length === 0 && (
-              <div className="text-center py-20">
-                <h3 className="text-xl font-medium text-navy mb-2">No books found</h3>
-                <p className="text-gray-600 mb-4">Try adjusting your filters or search query</p>
+            ) : filteredBooks.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-600">No books found matching your criteria. Try adjusting your filters.</p>
                 <button
                   onClick={() => {
-                    setFilters({ category: 'all', price: 'all', rating: 'all', sale: 'all', access: 'all' });
+                    setFilters({ 
+                      category: 'all', 
+                      price: 'all', 
+                      rating: 'all', 
+                      sale: 'all', 
+                      access: 'all',
+                      author: 'all',
+                      language: 'all',
+                      format: 'all',
+                      publisher: 'all',
+                      newRelease: false,
+                      newArrival: false,
+                      comingSoon: false
+                    });
                     setSearchQuery('');
                     setAppliedSearchQuery('');
                     setSortBy('popularity');
@@ -615,12 +918,10 @@ function Books() {
                   Reset Filters
                 </button>
               </div>
-            )}
-            
-            {/* Books Grid/List View */}
-            {!loading && !error && filteredBooks.length > 0 && (
+            ) : (
+              /* Books Grid/List View */
               <div className={viewMode === 'grid' ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" : "space-y-4"}>
-                {currentBooks.map(book => (
+                {filteredBooks.map(book => (
                   <div key={book.id} className={`bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow ${viewMode === 'list' ? 'flex' : ''} relative`}>
                     <Link to={`/book/${book.id}`} className={`${viewMode === 'list' ? 'w-1/4 min-w-[100px]' : ''} relative`}>
                       {/* Bestseller Tag */}

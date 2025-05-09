@@ -9,5 +9,6 @@ namespace LordofTheReads.Services
     {
         Task<IEnumerable<BookDto>> GetBooksAsync();
         Task<BookDto> GetBookByIdAsync(int id);
+        Task<(IEnumerable<BookDto> Books, int TotalCount)> FilterBooksAsync(BookFilterDTO filter);
     }
 }

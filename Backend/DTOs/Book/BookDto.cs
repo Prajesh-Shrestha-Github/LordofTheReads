@@ -28,5 +28,8 @@ namespace LordofTheReads.DTOs.Book
         public List<string> Genres { get; set; } = new List<string>();
         // Number of reviews for the book
         public int ReviewCount { get; set; }
+        
+        // Average rating of the book
+        public decimal Rating { get; set; }
     }
 }

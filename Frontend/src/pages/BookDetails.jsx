@@ -17,10 +17,11 @@ function BookDetails() {
   const [error, setError] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [isBookmarked, setIsBookmarked] = useState(false);
-  const [selectedFormat, setSelectedFormat] = useState('');
-  const [availableFormats, setAvailableFormats] = useState([]);
   const [notification, setNotification] = useState({ show: false, message: '', type: '' });
   const { isAuthenticated } = useAuth();
+  
+  // State to store available formats from database
+  const [availableFormats, setAvailableFormats] = useState([]);
   
   useEffect(() => {
     const fetchBookDetails = async () => {
@@ -29,15 +30,17 @@ function BookDetails() {
         const data = await bookService.getBookById(id);
         setBook(data);
         
-        // Set the format from the database as the selected format
+        // Parse formats from the database
         if (data.format) {
-          setSelectedFormat(data.format);
+          // Split the format string by commas, periods, or other separators
+          const formatString = data.format;
+          const parsedFormats = formatString.split(/[,;]/).map(format => format.trim());
           
-          // Only use the exact format from the database
-          setAvailableFormats([data.format]);
+          console.log('Parsed formats:', parsedFormats);
+          setAvailableFormats(parsedFormats);
         } else {
-          // Fallback formats if no format is specified in the database
-          setAvailableFormats(['Paperback', 'Hardcover', 'E-Book']);
+          // Fallback to standard formats if none are specified
+          setAvailableFormats(['Paperback']);
         }
       } catch (err) {
         console.error('Error fetching book details:', err);
@@ -77,6 +80,7 @@ function BookDetails() {
   };
   
   const handleAddToCart = async () => {
+    
     if (!isAuthenticated()) {
       // Redirect to login if not authenticated
       setNotification({
@@ -91,6 +95,7 @@ function BookDetails() {
     }
     
     try {
+      // Add to cart without format specification
       await cartService.addToCart(book.id, quantity);
       // Dispatch custom event to update cart count in navbar
       window.dispatchEvent(new CustomEvent('cart-updated'));
@@ -272,20 +277,23 @@ function BookDetails() {
             {/* Description */}
             <p className="text-navy mb-6">{book.description}</p>
             
-            {/* Format selection */}
+            {/* Available Formats Display */}
             <div className="mb-6">
-              <h3 className="font-medium mb-2">Format</h3>
-              <div className="flex flex-wrap gap-2">
-                {availableFormats.map((format) => (
-                  <button 
-                    key={format}
-                    onClick={() => setSelectedFormat(format)}
-                    className={`px-3 py-1 flex items-center justify-center ${selectedFormat === format ? 'bg-navy text-white' : 'bg-gray-100 text-navy'} rounded-md hover:bg-gold hover:text-navy transition-colors`}
-                  >
-                    {format}
-                  </button>
-                ))}
-              </div>
+              <h3 className="font-medium mb-2">Available Formats</h3>
+              {availableFormats.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {availableFormats.map((format) => (
+                    <div 
+                      key={format}
+                      className="px-3 py-1 bg-gray-100 text-navy rounded-md"
+                    >
+                      {format}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500">No formats available</p>
+              )}
             </div>
             
             {/* Quantity selector */}
