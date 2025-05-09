@@ -60,8 +60,8 @@ namespace LordofTheReads.Services
             
             _logger.LogInformation($"Cart found with {cart.CartItems.Count} items");
 
-            // Calculate total amount
-            decimal totalAmount = cart.CartItems.Sum(ci => ci.Book.Price * ci.Quantity);
+            // Calculate total amount using the price from CartItem (which includes discounts)
+            decimal totalAmount = cart.CartItems.Sum(ci => ci.Price * ci.Quantity);
             
             // Apply discount if 5 or more books
             int totalBooks = cart.CartItems.Sum(ci => ci.Quantity);
@@ -123,7 +123,7 @@ namespace LordofTheReads.Services
                 {
                     BookId = cartItem.BookId,
                     Quantity = cartItem.Quantity,
-                    PriceAtPurchase = cartItem.Book.Price
+                    PriceAtPurchase = cartItem.Price // Use the price from CartItem which includes any discounts
                 };
                 order.OrderItems.Add(orderItem);
             }

@@ -43,10 +43,24 @@ namespace LordofTheReads.Services
 
         public async Task<CartItem> AddToCartAsync(int userId, int bookId, int quantity)
         {
-            var book = await _context.Books.FindAsync(bookId);
+            // Get the book with discount information
+            var book = await _context.Books
+                .Include(b => b.Discounts)
+                .FirstOrDefaultAsync(b => b.Id == bookId);
+                
             if (book == null) throw new KeyNotFoundException($"Book with ID {bookId} not found");
 
             var cart = await GetOrCreateCartAsync(userId);
+
+            // Calculate the actual price (including any discount)
+            decimal actualPrice = book.Price;
+            var activeDiscount = book.Discounts.FirstOrDefault(d => d.OnSaleFlag);
+            if (activeDiscount != null)
+            {
+                decimal discountMultiplier = 1 - (activeDiscount.DiscountPercentage / 100m);
+                actualPrice = Math.Round(book.Price * discountMultiplier, 2);
+                _logger.LogInformation($"Applied discount of {activeDiscount.DiscountPercentage}% to book {bookId}. Original price: {book.Price}, Discounted price: {actualPrice}");
+            }
 
             var existingItem = await _context.CartItems
                 .FirstOrDefaultAsync(ci => ci.CartId == cart.Id && ci.BookId == bookId);
@@ -54,6 +68,8 @@ namespace LordofTheReads.Services
             if (existingItem != null)
             {
                 existingItem.Quantity += quantity;
+                // Update the price in case the discount has changed
+                existingItem.Price = actualPrice;
                 _context.CartItems.Update(existingItem);
             }
             else
@@ -63,6 +79,7 @@ namespace LordofTheReads.Services
                     CartId = cart.Id,
                     BookId = bookId,
                     Quantity = quantity,
+                    Price = actualPrice,
                     AddedAt = DateTime.UtcNow
                 };
                 _context.CartItems.Add(existingItem);
@@ -90,6 +107,27 @@ namespace LordofTheReads.Services
             }
             else
             {
+                // Get the book with discount information to ensure price is up-to-date
+                var book = await _context.Books
+                    .Include(b => b.Discounts)
+                    .FirstOrDefaultAsync(b => b.Id == bookId);
+                
+                if (book != null)
+                {
+                    // Recalculate the price in case discounts have changed
+                    decimal actualPrice = book.Price;
+                    var activeDiscount = book.Discounts.FirstOrDefault(d => d.OnSaleFlag);
+                    if (activeDiscount != null)
+                    {
+                        decimal discountMultiplier = 1 - (activeDiscount.DiscountPercentage / 100m);
+                        actualPrice = Math.Round(book.Price * discountMultiplier, 2);
+                        _logger.LogInformation($"Applied discount of {activeDiscount.DiscountPercentage}% to book {bookId}. Original price: {book.Price}, Discounted price: {actualPrice}");
+                    }
+                    
+                    // Update the price
+                    cartItem.Price = actualPrice;
+                }
+                
                 cartItem.Quantity = quantity;
                 cart.UpdatedAt = DateTime.UtcNow;
                 await _context.SaveChangesAsync();

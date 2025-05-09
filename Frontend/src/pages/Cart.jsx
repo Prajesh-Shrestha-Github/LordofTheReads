@@ -38,6 +38,7 @@ function Cart() {
         const formattedItems = cart.cartItems.map(item => ({
           bookId: item.bookId,
           quantity: item.quantity,
+          price: item.price, // Include the price from CartItem (which includes any discounts)
           book: item.book
         }));
         
@@ -53,9 +54,9 @@ function Cart() {
     fetchCartItems();
   }, [isAuthenticated]);
 
-  // Calculate subtotal
+  // Calculate subtotal using the price from CartItem (which includes any discounts)
   const subtotal = cartItems.reduce((total, item) => 
-    total + (item.book?.price || 0) * item.quantity, 0);
+    total + (item.price || item.book?.price || 0) * item.quantity, 0);
   
   // Calculate total (no tax)
   const total = subtotal;
@@ -177,8 +178,11 @@ function Cart() {
                   <div className="md:col-span-2 flex justify-between md:justify-end">
                     <span className="md:hidden text-gray">Price:</span>
                     <div>
-                      <div className="font-medium text-navy">${((item.book?.price || 0) * item.quantity).toFixed(2)}</div>
-                      <div className="text-xs text-gray">${(item.book?.price || 0).toFixed(2)} each</div>
+                      <div className="font-medium text-navy">${((item.price || item.book?.price || 0) * item.quantity).toFixed(2)}</div>
+                      <div className="text-xs text-gray">${(item.price || item.book?.price || 0).toFixed(2)} each</div>
+                      {item.price && item.book?.price && item.price < item.book.price && (
+                        <div className="text-xs text-red-600 line-through">${item.book.price.toFixed(2)} original</div>
+                      )}
                     </div>
                   </div>
                   
