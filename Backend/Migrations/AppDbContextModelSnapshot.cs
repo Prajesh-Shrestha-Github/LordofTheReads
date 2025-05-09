@@ -560,6 +560,10 @@ namespace LordofTheReads.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
                     b.Property<decimal>("DiscountPercentage")
                         .HasColumnType("decimal(5, 2)")
                         .HasColumnName("discount_percentage");

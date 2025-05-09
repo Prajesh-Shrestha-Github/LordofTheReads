@@ -26,5 +26,8 @@ namespace LordofTheReads.Database.Entities
 
         [Column("used_at")]
         public DateTime? UsedAt { get; set; }
+
+        [Column("description")]
+        public string? Description { get; set; }
     }
 }

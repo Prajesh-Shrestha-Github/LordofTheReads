@@ -179,9 +179,17 @@ function Orders() {
                       <p className="text-sm text-gray">Total Amount:</p>
                       <p className="font-bold text-navy text-lg">${order.totalAmount.toFixed(2)}</p>
                       {order.discountAmount > 0 && (
-                        <p className="text-xs text-green-600">
-                          You saved ${order.discountAmount.toFixed(2)}
-                        </p>
+                        <div>
+                          <p className="text-xs text-green-600 font-semibold">
+                            You saved ${order.discountAmount.toFixed(2)}!
+                          </p>
+                          {order.discountAmount >= order.totalAmount * 0.1 && (
+                            <p className="text-xs text-green-600">10% loyalty discount applied</p>
+                          )}
+                          {order.orderItems.length >= 5 && (
+                            <p className="text-xs text-green-600">5% volume discount applied</p>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>

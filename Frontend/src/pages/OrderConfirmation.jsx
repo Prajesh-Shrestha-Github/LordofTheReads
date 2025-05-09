@@ -124,6 +124,29 @@ function OrderConfirmation() {
             </div>
           </div>
           
+          {/* Order Summary */}
+          <div className="bg-white rounded-lg p-6 shadow-sm mb-8">
+            <h2 className="text-lg font-bold mb-4 text-navy">Order Summary</h2>
+            
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-navy">Order #{order?.id}</p>
+                <div className="flex items-center text-gray text-sm">
+                  <Calendar className="h-4 w-4 mr-1" />
+                  <span>Placed on {formatDate(order?.orderDate)}</span>
+                </div>
+              </div>
+              
+              <div className="text-right">
+                <p className="text-sm text-gray mb-1">Total Amount:</p>
+                <p className="text-xl font-bold text-navy">${order?.totalAmount.toFixed(2)}</p>
+                {order?.discountAmount > 0 && (
+                  <p className="text-sm text-green-600">You saved ${order.discountAmount.toFixed(2)}!</p>
+                )}
+              </div>
+            </div>
+          </div>
+          
           {/* Order Details */}
           <div className="bg-white rounded-lg p-6 shadow-sm mb-8">
             <h2 className="text-lg font-bold mb-4 text-navy">Order Details</h2>
