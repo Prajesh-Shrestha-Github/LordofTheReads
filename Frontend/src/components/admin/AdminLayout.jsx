@@ -40,6 +40,7 @@ const AdminLayout = () => {
     else if (path.includes('/admin/books')) setActiveSection('books');
     else if (path.includes('/admin/discounts')) setActiveSection('discounts');
     else if (path.includes('/admin/announcements')) setActiveSection('announcements');
+    else if (path.includes('/admin/staff')) setActiveSection('staff');
   }, [location.pathname]);
 
   // Check session expiration every minute
@@ -141,6 +142,17 @@ const AdminLayout = () => {
                 <span>Announcements</span>
               </NavLink>
             </li>
+            <li>
+              <NavLink 
+                to="/admin/staff" 
+                className={({ isActive }) => `flex items-center px-4 py-3 rounded-lg ${
+                  isActive ? 'bg-teal-50 text-teal-600 font-medium' : 'text-gray-700 hover:bg-gray-50'
+                } transition-all duration-200`}
+              >
+                <Users size={18} className="mr-3" />
+                <span>Staff</span>
+              </NavLink>
+            </li>
           </ul>
           
           <div className="mt-8 pt-8 border-t border-gray-100">
@@ -168,6 +180,7 @@ const AdminLayout = () => {
               {activeSection === 'books' && 'Books Management'}
               {activeSection === 'discounts' && 'Discounts Management'}
               {activeSection === 'announcements' && 'Announcements Management'}
+              {activeSection === 'staff' && 'Staff Management'}
             </h1>
           </div>
           

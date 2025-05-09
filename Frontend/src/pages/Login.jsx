@@ -93,11 +93,11 @@ function Login() {
         password: formData.password
       });
 
-      // Check if user is an admin (role === 2) and redirect to admin dashboard
       if (userData && userData.role === 2) {
         navigate('/admin');
+      } else if (userData && userData.role === 1) {
+        navigate('/staff');
       } else {
-        // Redirect to home page or intended page for non-admin users
         const redirectTo = location.state?.from?.pathname || '/';
         navigate(redirectTo);
       }

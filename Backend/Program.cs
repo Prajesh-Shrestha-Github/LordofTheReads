@@ -2,6 +2,7 @@ using LordofTheReads.Database;
 using LordofTheReads.Middlewares;
 using LordofTheReads.Services;
 using LordofTheReads.Settings;
+using LordofTheReads.Hubs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -110,11 +111,11 @@ builder.Services.AddDbContext<AppDbContext>(
 );
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowReactApp", 
-        builder => builder
-            .AllowAnyOrigin()
-            .AllowAnyMethod()
-            .AllowAnyHeader());
+    options.AddPolicy("AllowReactApp", policy =>
+        policy.WithOrigins("http://localhost:5173")
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials());
 });
 
 builder.Services.AddScoped<IBookService, BookService>();
@@ -124,6 +125,9 @@ builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IBookmarkService, BookmarkService>();
 // Register order service
 builder.Services.AddScoped<IOrderService, OrderService>();
+// Register notification service and SignalR
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddSignalR();
 
 var app = builder.Build();
 
@@ -147,13 +151,21 @@ app.UseCors("AllowReactApp");
 app.UseHttpsRedirection();
 
 // Enable CORS
-app.UseCors("AllowFrontend");
+app.UseCors("AllowReactApp");
 
-// Add authentication middleware before authorization
+// Use Routing
+app.UseRouting();
+
+// Use Authentication and Authorization
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapControllers();
+// Configure endpoints
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapControllers();
+    endpoints.MapHub<NotificationHub>("/hubs/notification");
+});
 
 // Create and apply migrations, then seed the database
 using (var scope = app.Services.CreateScope())
