@@ -25,11 +25,36 @@ const getBookById = async (id) => {
 // Search books by query (title or author)
 const searchBooks = async (query) => {
   try {
-    // Use the backend filter API with search query
-    const response = await api.get('/book/filter', {
-      params: { searchQuery: query }
+    // Get all books and filter client-side for reliable search
+    const response = await api.get('/book');
+    const allBooks = response.data;
+    
+    // If no query, return all books
+    if (!query || query.trim() === '') {
+      return allBooks;
+    }
+    
+    // Filter books by search query (case-insensitive)
+    const searchTerm = query.toLowerCase();
+    const filteredBooks = allBooks.filter(book => {
+      return (
+        // Search in title
+        (book.title && book.title.toLowerCase().includes(searchTerm)) ||
+        // Search in description
+        (book.description && book.description.toLowerCase().includes(searchTerm)) ||
+        // Search in authors
+        (book.authors && book.authors.some(author => 
+          author.toLowerCase().includes(searchTerm)
+        )) ||
+        // Search in genres
+        (book.genres && book.genres.some(genre => 
+          genre.toLowerCase().includes(searchTerm)
+        ))
+      );
     });
-    return response.data.books;
+    
+    console.log(`Found ${filteredBooks.length} books matching "${query}"`);
+    return filteredBooks;
   } catch (error) {
     console.error('Error searching books:', error);
     throw error;
