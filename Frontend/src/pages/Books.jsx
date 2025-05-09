@@ -7,7 +7,7 @@ import { addBookmark, isBookmarked, removeBookmark } from '../services/bookmarkS
 import cartService from '../services/cartService';
 import { getAllGenres } from '../services/genreService';
 import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
+import { getAllBooks, getBookById, filterBooks } from '../services/bookService';
 
 function Books() {
   // Get search parameters from URL
@@ -42,14 +42,16 @@ function Books() {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const booksPerPage = 12;
+  const [totalBooks, setTotalBooks] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   
   // Price ranges
   const priceRanges = [
     { id: 'all', name: 'All Prices' },
-    { id: 'under-10', name: 'Under $10' },
+    { id: '0-10', name: 'Under $10' },
     { id: '10-20', name: '$10 - $20' },
     { id: '20-30', name: '$20 - $30' },
-    { id: 'over-30', name: 'Over $30' },
+    { id: '30-100', name: 'Over $30' },
   ];
   
   // Rating options
@@ -70,24 +72,109 @@ function Books() {
     { id: 'rating', name: 'Average Rating' },
   ];
 
-  // Fetch books data
-  useEffect(() => {
-    const fetchBooks = async () => {
-      setLoading(true);
-      try {
-        const response = await axios.get('http://localhost:5253/api/book');
-        console.log('API Response:', response.data);
-        setBooks(response.data);
-        setLoading(false);
-      } catch (err) {
-        console.error('Error fetching books:', err);
-        setError('Failed to fetch books. Please make sure the backend server is running.');
-        setLoading(false);
+  // Fetch books with filters
+  const fetchFilteredBooks = async () => {
+    setLoading(true);
+    try {
+      console.log('Fetching all books from the regular endpoint');
+      
+      // Use the regular book endpoint directly
+      const response = await fetch('http://localhost:5253/api/book');
+      if (!response.ok) {
+        throw new Error(`API responded with status: ${response.status}`);
       }
-    };
-    
-    fetchBooks();
-  }, []);
+      
+      const allBooks = await response.json();
+      console.log('Fetched all books:', allBooks);
+      
+      // Apply filters on the client side
+      let filteredResults = [...allBooks];
+      
+      // Apply category filter
+      if (filters.category !== 'all') {
+        filteredResults = filteredResults.filter(book => 
+          book.genres && book.genres.some(genre => 
+            genre.toLowerCase() === filters.category.toLowerCase()
+          )
+        );
+      }
+      
+      // Apply search filter
+      if (appliedSearchQuery) {
+        const query = appliedSearchQuery.toLowerCase();
+        filteredResults = filteredResults.filter(book => 
+          (book.title && book.title.toLowerCase().includes(query)) ||
+          (book.description && book.description.toLowerCase().includes(query)) ||
+          (book.authors && book.authors.some(author => author.toLowerCase().includes(query)))
+        );
+      }
+      
+      // Apply rating filter
+      if (filters.rating !== 'all') {
+        const minRating = parseInt(filters.rating.split('-')[0]);
+        filteredResults = filteredResults.filter(book => 
+          book.rating >= minRating
+        );
+      }
+      
+      // Apply sale filter
+      if (filters.sale === 'sale') {
+        filteredResults = filteredResults.filter(book => 
+          book.onSaleFlag === true
+        );
+      }
+      
+      // Apply library access filter
+      if (filters.access === 'library') {
+        filteredResults = filteredResults.filter(book => 
+          book.physicalLibraryAccess === true
+        );
+      }
+      
+      // Apply price filter
+      if (filters.price !== 'all') {
+        const [minPrice, maxPrice] = filters.price.split('-').map(p => parseFloat(p));
+        filteredResults = filteredResults.filter(book => 
+          book.price >= minPrice && book.price <= maxPrice
+        );
+      }
+      
+      // Apply pagination
+      const totalCount = filteredResults.length;
+      const startIndex = (currentPage - 1) * booksPerPage;
+      const paginatedResults = filteredResults.slice(startIndex, startIndex + booksPerPage);
+      
+      console.log('Filtered and paginated results:', paginatedResults);
+      
+      // Update state with filtered results
+      setBooks(paginatedResults);
+      setFilteredBooks(paginatedResults);
+      setTotalBooks(totalCount);
+      setTotalPages(Math.ceil(totalCount / booksPerPage));
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching books:', err);
+      setError('Failed to fetch books. Please make sure the backend server is running.');
+      setLoading(false);
+    }
+  };
+  
+  // Map frontend sort options to API sort parameters
+  const mapSortByToApi = (sortOption) => {
+    switch (sortOption) {
+      case 'price-low': return 'price_asc';
+      case 'price-high': return 'price_desc';
+      case 'newest': return 'date_desc';
+      case 'rating': return 'rating';
+      case 'popularity': return 'popularity';
+      default: return 'title_asc';
+    }
+  };
+
+  // Fetch books when filters or pagination changes
+  useEffect(() => {
+    fetchFilteredBooks();
+  }, [currentPage, filters, sortBy, appliedSearchQuery]);
 
   // Fetch genres from the database
   useEffect(() => {
@@ -127,89 +214,18 @@ function Books() {
     loadBookmarkStates();
   }, [books, isAuthenticated]);
 
-  // Apply filters and search to books
+  // We no longer need to apply filters on the frontend since we're using backend filtering
+  // This useEffect is kept for reference but is not active anymore
+  /*
   useEffect(() => {
     if (!books.length) return;
 
-    let result = [...books];
-
-    // Apply category/genre filter
-    if (filters.category !== 'all') {
-      result = result.filter(book => 
-        book.genres && book.genres.some(genre => 
-          genre.toLowerCase() === filters.category.toLowerCase()
-        )
-      );
-    }
-
-    // Apply price filter
-    if (filters.price !== 'all') {
-      switch (filters.price) {
-        case 'under-10':
-          result = result.filter(book => book.price < 10);
-          break;
-        case '10-20':
-          result = result.filter(book => book.price >= 10 && book.price <= 20);
-          break;
-        case '20-30':
-          result = result.filter(book => book.price > 20 && book.price <= 30);
-          break;
-        case 'over-30':
-          result = result.filter(book => book.price > 30);
-          break;
-        default:
-          break;
-      }
-    }
-
-    // Apply rating filter
-    if (filters.rating !== 'all') {
-      const minRating = parseInt(filters.rating.split('-')[0]);
-      result = result.filter(book => (book.rating || 0) >= minRating);
-    }
-
-    // Apply sale filter
-    if (filters.sale === 'sale') {
-      result = result.filter(book => book.onSaleFlag);
-    }
-
-    // Apply library access filter
-    if (filters.access === 'library') {
-      result = result.filter(book => book.physicalLibraryAccess === true);
-    }
-
-    // Apply search query
-    if (appliedSearchQuery) {
-      const query = appliedSearchQuery.toLowerCase();
-      result = result.filter(book => 
-        book.title.toLowerCase().includes(query) || 
-        (book.authors && book.authors.some(author => author.toLowerCase().includes(query)))
-      );
-    }
-
-    // Apply sorting
-    switch (sortBy) {
-      case 'price-low':
-        result.sort((a, b) => a.price - b.price);
-        break;
-      case 'price-high':
-        result.sort((a, b) => b.price - a.price);
-        break;
-      case 'newest':
-        result.sort((a, b) => new Date(b.publicationDate || 0) - new Date(a.publicationDate || 0));
-        break;
-      case 'rating':
-        result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-        break;
-      case 'popularity':
-      default:
-        // Assuming higher IDs are more popular (or you could use another field)
-        result.sort((a, b) => b.id - a.id);
-        break;
-    }
-
-    setFilteredBooks(result);
-  }, [books, filters, sortBy, appliedSearchQuery]);
+    // All filtering is now handled by the backend API
+    // The frontend just displays the filtered results
+    
+    setFilteredBooks(books);
+  }, [books]);
+  */
 
   // Handle adding to cart
   const handleAddToCart = async (book) => {
@@ -325,11 +341,9 @@ function Books() {
     setViewMode(mode);
   };
 
-  // Get current books for pagination
-  const indexOfLastBook = currentPage * booksPerPage;
-  const indexOfFirstBook = indexOfLastBook - booksPerPage;
-  const currentBooks = filteredBooks.slice(indexOfFirstBook, indexOfLastBook);
-  const totalPages = Math.ceil(filteredBooks.length / booksPerPage);
+  // Display pagination info
+  const indexOfLastBook = Math.min(currentPage * booksPerPage, totalBooks);
+  const indexOfFirstBook = (currentPage - 1) * booksPerPage + 1;
 
   // Change page
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
@@ -435,10 +449,10 @@ function Books() {
                   onChange={(e) => {
                     const value = parseInt(e.target.value);
                     let priceFilter = 'all';
-                    if (value === 0) priceFilter = 'under-10';
+                    if (value === 0) priceFilter = '0-10';
                     else if (value === 10) priceFilter = '10-20';
                     else if (value === 20) priceFilter = '20-30';
-                    else if (value === 30) priceFilter = 'over-30';
+                    else if (value === 30) priceFilter = '30-100';
                     handleFilterChange('price', priceFilter);
                   }}
                   className="w-full accent-gold"
@@ -573,36 +587,24 @@ function Books() {
             {/* Results Summary */}
             <div className="flex justify-between items-center mb-6">
               <p className="text-sm text-gray-600">
-                Showing {filteredBooks.length > 0 ? indexOfFirstBook + 1 : 0}-
-                {Math.min(indexOfLastBook, filteredBooks.length)} of {filteredBooks.length} results
+                Showing {filteredBooks.length > 0 ? indexOfFirstBook : 0}-
+                {Math.min(indexOfLastBook, totalBooks)} of {totalBooks} results
               </p>
             </div>
             
-            {/* Loading State */}
-            {loading && (
-              <div className="flex justify-center items-center py-20">
+            {/* Books Grid/List */}
+            {loading ? (
+              <div className="flex justify-center items-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-navy"></div>
               </div>
-            )}
-            
-            {/* Error State */}
-            {error && !loading && (
-              <div className="bg-red-100 text-red-700 p-4 rounded-md mb-6">
-                {error}
-                <button 
-                  className="ml-4 underline"
-                  onClick={() => window.location.reload()}
-                >
-                  Try Again
-                </button>
+            ) : error ? (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                <strong className="font-bold">Error!</strong>
+                <span className="block sm:inline"> {error}</span>
               </div>
-            )}
-            
-            {/* Empty State */}
-            {!loading && !error && filteredBooks.length === 0 && (
-              <div className="text-center py-20">
-                <h3 className="text-xl font-medium text-navy mb-2">No books found</h3>
-                <p className="text-gray-600 mb-4">Try adjusting your filters or search query</p>
+            ) : filteredBooks.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-600">No books found matching your criteria. Try adjusting your filters.</p>
                 <button
                   onClick={() => {
                     setFilters({ category: 'all', price: 'all', rating: 'all', sale: 'all', access: 'all' });
@@ -615,12 +617,10 @@ function Books() {
                   Reset Filters
                 </button>
               </div>
-            )}
-            
-            {/* Books Grid/List View */}
-            {!loading && !error && filteredBooks.length > 0 && (
+            ) : (
+              /* Books Grid/List View */
               <div className={viewMode === 'grid' ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" : "space-y-4"}>
-                {currentBooks.map(book => (
+                {filteredBooks.map(book => (
                   <div key={book.id} className={`bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow ${viewMode === 'list' ? 'flex' : ''} relative`}>
                     <Link to={`/book/${book.id}`} className={`${viewMode === 'list' ? 'w-1/4 min-w-[100px]' : ''} relative`}>
                       {/* Bestseller Tag */}

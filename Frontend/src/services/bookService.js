@@ -25,23 +25,40 @@ const getBookById = async (id) => {
 // Search books by query (title or author)
 const searchBooks = async (query) => {
   try {
-    // Since we don't have a dedicated search endpoint, we'll fetch all books and filter client-side
-    const response = await api.get('/book');
-    const books = response.data;
-    
-    if (!query) return [];
-    
-    // Filter books by title or author containing the query (case insensitive)
-    const searchQuery = query.toLowerCase();
-    return books.filter(book => {
-      const titleMatch = book.title?.toLowerCase().includes(searchQuery);
-      const authorMatch = book.authors?.some(author => 
-        author.toLowerCase().includes(searchQuery)
-      );
-      return titleMatch || authorMatch;
+    // Use the backend filter API with search query
+    const response = await api.get('/book/filter', {
+      params: { searchQuery: query }
     });
+    return response.data.books;
   } catch (error) {
     console.error('Error searching books:', error);
+    throw error;
+  }
+};
+
+// Filter books with comprehensive options
+const filterBooks = async (filterOptions) => {
+  try {
+    console.log('Filter options being sent to API:', filterOptions);
+    // Send filter options to backend API
+    const response = await api.get('/book/filtered', {
+      params: filterOptions
+    });
+    console.log('Successful response from API:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error filtering books:', error);
+    if (error.response) {
+      console.error('Response data:', error.response.data);
+      console.error('Response status:', error.response.status);
+      console.error('Response headers:', error.response.headers);
+      
+    } else if (error.request) {
+      console.error('Request was made but no response received:', error.request);
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      console.error('Error setting up request:', error.message);
+    }
     throw error;
   }
 };
@@ -60,14 +77,15 @@ const bookmarkBook = async (bookId) => {
 };
 
 // Export all functions as named exports
-export { getAllBooks, getBookById, bookmarkBook, searchBooks };
+export { getAllBooks, getBookById, bookmarkBook, searchBooks, filterBooks };
 
 // Also export as default for backward compatibility
 const bookService = {
   getAllBooks,
   getBookById,
   bookmarkBook,
-  searchBooks
+  searchBooks,
+  filterBooks
 };
 
 export default bookService;
