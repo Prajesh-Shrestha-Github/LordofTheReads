@@ -29,3 +29,6 @@ Thumbs.db
 
 # Optional: Exclude secrets or sensitive files
 appsettings.Development.json
+
+/Migrations/
+Migrations
