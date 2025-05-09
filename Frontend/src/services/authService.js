@@ -1,4 +1,9 @@
 import api from './api';
+import Cookies from 'js-cookie';
+
+// Cookie configuration
+const COOKIE_NAME = 'lordofreads_token';
+const COOKIE_EXPIRY = 7; // 7 days
 
 const authService = {
   // Login with email/username and password
@@ -18,14 +23,14 @@ const authService = {
     }
   },
 
-  // Get token from storage
+  // Get token from cookies
   getToken: () => {
-    return localStorage.getItem('token');
+    return Cookies.get(COOKIE_NAME);
   },
 
   // Validate the current token
   validateToken: () => {
-    const token = localStorage.getItem('token');
+    const token = Cookies.get(COOKIE_NAME);
     if (!token) return false;
     
     try {
@@ -43,7 +48,8 @@ const authService = {
         return false;
       }
       
-      // If token is close to expiry (less than 1 minute), force refreshing soon
+      // If token is close to expiry (less than 1 minute), log it but don't refresh
+      // We will rely on the 7-day expiration instead of forced refreshes
       if (timeToExpiry < 60) {
         console.log(`Token expiring soon (${timeToExpiry}s remaining)`);
       }
@@ -58,9 +64,14 @@ const authService = {
   
   // Clear all session data
   clearSession: () => {
+    // Remove the auth cookie
+    Cookies.remove(COOKIE_NAME, { path: '/' });
+    
+    // Still clear localStorage as a fallback for any legacy data
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('loginTime');
+    
     // Clear any other auth-related data
     sessionStorage.removeItem('authState');
     
@@ -79,9 +90,15 @@ const authService = {
         password: credentials.password
       });
       
-      // Store the JWT token in localStorage
+      // Store the JWT token in a cookie that expires in 7 days
       if (response.data && response.data.token) {
-        localStorage.setItem('token', response.data.token);
+        // Set the cookie with proper configuration
+        Cookies.set(COOKIE_NAME, response.data.token, {
+          expires: COOKIE_EXPIRY,      // 7 days
+          path: '/',                  // Make cookie available site-wide
+          secure: window.location.protocol === 'https:', // Use secure flag in HTTPS
+          sameSite: 'strict'          // Protect against CSRF
+        });
         
         // Parse the JWT token to extract role information
         const tokenData = authService.parseJwt(response.data.token);
@@ -92,6 +109,7 @@ const authService = {
           userData.role = parseInt(tokenData.role, 10);
         }
         
+        // Keep user data in localStorage for non-sensitive info
         localStorage.setItem('user', JSON.stringify(userData));
         localStorage.setItem('loginTime', Date.now().toString());
       } else {
