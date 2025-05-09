@@ -9,6 +9,9 @@ import Bookmarks from "./pages/Bookmarks";
 import BookDetails from "./pages/BookDetails";
 import About from "./pages/About";
 import Notifications from "./pages/Notifications";
+import Checkout from "./pages/Checkout";
+import OrderConfirmation from "./pages/OrderConfirmation";
+import Orders from "./pages/Orders";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import UserOnlyRoute from "./components/UserOnlyRoute";
@@ -139,6 +142,21 @@ const AppRoutes = () => {
       <Route path="/notifications" element={
         <UserOnlyRoute>
           <Notifications />
+        </UserOnlyRoute>
+      } />
+      <Route path="/checkout" element={
+        <UserOnlyRoute>
+          <Checkout />
+        </UserOnlyRoute>
+      } />
+      <Route path="/order-confirmation/:orderId" element={
+        <UserOnlyRoute>
+          <OrderConfirmation />
+        </UserOnlyRoute>
+      } />
+      <Route path="/orders" element={
+        <UserOnlyRoute>
+          <Orders />
         </UserOnlyRoute>
       } />
       

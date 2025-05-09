@@ -12,8 +12,8 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [sessionExpired, setSessionExpired] = useState(false);
   
-  // SessionTimeout in milliseconds (15 minutes for testing)
-  const SESSION_TIMEOUT = 15 * 60 * 1000;  
+  // SessionTimeout in milliseconds (7 days to match cookie expiration)
+  const SESSION_TIMEOUT = 7 * 24 * 60 * 60 * 1000;  
   let sessionTimer = null;
 
   // Reset session timer

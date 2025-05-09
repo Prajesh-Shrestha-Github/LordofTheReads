@@ -1,4 +1,5 @@
 import axios from 'axios';
+import authService from './authService';
 
 // Create axios instance with base settings
 const api = axios.create({
@@ -11,7 +12,7 @@ const api = axios.create({
 // Add interceptor to include authentication token with requests
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = authService.getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -28,10 +29,10 @@ api.interceptors.response.use(
   (error) => {
     // If the error is due to authentication
     if (error.response && error.response.status === 401) {
-      // Clear the invalid token
-      localStorage.removeItem('token');
-      // Optional: redirect to login page
-      // window.location.href = '/login';
+      // Clear the invalid session
+      authService.clearSession();
+      // Redirect to login
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   }
