@@ -1,0 +1,266 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
+import { useAuth } from '../context/AuthContext';
+import cartService from '../services/cartService';
+import orderService from '../services/orderService';
+
+function Checkout() {
+  const [cart, setCart] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [processing, setProcessing] = useState(false);
+  const { isAuthenticated, user } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchCart = async () => {
+      try {
+        setLoading(true);
+        
+        // Check if user is authenticated
+        if (!isAuthenticated()) {
+          navigate('/login', { state: { from: '/checkout' } });
+          return;
+        }
+        
+        // Get cart from database via API
+        const cartData = await cartService.getCart();
+        
+        if (!cartData || !cartData.cartItems || cartData.cartItems.length === 0) {
+          navigate('/cart');
+          return;
+        }
+        
+        setCart(cartData);
+      } catch (err) {
+        console.error('Error fetching cart:', err);
+        setError('Failed to load cart items');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchCart();
+  }, [isAuthenticated, navigate]);
+
+  // Calculate subtotal
+  const subtotal = cart?.cartItems?.reduce((total, item) => 
+    total + (item.book?.price || 0) * item.quantity, 0) || 0;
+  
+  // Calculate if eligible for 5% discount (5 or more books)
+  const totalBooks = cart?.cartItems?.reduce((total, item) => total + item.quantity, 0) || 0;
+  const isEligibleForQuantityDiscount = totalBooks >= 5;
+  const quantityDiscountAmount = isEligibleForQuantityDiscount ? subtotal * 0.05 : 0;
+  
+  // Total after discounts
+  const total = subtotal - quantityDiscountAmount;
+
+  const handlePlaceOrder = async () => {
+    try {
+      setProcessing(true);
+      setError(null);
+      
+      console.log('Attempting to create order...');
+      
+      // Create order via API
+      const order = await orderService.createOrder();
+      
+      console.log('Order created successfully:', order);
+      
+      // Navigate to order confirmation page
+      navigate(`/order-confirmation/${order.id}`);
+    } catch (err) {
+      console.error('Error placing order:', err);
+      
+      // Provide more detailed error information
+      if (err.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        console.error('Response data:', err.response.data);
+        console.error('Response status:', err.response.status);
+        console.error('Response headers:', err.response.headers);
+        
+        if (err.response.status === 401) {
+          setError('Authentication error. Please log in again.');
+        } else if (err.response.status === 404) {
+          setError('API endpoint not found. Please contact support.');
+        } else {
+          setError(`Server error: ${err.response.status}. ${err.response.data?.message || 'Please try again.'}`);
+        }
+      } else if (err.request) {
+        // The request was made but no response was received
+        console.error('Request made but no response received:', err.request);
+        setError('No response from server. Please check your connection and try again.');
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        console.error('Error setting up request:', err.message);
+        setError(`Error: ${err.message}`);
+      }
+      
+      setProcessing(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen flex-col bg-beige">
+        <Navbar />
+        <div className="container mx-auto px-4 py-8 flex-grow flex items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-navy border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
+            <p className="mt-4 text-navy">Loading checkout...</p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col bg-beige">
+      <Navbar />
+      
+      <div className="container mx-auto px-4 py-8 flex-grow">
+        <h1 className="text-2xl font-bold mb-8 text-navy">Checkout</h1>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Order Summary */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
+              <h2 className="text-lg font-bold mb-4 text-navy">Order Summary</h2>
+              
+              {cart?.cartItems?.map(item => (
+                <div key={item.bookId} className="flex items-center py-4 border-b border-gray-200 last:border-0">
+                  <div className="w-16 h-16 flex-shrink-0 mr-4">
+                    <img 
+                      src={item.book?.imageUrl || '/placeholder-book.png'} 
+                      alt={item.book?.title || 'Book cover'} 
+                      className="w-full h-full object-cover rounded-md"
+                    />
+                  </div>
+                  
+                  <div className="flex-grow">
+                    <h3 className="font-medium text-navy">{item.book?.title || 'Unknown Book'}</h3>
+                    <p className="text-sm text-gray">
+                      {item.book?.bookAuthors?.map(ba => ba.author?.name).join(', ') || 'Unknown Author'}
+                    </p>
+                  </div>
+                  
+                  <div className="text-right">
+                    <div className="font-medium text-navy">${((item.book?.price || 0) * item.quantity).toFixed(2)}</div>
+                    <div className="text-xs text-gray">Qty: {item.quantity}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            {/* Pickup Information */}
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <h2 className="text-lg font-bold mb-4 text-navy">Pickup Information</h2>
+              
+              <div className="mb-6">
+                <p className="text-navy mb-2">
+                  <strong>Pickup Location:</strong>
+                </p>
+                <p className="text-gray">
+                  Lord of The Reads Bookstore<br />
+                  123 Book Street<br />
+                  Kathmandu, Nepal
+                </p>
+              </div>
+              
+              <div className="mb-6">
+                <p className="text-navy mb-2">
+                  <strong>Pickup Instructions:</strong>
+                </p>
+                <p className="text-gray">
+                  After placing your order, you will receive a confirmation email with a claim code.
+                  Present your membership ID and claim code at the store to complete your purchase.
+                </p>
+              </div>
+              
+              <div className="mb-6">
+                <p className="text-navy mb-2">
+                  <strong>Store Hours:</strong>
+                </p>
+                <p className="text-gray">
+                  Monday - Friday: 10:00 AM - 8:00 PM<br />
+                  Saturday - Sunday: 11:00 AM - 6:00 PM
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Payment Summary */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-lg p-6 shadow-sm sticky top-4">
+              <h2 className="text-lg font-bold mb-4 text-navy">Payment Summary</h2>
+              
+              <div className="space-y-3 mb-4">
+                <div className="flex justify-between text-navy">
+                  <span>Subtotal ({totalBooks} items)</span>
+                  <span>${subtotal.toFixed(2)}</span>
+                </div>
+                
+                {isEligibleForQuantityDiscount && (
+                  <div className="flex justify-between text-green-600">
+                    <span>5% Discount (5+ books)</span>
+                    <span>-${quantityDiscountAmount.toFixed(2)}</span>
+                  </div>
+                )}
+                
+                <div className="flex justify-between text-navy">
+                  <span>Shipping</span>
+                  <span>Free</span>
+                </div>
+              </div>
+              
+              <div className="border-t border-gray pt-3 mb-6">
+                <div className="flex justify-between font-bold text-navy">
+                  <span>Total</span>
+                  <span>${total.toFixed(2)}</span>
+                </div>
+              </div>
+              
+              <button 
+                onClick={handlePlaceOrder}
+                disabled={processing}
+                className={`w-full py-3 rounded-md font-medium transition-colors ${
+                  processing 
+                    ? 'bg-gray-400 text-white cursor-not-allowed' 
+                    : 'bg-navy text-white hover:bg-gold hover:text-navy'
+                }`}
+              >
+                {processing ? (
+                  <span className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Processing...
+                  </span>
+                ) : 'Place Order'}
+              </button>
+              
+              <p className="text-xs text-center text-gray mt-4">
+                By placing your order, you agree to our Terms of Service and Privacy Policy.
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        {error && (
+          <div className="mt-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            {error}
+          </div>
+        )}
+      </div>
+
+      <Footer />
+    </div>
+  );
+}
+
+export default Checkout;

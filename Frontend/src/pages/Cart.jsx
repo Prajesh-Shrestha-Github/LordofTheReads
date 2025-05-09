@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Minus, Plus, Trash2 } from 'lucide-react';
@@ -11,6 +11,7 @@ function Cart() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchCartItems = async () => {
@@ -216,7 +217,11 @@ function Cart() {
                   </div>
                 </div>
                 
-                <button className="w-full bg-navy text-white py-3 rounded-md font-medium hover:bg-gold hover:text-navy transition-colors">
+                <button 
+                  onClick={() => navigate('/checkout')}
+                  className="w-full bg-navy text-white py-3 rounded-md font-medium hover:bg-gold hover:text-navy transition-colors"
+                  disabled={cartItems.length === 0}
+                >
                   Proceed to Checkout
                 </button>
                 

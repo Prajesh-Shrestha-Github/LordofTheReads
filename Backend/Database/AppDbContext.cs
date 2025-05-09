@@ -9,21 +9,21 @@ namespace LordofTheReads.Database
         {
         }
 
-        public DbSet<User> Users { get; set; }
-        public DbSet<Book> Books { get; set; }
-        public DbSet<Author> Authors { get; set; }
-        public DbSet<Genre> Genres { get; set; }
-        public DbSet<BookAuthor> BookAuthors { get; set; }
-        public DbSet<BookGenre> BookGenres { get; set; }
-        public DbSet<Cart> Carts { get; set; }
-        public DbSet<CartItem> CartItems { get; set; }
-        public DbSet<Bookmark> Bookmarks { get; set; }
-        public DbSet<Order> Orders { get; set; }
-        public DbSet<OrderItem> OrderItems { get; set; }
-        public DbSet<Review> Reviews { get; set; }
-        public DbSet<Discount> Discounts { get; set; }
-        public DbSet<UserDiscount> UserDiscounts { get; set; }
-        public DbSet<Announcement> Announcements { get; set; }
+        public DbSet<User> Users { get; set; } = null!;
+        public DbSet<Book> Books { get; set; } = null!;
+        public DbSet<Author> Authors { get; set; } = null!;
+        public DbSet<Genre> Genres { get; set; } = null!;
+        public DbSet<BookAuthor> BookAuthors { get; set; } = null!;
+        public DbSet<BookGenre> BookGenres { get; set; } = null!;
+        public DbSet<Cart> Carts { get; set; } = null!;
+        public DbSet<CartItem> CartItems { get; set; } = null!;
+        public DbSet<Bookmark> Bookmarks { get; set; } = null!;
+        public DbSet<Order> Orders { get; set; } = null!;
+        public DbSet<OrderItem> OrderItems { get; set; } = null!;
+        public DbSet<Review> Reviews { get; set; } = null!;
+        public DbSet<Discount> Discounts { get; set; } = null!;
+        public DbSet<UserDiscount> UserDiscounts { get; set; } = null!;
+        public DbSet<Announcement> Announcements { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

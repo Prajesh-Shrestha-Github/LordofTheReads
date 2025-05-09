@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import cartService from '../services/cartService';
 import { getBookmarkCount } from '../services/bookmarkService';
 import { searchBooks } from '../services/bookService';
+import { getUnreadAnnouncementsCount } from '../services/announcementService';
 
 function Navbar() {
   const { user, logout, isAuthenticated, hasRole } = useAuth();
@@ -12,6 +13,7 @@ function Navbar() {
   const navigate = useNavigate();
   const [cartItemCount, setCartItemCount] = useState(0);
   const [bookmarkCount, setBookmarkCount] = useState(0);
+  const [notificationCount, setNotificationCount] = useState(0);
   const [showNavbar, setShowNavbar] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -155,6 +157,41 @@ function Navbar() {
       window.removeEventListener('bookmarksUpdated', handleBookmarkUpdate);
     };
   }, [isAuthenticated]);
+  
+  // Update notification count
+  useEffect(() => {
+    const fetchNotificationCount = async () => {
+      if (isAuthenticated()) {
+        try {
+          const count = await getUnreadAnnouncementsCount();
+          setNotificationCount(count);
+        } catch (error) {
+          console.error('Error fetching notification count:', error);
+          setNotificationCount(0);
+        }
+      } else {
+        setNotificationCount(0);
+      }
+    };
+
+    // Initial fetch
+    fetchNotificationCount();
+
+    // Set up polling to refresh notification count every 30 seconds
+    const intervalId = setInterval(fetchNotificationCount, 30000);
+
+    // Listen for announcement updates
+    const handleAnnouncementUpdate = () => {
+      fetchNotificationCount();
+    };
+
+    window.addEventListener('announcementsUpdated', handleAnnouncementUpdate);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('announcementsUpdated', handleAnnouncementUpdate);
+    };
+  }, [isAuthenticated]);
 
   // If we shouldn't show the navbar, return null but after all hooks have been called
   if (!showNavbar) {
@@ -178,8 +215,6 @@ function Navbar() {
             <Link to="/" className="text-xs font-medium text-navy hover:text-gold transition-colors">Home</Link>
             <Link to="/books" className="text-xs font-medium text-navy hover:text-gold transition-colors">Books</Link>
             <Link to="/about" className="text-xs font-medium text-navy hover:text-gold transition-colors">About</Link>
-            <Link to="/categories" className="text-xs font-medium text-navy hover:text-gold transition-colors">Categories</Link>
-            <Link to="/contact" className="text-xs font-medium text-navy hover:text-gold transition-colors">Contact</Link>
           </div>
         </nav>
 
@@ -243,6 +278,11 @@ function Navbar() {
           {isAuthenticated() && (
             <Link to="/notifications" className="text-navy hover:text-gold transition-colors relative">
               <BellRing className="h-5 w-5" />
+              {notificationCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  {notificationCount}
+                </span>
+              )}
             </Link>
           )}
           

@@ -1,21 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, Outlet, useNavigate, Navigate, useLocation, Link } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Home, Book, Percent, BellRing, LogOut, Menu, X, User, Settings, Users, BookOpen, ChevronDown, Search } from 'lucide-react';
 
 const AdminLayout = () => {
-  const { user, logout, hasRole } = useAuth();
+  const { user, logout, hasRole, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeSection, setActiveSection] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Check if user is admin, redirect if not
-  if (!hasRole('Admin')) {
-    return <Navigate to="/login" replace />;
-  }
 
   const handleLogout = () => {
     logout();
@@ -50,20 +45,17 @@ const AdminLayout = () => {
   // Check session expiration every minute
   useEffect(() => {
     const checkSession = () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
+      // Use authentication context to verify session
+      if (!isAuthenticated()) {
         logout();
         navigate('/login');
       }
     };
 
     const interval = setInterval(checkSession, 60000); // Check every minute
-    
-    // Initial check
-    checkSession();
-    
+    checkSession(); // Initial check
     return () => clearInterval(interval);
-  }, [logout, navigate]);
+  }, [isAuthenticated, logout, navigate]);
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
