@@ -15,18 +15,10 @@ namespace LordofTheReads.Services
 
         public async Task SendOrderProcessedNotification(int userId, string message)
         {
-            string connectionId = NotificationHub.GetConnectionIdForUser(userId.ToString());
-            if (!string.IsNullOrEmpty(connectionId))
-            {
-                await _hubContext.Clients.Client(connectionId)
-                    .SendAsync("ReceiveOrderProcessedNotification", message);
-            }
-            else
-            {
-                // Fallback to broadcast if user connection not found
-                await _hubContext.Clients.All
-                    .SendAsync("ReceiveBroadcastNotification", $"Order notification: {message}");
-            }
+            // Send notification to the user-specific group
+            var groupName = userId.ToString();
+            await _hubContext.Clients.Group(groupName)
+                .SendAsync("ReceiveOrderProcessedNotification", message);
         }
 
         public async Task BroadcastNewBookNotification(string bookTitle, string authorName)

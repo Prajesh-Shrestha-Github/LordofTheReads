@@ -27,6 +27,7 @@ import StaffManagement from "./pages/admin/StaffManagement";
 import authService from "./services/authService";
 import StaffLayout from "./components/staff/StaffLayout";
 import PendingOrders from "./pages/staff/PendingOrders";
+import ProcessedOrders from "./pages/staff/ProcessedOrders";
 
 // Root level redirection component to handle admin routes
 const RootRedirect = () => {
@@ -193,6 +194,7 @@ const AppRoutes = () => {
         <Route element={<StaffLayout />}
         >
           <Route index element={<PendingOrders />} />
+          <Route path="processed" element={<ProcessedOrders />} />
         </Route>
       </Route>
 

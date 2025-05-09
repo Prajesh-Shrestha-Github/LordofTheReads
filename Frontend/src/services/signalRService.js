@@ -32,7 +32,6 @@ export const startConnection = (userId) => {
       // Register the connection with userId
       if (userId) {
         connection.invoke('RegisterConnection', userId.toString())
-          .then(() => console.log(`Connection registered for user ${userId}`))
           .catch(err => console.error('Error registering connection:', err));
       }
     })

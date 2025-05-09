@@ -238,8 +238,23 @@ namespace LordofTheReads.Services
             return orders;
         }
 
+        // Retrieve all processed (completed) orders for staff panel
+        public async Task<List<Order>> GetProcessedOrdersAsync()
+        {
+            var orders = await _context.Orders
+                .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Book)
+                .ThenInclude(b => b.BookAuthors)
+                .ThenInclude(ba => ba.Author)
+                .Include(o => o.User)
+                .Where(o => o.Status == OrderStatus.Completed)
+                .OrderByDescending(o => o.OrderDate)
+                .ToListAsync();
+            return orders;
+        }
+
         // Process (complete) a pending order
-        public async Task<bool> ProcessOrderAsync(int orderId, string claimCode)
+        public async Task<bool> ProcessOrderAsync(int orderId, string claimCode, int userId)
         {
             var order = await _context.Orders
                 .Include(o => o.OrderItems)
@@ -266,7 +281,7 @@ namespace LordofTheReads.Services
             {
                 // Send notification to the user
                 var message = $"Your order #{order.Id} has been processed successfully!";
-                await _notificationService.SendOrderProcessedNotification(order.UserId, message);
+                await _notificationService.SendOrderProcessedNotification(userId, message);
             }
             
             return true;

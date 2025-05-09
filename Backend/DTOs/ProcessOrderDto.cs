@@ -6,5 +6,7 @@ namespace LordofTheReads.DTOs
     {
         [Required]
         public string ClaimCode { get; set; } = string.Empty;
+        [Required]
+        public int UserId { get; set; }
     }
 }

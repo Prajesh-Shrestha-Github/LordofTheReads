@@ -42,12 +42,28 @@ namespace LordofTheReads.Controllers
             }
         }
 
+        [HttpGet("processed")]
+        public async Task<ActionResult<IEnumerable<OrderDto>>> GetProcessedOrders()
+        {
+            try
+            {
+                var orders = await _orderService.GetProcessedOrdersAsync();
+                var dtos = orders.Select(MapOrderToDto);
+                return Ok(dtos);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching processed orders");
+                return StatusCode(500, new { message = "An error occurred while retrieving processed orders.", error = ex.Message });
+            }
+        }
+
         [HttpPost("{id}/process")]
         public async Task<ActionResult> ProcessOrder(int id, [FromBody] ProcessOrderDto dto)
         {
             try
             {
-                var success = await _orderService.ProcessOrderAsync(id, dto.ClaimCode);
+                var success = await _orderService.ProcessOrderAsync(id, dto.ClaimCode, dto.UserId);
                 if (success)
                     return Ok(new { message = "Order processed successfully." });
                 return BadRequest(new { message = "Failed to process order." });

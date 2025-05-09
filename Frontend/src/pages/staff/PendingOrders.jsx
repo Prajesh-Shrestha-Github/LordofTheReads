@@ -22,14 +22,14 @@ const PendingOrders = () => {
 
   useEffect(() => { fetchOrders(); }, []);
 
-  const handleProcess = async (orderId) => {
+  const handleProcess = async (orderId, userId) => {
     const code = claimCodes[orderId] || '';
     if (!code) {
       setError('Please enter claim code');
       return;
     }
     try {
-      await staffOrderService.processOrder(orderId, code);
+      await staffOrderService.processOrder(orderId, code, userId);
       setOrders(prev => prev.filter(o => o.id !== orderId));
       setClaimCodes(prev => { const next = { ...prev }; delete next[orderId]; return next; });
       setError(null);
@@ -91,7 +91,7 @@ const PendingOrders = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${order.totalAmount.toFixed(2)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex space-x-2">
                     <button
-                      onClick={() => handleProcess(order.id)}
+                      onClick={() => handleProcess(order.id, order.userId)}
                       className="text-white bg-teal-600 hover:bg-teal-700 px-3 py-1 rounded"
                     >
                       Process
