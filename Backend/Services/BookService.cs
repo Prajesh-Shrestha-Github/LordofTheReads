@@ -79,41 +79,56 @@ namespace LordofTheReads.Services
             try
             {
                 var now = DateTime.UtcNow;
-                var book = await _context.Books
+                // First, get the book with all its related data
+                var bookEntity = await _context.Books
                     .Include(b => b.BookAuthors)
                     .ThenInclude(ba => ba.Author)
                     .Include(b => b.Discounts)
                     .Include(b => b.BookGenres)
                     .ThenInclude(bg => bg.Genre)
                     .Include(b => b.Reviews)
-                    .Where(b => b.Id == id)
-                    .Select(b => new BookDto
-                    {
-                        Id = b.Id,
-                        Title = b.Title ?? "Unknown Title",
-                        ISBN = b.ISBN,
-                        Description = b.Description,
-                        Price = b.Price,
-                        PublicationDate = b.PublicationDate,
-                        StockQuantity = b.StockQuantity,
-                        Publisher = b.Publisher,
-                        Language = b.Language,
-                        Format = b.Format,
-                        PhysicalLibraryAccess = b.PhysicalLibraryAccess,
-                        // Use the actual image URL if it exists
-                        ImageUrl = b.ImageUrl ?? "https://placehold.co/300x450?text=No+Cover",
-                        CreatedAt = b.CreatedAt,
-                        UpdatedAt = b.UpdatedAt,
-                        // Map author names from the navigation property
-                        Authors = b.BookAuthors.Select(ba => ba.Author.Name).ToList(),
-                        DiscountPercentage = b.Discounts.Where(d => d.OnSaleFlag).Select(d => d.DiscountPercentage).FirstOrDefault(),
-                        OnSaleFlag = b.Discounts.Any(d => d.OnSaleFlag),
-                        // Map genre names from the navigation property
-                        Genres = b.BookGenres.Select(bg => bg.Genre.Name).ToList(),
-                        // Number of reviews for the book
-                        ReviewCount = b.Reviews.Count(),
-                    })
-                    .FirstOrDefaultAsync();
+                    .FirstOrDefaultAsync(b => b.Id == id);
+                
+                if (bookEntity == null)
+                {
+                    _logger.LogWarning($"Book with ID {id} not found");
+                    return new BookDto();
+                }
+                
+                // Log discount information
+                _logger.LogInformation($"Book ID {id} has {bookEntity.Discounts.Count} discounts");
+                foreach (var discount in bookEntity.Discounts)
+                {
+                    _logger.LogInformation($"Discount ID: {discount.Id}, OnSaleFlag: {discount.OnSaleFlag}, Percentage: {discount.DiscountPercentage}%");
+                }
+                
+                // Map to DTO
+                var book = new BookDto
+                {
+                    Id = bookEntity.Id,
+                    Title = bookEntity.Title ?? "Unknown Title",
+                    ISBN = bookEntity.ISBN,
+                    Description = bookEntity.Description,
+                    Price = bookEntity.Price,
+                    PublicationDate = bookEntity.PublicationDate,
+                    StockQuantity = bookEntity.StockQuantity,
+                    Publisher = bookEntity.Publisher,
+                    Language = bookEntity.Language,
+                    Format = bookEntity.Format,
+                    PhysicalLibraryAccess = bookEntity.PhysicalLibraryAccess,
+                    // Use the actual image URL if it exists
+                    ImageUrl = bookEntity.ImageUrl ?? "https://placehold.co/300x450?text=No+Cover",
+                    CreatedAt = bookEntity.CreatedAt,
+                    UpdatedAt = bookEntity.UpdatedAt,
+                    // Map author names from the navigation property
+                    Authors = bookEntity.BookAuthors.Select(ba => ba.Author.Name).ToList(),
+                    DiscountPercentage = bookEntity.Discounts.Where(d => d.OnSaleFlag).Select(d => d.DiscountPercentage).FirstOrDefault(),
+                    OnSaleFlag = bookEntity.Discounts.Any(d => d.OnSaleFlag),
+                    // Map genre names from the navigation property
+                    Genres = bookEntity.BookGenres.Select(bg => bg.Genre.Name).ToList(),
+                    // Number of reviews for the book
+                    ReviewCount = bookEntity.Reviews.Count(),
+                };
 
                 return book ?? new BookDto();
             }
