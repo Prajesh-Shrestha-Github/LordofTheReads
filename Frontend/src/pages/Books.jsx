@@ -189,9 +189,15 @@ function Books() {
       
       // Apply format filter
       if (filters.format !== 'all') {
-        filteredResults = filteredResults.filter(book => 
-          book.format && book.format.toLowerCase() === filters.format.toLowerCase()
-        );
+        // For format filtering, we need to be more flexible since formats might be stored differently
+        // or a book might be available in multiple formats
+        filteredResults = filteredResults.filter(book => {
+          if (!book.format) return false;
+          
+          // Check if the format is contained within the book's format string
+          // This handles cases where format might be stored as "Hardcover, Paperback" etc.
+          return book.format.toLowerCase().includes(filters.format.toLowerCase());
+        });
       }
       
       // Apply publisher filter
