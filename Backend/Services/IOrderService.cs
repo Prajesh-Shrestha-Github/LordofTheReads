@@ -11,6 +11,9 @@ namespace LordofTheReads.Services
         Task<Order> GetOrderByIdAsync(int orderId, int userId);
         Task<List<Order>> GetUserOrdersAsync(int userId);
         Task<bool> CancelOrderAsync(int orderId, int userId);
+        Task<List<Order>> GetPendingOrdersAsync();
+        Task<bool> ProcessOrderAsync(int orderId, string claimCode);
+        Task<bool> CancelOrderByStaffAsync(int orderId);
         Task<string> GenerateClaimCodeAsync();
     }
 }

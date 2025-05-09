@@ -1,5 +1,5 @@
-import React from 'react';
-import { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import { startConnection, stopConnection } from '../services/signalRService';
 import authService from '../services/authService';
 
 // Create auth context
@@ -30,6 +30,19 @@ export const AuthProvider = ({ children }) => {
       }, SESSION_TIMEOUT);
     }
   };
+  
+  // Initialize SignalR connection when user is authenticated
+  useEffect(() => {
+    if (user) {
+      // Start the SignalR connection with the user ID
+      startConnection(user.id);
+      
+      // Clean up the connection when component unmounts or user logs out
+      return () => {
+        stopConnection();
+      };
+    }
+  }, [user]);
   
   // Monitor user activity to keep session alive
   useEffect(() => {

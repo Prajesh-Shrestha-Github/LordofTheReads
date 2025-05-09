@@ -1,5 +1,7 @@
 import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, Outlet, useNavigate } from "react-router-dom";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import Home from "./pages/Home";
 import Cart from "./pages/Cart";
 import Login from "./pages/Login";
@@ -21,7 +23,10 @@ import BooksManagement from "./pages/admin/BooksManagement";
 import BookForm from "./pages/admin/BookForm";
 import DiscountsManagement from "./pages/admin/DiscountsManagement";
 import AnnouncementsManagement from "./pages/admin/AnnouncementsManagement";
+import StaffManagement from "./pages/admin/StaffManagement";
 import authService from "./services/authService";
+import StaffLayout from "./components/staff/StaffLayout";
+import PendingOrders from "./pages/staff/PendingOrders";
 
 // Root level redirection component to handle admin routes
 const RootRedirect = () => {
@@ -176,9 +181,21 @@ const AppRoutes = () => {
           <Route path="books/edit/:id" element={<BookForm />} />
           <Route path="discounts" element={<DiscountsManagement />} />
           <Route path="announcements" element={<AnnouncementsManagement />} />
+          <Route path="staff" element={<StaffManagement />} />
         </Route>
       </Route>
-      
+
+      {/* Staff Panel Routes */}
+      <Route 
+        path="/staff" 
+        element={<ProtectedRoute requiredRole="Staff" redirectPath="/login" />}
+      >
+        <Route element={<StaffLayout />}
+        >
+          <Route index element={<PendingOrders />} />
+        </Route>
+      </Route>
+
       {/* Redirect any unknown routes to appropriate page based on role */}
       <Route path="*" element={<RootRedirect />} />
     </Routes>
@@ -190,6 +207,7 @@ function App() {
     <AuthProvider>
       <Router>
         <AppRoutes />
+        <ToastContainer position="top-right" autoClose={5000} hideProgressBar={false} newestOnTop closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
       </Router>
     </AuthProvider>
   );

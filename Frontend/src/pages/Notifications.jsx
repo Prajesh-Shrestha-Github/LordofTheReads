@@ -4,12 +4,16 @@ import { BellRing, Check } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { getAllAnnouncements, markAllAnnouncementsAsRead, getReadAnnouncementIds } from '../services/announcementService';
+import { startConnection, stopConnection } from '../services/signalRService';
+import { useAuth } from '../context/AuthContext';
 
 function Notifications() {
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [readAnnouncementIds, setReadAnnouncementIds] = useState([]);
+  const { user } = useAuth();
+  const [notificationsList, setNotificationsList] = useState([]);
 
   useEffect(() => {
     const fetchAnnouncements = async () => {
@@ -29,10 +33,27 @@ function Notifications() {
     };
 
     fetchAnnouncements();
-    
     // Mark all announcements as read when the page is visited
     markAllAnnouncementsAsRead();
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const connection = startConnection(user.id);
+    connection.on('ReceiveBroadcastNotification', message => {
+      setNotificationsList(prev => [
+        { id: Date.now(), title: 'Broadcast', content: message, startDate: new Date().toISOString() },
+        ...prev
+      ]);
+    });
+    connection.on('ReceiveOrderProcessedNotification', message => {
+      setNotificationsList(prev => [
+        { id: Date.now(), title: 'Order Processed', content: message, startDate: new Date().toISOString() },
+        ...prev
+      ]);
+    });
+    return () => stopConnection();
+  }, [user]);
 
   // Format date to be more readable
   const formatDate = (dateString) => {
@@ -68,6 +89,24 @@ function Notifications() {
           )}
         </div>
         
+        {notificationsList.length > 0 && (
+          <div className="space-y-6 mb-6">
+            {notificationsList.map(notif => (
+              <div key={notif.id} className="bg-blue-50 p-6 rounded-md shadow-sm">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold text-navy">{notif.title}</h2>
+                    <p className="text-gray-500 text-sm mt-1">Received on {formatDate(notif.startDate)}</p>
+                  </div>
+                  <div className="bg-green-200 text-navy px-2 py-1 text-xs rounded-full">Notification</div>
+                </div>
+                <div className="mt-4">
+                  <p className="text-gray-700">{notif.content}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
         {loading ? (
           <div className="flex justify-center items-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-navy"></div>

@@ -17,12 +17,14 @@ namespace LordofTheReads.Services
         private readonly AppDbContext _context;
         private readonly ICartService _cartService;
         private readonly ILogger<OrderService> _logger;
+        private readonly INotificationService _notificationService;
 
-        public OrderService(AppDbContext context, ICartService cartService, ILogger<OrderService> logger)
+        public OrderService(AppDbContext context, ICartService cartService, ILogger<OrderService> logger, INotificationService notificationService = null)
         {
             _context = context;
             _cartService = cartService;
             _logger = logger;
+            _notificationService = notificationService;
         }
 
         public async Task<Order> CreateOrderFromCartAsync(int userId)
@@ -218,6 +220,81 @@ namespace LordofTheReads.Services
             order.CancellationDate = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+            return true;
+        }
+
+        // Retrieve all pending orders for staff panel
+        public async Task<List<Order>> GetPendingOrdersAsync()
+        {
+            var orders = await _context.Orders
+                .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Book)
+                .ThenInclude(b => b.BookAuthors)
+                .ThenInclude(ba => ba.Author)
+                .Include(o => o.User)
+                .Where(o => o.Status == OrderStatus.Pending)
+                .OrderBy(o => o.OrderDate)
+                .ToListAsync();
+            return orders;
+        }
+
+        // Process (complete) a pending order
+        public async Task<bool> ProcessOrderAsync(int orderId, string claimCode)
+        {
+            var order = await _context.Orders
+                .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Book)
+                .ThenInclude(b => b.BookAuthors)
+                .ThenInclude(ba => ba.Author)
+                .Include(o => o.User)
+                .FirstOrDefaultAsync(o => o.Id == orderId);
+                
+            if (order == null)
+                throw new KeyNotFoundException($"Order with ID {orderId} not found");
+
+            if (order.Status != OrderStatus.Pending)
+                throw new InvalidOperationException("Only pending orders can be processed");
+
+            if (order.ClaimCode != claimCode)
+                throw new InvalidOperationException("Invalid claim code.");
+
+            order.Status = OrderStatus.Completed;
+            await _context.SaveChangesAsync();
+            
+            // Send notifications if service is available
+            if (_notificationService != null)
+            {
+                // Send notification to the user
+                var message = $"Your order #{order.Id} has been processed successfully!";
+                await _notificationService.SendOrderProcessedNotification(order.UserId, message);
+            }
+            
+            return true;
+        }
+
+        // Cancel an order by staff (mark as cancelled)
+        public async Task<bool> CancelOrderByStaffAsync(int orderId)
+        {
+            var order = await _context.Orders.FindAsync(orderId);
+            if (order == null)
+                throw new KeyNotFoundException($"Order with ID {orderId} not found");
+
+            if (order.Status != OrderStatus.Pending)
+                throw new InvalidOperationException("Only pending orders can be cancelled");
+
+            order.Status = OrderStatus.Cancelled;
+            order.IsCancelled = true;
+            order.CancellationDate = DateTime.UtcNow;
+            
+            await _context.SaveChangesAsync();
+            
+            // Send notification to the user if service is available
+            if (_notificationService != null)
+            {
+                var message = $"Your order #{order.Id} has been cancelled by staff.";
+                await _notificationService.SendOrderProcessedNotification(order.UserId, message);
+            }
+            
             return true;
         }
 
