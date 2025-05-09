@@ -17,6 +17,7 @@ function Books() {
   // Books data
   const [books, setBooks] = useState([]);
   const [filteredBooks, setFilteredBooks] = useState([]);
+  const [allBooks, setAllBooks] = useState([]); // Store all books for filter options
   const [genres, setGenres] = useState([]);
   const [loading, setLoading] = useState(true);
   const [genresLoading, setGenresLoading] = useState(true);
@@ -25,6 +26,11 @@ function Books() {
   const { isAuthenticated } = useAuth();
   const [bookmarkStates, setBookmarkStates] = useState({});
   
+  // Filter options data
+  const [availableAuthors, setAvailableAuthors] = useState([]);
+  const [availableLanguages, setAvailableLanguages] = useState([]);
+  const [availablePublishers, setAvailablePublishers] = useState([]);
+  
   // Filter and sort states
   const [filters, setFilters] = useState({
     category: genreParam || 'all',
@@ -32,6 +38,13 @@ function Books() {
     rating: 'all',
     sale: 'all',
     access: 'all',
+    author: 'all',
+    language: 'all',
+    format: 'all',
+    publisher: 'all',
+    newRelease: false,
+    newArrival: false,
+    comingSoon: false,
   });
   const [sortBy, setSortBy] = useState('popularity');
   const [searchQuery, setSearchQuery] = useState('');
@@ -84,11 +97,30 @@ function Books() {
         throw new Error(`API responded with status: ${response.status}`);
       }
       
-      const allBooks = await response.json();
-      console.log('Fetched all books:', allBooks);
+      const fetchedBooks = await response.json();
+      console.log('Fetched all books:', fetchedBooks);
+      
+      // Store all books for filter options
+      setAllBooks(fetchedBooks);
+      
+      // Extract unique filter options once when all books are loaded
+      if (availableAuthors.length === 0) {
+        const authors = [...new Set(fetchedBooks.flatMap(book => book.authors || []))].sort();
+        setAvailableAuthors(authors);
+      }
+      
+      if (availableLanguages.length === 0) {
+        const languages = [...new Set(fetchedBooks.map(book => book.language).filter(Boolean))].sort();
+        setAvailableLanguages(languages);
+      }
+      
+      if (availablePublishers.length === 0) {
+        const publishers = [...new Set(fetchedBooks.map(book => book.publisher).filter(Boolean))].sort();
+        setAvailablePublishers(publishers);
+      }
       
       // Apply filters on the client side
-      let filteredResults = [...allBooks];
+      let filteredResults = [...fetchedBooks];
       
       // Apply category filter
       if (filters.category !== 'all') {
@@ -136,6 +168,67 @@ function Books() {
         const [minPrice, maxPrice] = filters.price.split('-').map(p => parseFloat(p));
         filteredResults = filteredResults.filter(book => 
           book.price >= minPrice && book.price <= maxPrice
+        );
+      }
+      
+      // Apply author filter
+      if (filters.author !== 'all') {
+        filteredResults = filteredResults.filter(book => 
+          book.authors && book.authors.some(author => 
+            author.toLowerCase() === filters.author.toLowerCase()
+          )
+        );
+      }
+      
+      // Apply language filter
+      if (filters.language !== 'all') {
+        filteredResults = filteredResults.filter(book => 
+          book.language && book.language.toLowerCase() === filters.language.toLowerCase()
+        );
+      }
+      
+      // Apply format filter
+      if (filters.format !== 'all') {
+        filteredResults = filteredResults.filter(book => 
+          book.format && book.format.toLowerCase() === filters.format.toLowerCase()
+        );
+      }
+      
+      // Apply publisher filter
+      if (filters.publisher !== 'all') {
+        filteredResults = filteredResults.filter(book => 
+          book.publisher && book.publisher.toLowerCase() === filters.publisher.toLowerCase()
+        );
+      }
+      
+      // Apply new release filter
+      if (filters.newRelease) {
+        // New releases are books published in the last 3 months
+        const threeMonthsAgo = new Date();
+        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+        filteredResults = filteredResults.filter(book => 
+          book.publicationDate && new Date(book.publicationDate) >= threeMonthsAgo
+        );
+      }
+      
+      // Apply new arrival filter
+      if (filters.newArrival) {
+        // New arrivals are books added to the store in the last month
+        // Assuming createdAt field exists, otherwise we'll use publicationDate as a fallback
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+        filteredResults = filteredResults.filter(book => 
+          (book.createdAt && new Date(book.createdAt) >= oneMonthAgo) ||
+          (book.publicationDate && new Date(book.publicationDate) >= oneMonthAgo)
+        );
+      }
+      
+      // Apply coming soon filter
+      if (filters.comingSoon) {
+        // Coming soon books have a future publication date
+        const today = new Date();
+        filteredResults = filteredResults.filter(book => 
+          book.publicationDate && new Date(book.publicationDate) > today
         );
       }
       
@@ -389,7 +482,20 @@ function Books() {
                 <h2 className="font-medium text-navy">Filters</h2>
                 <button 
                   onClick={() => {
-                    setFilters({ category: 'all', price: 'all', rating: 'all', sale: 'all', access: 'all' });
+                    setFilters({ 
+                      category: 'all', 
+                      price: 'all', 
+                      rating: 'all', 
+                      sale: 'all', 
+                      access: 'all',
+                      author: 'all',
+                      language: 'all',
+                      format: 'all',
+                      publisher: 'all',
+                      newRelease: false,
+                      newArrival: false,
+                      comingSoon: false
+                    });
                     setSearchQuery('');
                     setAppliedSearchQuery('');
                     setCurrentPage(1);
@@ -520,6 +626,182 @@ function Books() {
                   <label htmlFor="filter-access" className="text-sm text-gray-600">Physical Library Access</label>
                 </div>
               </div>
+              
+              {/* Authors */}
+              <div className="mb-6">
+                <h3 className="font-medium text-navy mb-2">Authors</h3>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="author-all"
+                      checked={filters.author === 'all'}
+                      onChange={() => handleFilterChange('author', 'all')}
+                      className="mr-2"
+                    />
+                    <label htmlFor="author-all" className="text-sm text-gray-600">
+                      All Authors
+                    </label>
+                  </div>
+                  {/* Use the pre-extracted authors list */}
+                  {availableAuthors.map((author, index) => (
+                        <div key={`author-${index}`} className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id={`author-${index}`}
+                            checked={filters.author === author}
+                            onChange={() => handleFilterChange('author', author)}
+                            className="mr-2"
+                          />
+                          <label htmlFor={`author-${index}`} className="text-sm text-gray-600">
+                            {author}
+                          </label>
+                        </div>
+                      ))
+                  }
+                </div>
+              </div>
+              
+              {/* Languages */}
+              <div className="mb-6">
+                <h3 className="font-medium text-navy mb-2">Language</h3>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="language-all"
+                      checked={filters.language === 'all'}
+                      onChange={() => handleFilterChange('language', 'all')}
+                      className="mr-2"
+                    />
+                    <label htmlFor="language-all" className="text-sm text-gray-600">
+                      All Languages
+                    </label>
+                  </div>
+                  {/* Use the pre-extracted languages list */}
+                  {availableLanguages.map((language, index) => (
+                        <div key={`language-${index}`} className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id={`language-${index}`}
+                            checked={filters.language === language}
+                            onChange={() => handleFilterChange('language', language)}
+                            className="mr-2"
+                          />
+                          <label htmlFor={`language-${index}`} className="text-sm text-gray-600">
+                            {language}
+                          </label>
+                        </div>
+                      ))
+                  }
+                </div>
+              </div>
+              
+              {/* Formats */}
+              <div className="mb-6">
+                <h3 className="font-medium text-navy mb-2">Format</h3>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="format-all"
+                      checked={filters.format === 'all'}
+                      onChange={() => handleFilterChange('format', 'all')}
+                      className="mr-2"
+                    />
+                    <label htmlFor="format-all" className="text-sm text-gray-600">
+                      All Formats
+                    </label>
+                  </div>
+                  {/* Predefined formats */}
+                  {['Hardcover', 'Paperback', 'E-Book', 'Audiobook', 'Limited Edition', 'Signed Copy', 'First Edition', 'Collector\'s Edition'].map((format, index) => (
+                    <div key={`format-${index}`} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id={`format-${index}`}
+                        checked={filters.format === format}
+                        onChange={() => handleFilterChange('format', format)}
+                        className="mr-2"
+                      />
+                      <label htmlFor={`format-${index}`} className="text-sm text-gray-600">
+                        {format}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Publishers */}
+              <div className="mb-6">
+                <h3 className="font-medium text-navy mb-2">Publisher</h3>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="publisher-all"
+                      checked={filters.publisher === 'all'}
+                      onChange={() => handleFilterChange('publisher', 'all')}
+                      className="mr-2"
+                    />
+                    <label htmlFor="publisher-all" className="text-sm text-gray-600">
+                      All Publishers
+                    </label>
+                  </div>
+                  {/* Use the pre-extracted publishers list */}
+                  {availablePublishers.map((publisher, index) => (
+                        <div key={`publisher-${index}`} className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id={`publisher-${index}`}
+                            checked={filters.publisher === publisher}
+                            onChange={() => handleFilterChange('publisher', publisher)}
+                            className="mr-2"
+                          />
+                          <label htmlFor={`publisher-${index}`} className="text-sm text-gray-600">
+                            {publisher}
+                          </label>
+                        </div>
+                      ))
+                  }
+                </div>
+              </div>
+              
+              {/* New Releases & Arrivals */}
+              <div className="mb-6">
+                <h3 className="font-medium text-navy mb-2">Special Categories</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="filter-new-release"
+                      checked={filters.newRelease}
+                      onChange={() => handleFilterChange('newRelease', !filters.newRelease)}
+                      className="mr-2"
+                    />
+                    <label htmlFor="filter-new-release" className="text-sm text-gray-600">New Releases</label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="filter-new-arrival"
+                      checked={filters.newArrival}
+                      onChange={() => handleFilterChange('newArrival', !filters.newArrival)}
+                      className="mr-2"
+                    />
+                    <label htmlFor="filter-new-arrival" className="text-sm text-gray-600">New Arrivals</label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="filter-coming-soon"
+                      checked={filters.comingSoon}
+                      onChange={() => handleFilterChange('comingSoon', !filters.comingSoon)}
+                      className="mr-2"
+                    />
+                    <label htmlFor="filter-coming-soon" className="text-sm text-gray-600">Coming Soon</label>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           
@@ -607,7 +889,20 @@ function Books() {
                 <p className="text-gray-600">No books found matching your criteria. Try adjusting your filters.</p>
                 <button
                   onClick={() => {
-                    setFilters({ category: 'all', price: 'all', rating: 'all', sale: 'all', access: 'all' });
+                    setFilters({ 
+                      category: 'all', 
+                      price: 'all', 
+                      rating: 'all', 
+                      sale: 'all', 
+                      access: 'all',
+                      author: 'all',
+                      language: 'all',
+                      format: 'all',
+                      publisher: 'all',
+                      newRelease: false,
+                      newArrival: false,
+                      comingSoon: false
+                    });
                     setSearchQuery('');
                     setAppliedSearchQuery('');
                     setSortBy('popularity');
