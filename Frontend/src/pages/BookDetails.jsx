@@ -17,13 +17,8 @@ function BookDetails() {
   const [error, setError] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [isBookmarked, setIsBookmarked] = useState(false);
-  const [selectedFormat, setSelectedFormat] = useState('');
-  const [formatPrices, setFormatPrices] = useState({});
   const [notification, setNotification] = useState({ show: false, message: '', type: '' });
   const { isAuthenticated } = useAuth();
-  
-  // Define standard available formats as fallback
-  const standardFormats = ['Hardcover', 'Paperback', 'E-Book', 'Audiobook', 'Limited Edition', 'Signed Copy', 'First Edition', 'Collector\'s Edition'];
   
   // State to store available formats from database
   const [availableFormats, setAvailableFormats] = useState([]);
@@ -43,30 +38,10 @@ function BookDetails() {
           
           console.log('Parsed formats:', parsedFormats);
           setAvailableFormats(parsedFormats);
-          
-          // Set the first format as selected by default
-          if (parsedFormats.length > 0) {
-            setSelectedFormat(parsedFormats[0]);
-          }
         } else {
           // Fallback to standard formats if none are specified
           setAvailableFormats(['Paperback']);
-          setSelectedFormat('Paperback');
         }
-        
-        // Generate format prices based on the base price
-        const basePrice = data.price || 14.99;
-        const prices = {
-          'Paperback': basePrice,
-          'Hardcover': basePrice * 1.5,
-          'E-Book': basePrice * 0.7,
-          'Audiobook': basePrice * 1.2,
-          'Limited Edition': basePrice * 2.5,
-          'Signed Copy': basePrice * 3,
-          'First Edition': basePrice * 4,
-          'Collector\'s Edition': basePrice * 5
-        };
-        setFormatPrices(prices);
       } catch (err) {
         console.error('Error fetching book details:', err);
         setError('Failed to load book details. Please try again later.');
@@ -105,17 +80,6 @@ function BookDetails() {
   };
   
   const handleAddToCart = async () => {
-    if (!selectedFormat) {
-      setNotification({
-        show: true,
-        message: 'Please select a format before adding to cart',
-        type: 'error'
-      });
-      setTimeout(() => {
-        setNotification({ show: false, message: '', type: '' });
-      }, 3000);
-      return;
-    }
     
     if (!isAuthenticated()) {
       // Redirect to login if not authenticated
@@ -131,13 +95,13 @@ function BookDetails() {
     }
     
     try {
-      // Add format information to the cart item
-      await cartService.addToCart(book.id, quantity, selectedFormat);
+      // Add to cart without format specification
+      await cartService.addToCart(book.id, quantity);
       // Dispatch custom event to update cart count in navbar
       window.dispatchEvent(new CustomEvent('cart-updated'));
       setNotification({
         show: true,
-        message: `${book.title} (${selectedFormat}) added to cart!`,
+        message: `${book.title} added to cart!`,
         type: 'cart'
       });
       setTimeout(() => {
@@ -313,40 +277,19 @@ function BookDetails() {
             {/* Description */}
             <p className="text-navy mb-6">{book.description}</p>
             
-            {/* Format selection */}
+            {/* Available Formats Display */}
             <div className="mb-6">
-              <h3 className="font-medium mb-2">Format</h3>
+              <h3 className="font-medium mb-2">Available Formats</h3>
               {availableFormats.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
-                  {availableFormats.map((format) => {
-                    // Calculate price based on format
-                    const basePrice = book.price || 14.99;
-                    let price = basePrice;
-                    
-                    if (format.toLowerCase().includes('hardcover')) {
-                      price = basePrice * 1.5;
-                    } else if (format.toLowerCase().includes('e-book') || format.toLowerCase().includes('ebook')) {
-                      price = basePrice * 0.7;
-                    } else if (format.toLowerCase().includes('audio')) {
-                      price = basePrice * 1.2;
-                    } else if (format.toLowerCase().includes('limited') || format.toLowerCase().includes('signed')) {
-                      price = basePrice * 2.5;
-                    } else if (format.toLowerCase().includes('first edition')) {
-                      price = basePrice * 4;
-                    } else if (format.toLowerCase().includes('collector')) {
-                      price = basePrice * 5;
-                    }
-                    
-                    return (
-                      <button 
-                        key={format}
-                        onClick={() => setSelectedFormat(format)}
-                        className={`px-3 py-1 flex items-center justify-center ${selectedFormat === format ? 'bg-navy text-white' : 'bg-gray-100 text-navy'} rounded-md hover:bg-gold hover:text-navy transition-colors`}
-                      >
-                        {format} - ${price.toFixed(2)}
-                      </button>
-                    );
-                  })}
+                  {availableFormats.map((format) => (
+                    <div 
+                      key={format}
+                      className="px-3 py-1 bg-gray-100 text-navy rounded-md"
+                    >
+                      {format}
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <p className="text-gray-500">No formats available</p>
