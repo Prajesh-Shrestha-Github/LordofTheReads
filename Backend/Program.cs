@@ -122,6 +122,8 @@ builder.Services.AddScoped<IBookService, BookService>();
 builder.Services.AddScoped<ICartService, CartService>();
 // Register bookmark service
 builder.Services.AddScoped<IBookmarkService, BookmarkService>();
+// Register order service
+builder.Services.AddScoped<IOrderService, OrderService>();
 
 var app = builder.Build();
 
@@ -153,21 +155,27 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Seed the database
+// Create and apply migrations, then seed the database
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
-    var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("SeedData");
-    
+    var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("Database");
+    var context = services.GetRequiredService<AppDbContext>();
     try
     {
+        // Apply pending EF Core migrations
+        logger.LogInformation("Applying database migrations...");
+        context.Database.Migrate();
+        logger.LogInformation("Database migrations applied successfully");
+
+        // Now seed the data
         logger.LogInformation("Initializing seed data...");
         await SeedData.Initialize(services, logger);
         logger.LogInformation("Seed data initialization completed successfully");
     }
     catch (Exception ex)
     {
-        logger.LogError(ex, "An error occurred while seeding the database");
+        logger.LogError(ex, "An error occurred while applying migrations or seeding the database: {Error}", ex.Message);
     }
 }
 
