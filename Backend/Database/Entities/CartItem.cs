@@ -20,6 +20,10 @@ namespace LordofTheReads.Database.Entities
         [Required]
         public int Quantity { get; set; } = 1;
 
+        [Column("Price")]
+        [Required]
+        public decimal Price { get; set; }
+
         [Column("added_at")]
         public DateTime AddedAt { get; set; } = DateTime.UtcNow;
     }

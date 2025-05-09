@@ -45,9 +45,9 @@ function Checkout() {
     fetchCart();
   }, [isAuthenticated, navigate]);
 
-  // Calculate subtotal
+  // Calculate subtotal using the price from CartItem (which includes any discounts)
   const subtotal = cart?.cartItems?.reduce((total, item) => 
-    total + (item.book?.price || 0) * item.quantity, 0) || 0;
+    total + (item.price || item.book?.price || 0) * item.quantity, 0) || 0;
   
   // Calculate if eligible for 5% discount (5 or more books)
   const totalBooks = cart?.cartItems?.reduce((total, item) => total + item.quantity, 0) || 0;
@@ -149,8 +149,21 @@ function Checkout() {
                   </div>
                   
                   <div className="text-right">
-                    <div className="font-medium text-navy">${((item.book?.price || 0) * item.quantity).toFixed(2)}</div>
-                    <div className="text-xs text-gray">Qty: {item.quantity}</div>
+                    {item.price && item.book?.price && item.price < item.book.price ? (
+                      <>
+                        <div className="font-medium text-navy">${(item.price * item.quantity).toFixed(2)}</div>
+                        <div className="text-xs text-gray line-through">${(item.book.price * item.quantity).toFixed(2)}</div>
+                        <div className="text-xs text-red-600">
+                          {Math.round((1 - item.price / item.book.price) * 100)}% off
+                        </div>
+                        <div className="text-xs text-gray">Qty: {item.quantity}</div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="font-medium text-navy">${((item.price || item.book?.price || 0) * item.quantity).toFixed(2)}</div>
+                        <div className="text-xs text-gray">Qty: {item.quantity}</div>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
