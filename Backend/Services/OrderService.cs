@@ -126,9 +126,26 @@ namespace LordofTheReads.Services
                 OrderItems = new List<OrderItem>()
             };
 
-            // Add order items
+            // Create order items and update stock quantity
             foreach (var cartItem in cart.CartItems)
             {
+                // Check if there's enough stock for this item
+                var book = await _context.Books.FindAsync(cartItem.BookId);
+                if (book == null)
+                {
+                    throw new InvalidOperationException($"Book with ID {cartItem.BookId} not found");
+                }
+                
+                if (book.StockQuantity < cartItem.Quantity)
+                {
+                    throw new InvalidOperationException($"Not enough stock for '{book.Title}'. Only {book.StockQuantity} available.");
+                }
+                
+                // Decrease stock quantity when order is placed (pending)
+                book.StockQuantity -= cartItem.Quantity;
+                _context.Books.Update(book);
+                
+                // Create the order item
                 var orderItem = new OrderItem
                 {
                     BookId = cartItem.BookId,
@@ -136,6 +153,8 @@ namespace LordofTheReads.Services
                     PriceAtPurchase = cartItem.Price // Use the price from CartItem which includes any discounts
                 };
                 order.OrderItems.Add(orderItem);
+                
+                _logger.LogInformation($"Updated stock for book ID {book.Id}. New stock quantity: {book.StockQuantity}");
             }
 
             // Save order to database
@@ -285,7 +304,10 @@ namespace LordofTheReads.Services
 
         public async Task<bool> CancelOrderAsync(int orderId, int userId)
         {
-            var order = await _context.Orders.FindAsync(orderId);
+            var order = await _context.Orders
+                .Include(o => o.OrderItems)
+                .FirstOrDefaultAsync(o => o.Id == orderId);
+                
             if (order == null)
             {
                 throw new KeyNotFoundException($"Order with ID {orderId} not found");
@@ -305,6 +327,18 @@ namespace LordofTheReads.Services
             if (order.Status != OrderStatus.Pending)
             {
                 throw new InvalidOperationException("Only pending orders can be cancelled");
+            }
+            
+            // Return the stock quantities for each book in the order
+            foreach (var orderItem in order.OrderItems)
+            {
+                var book = await _context.Books.FindAsync(orderItem.BookId);
+                if (book != null)
+                {
+                    book.StockQuantity += orderItem.Quantity;
+                    _context.Books.Update(book);
+                    _logger.LogInformation($"Returned {orderItem.Quantity} units to stock for book ID {book.Id}. New stock quantity: {book.StockQuantity}");
+                }
             }
 
             order.Status = OrderStatus.Cancelled;
@@ -401,12 +435,27 @@ namespace LordofTheReads.Services
         // Cancel an order by staff (mark as cancelled)
         public async Task<bool> CancelOrderByStaffAsync(int orderId)
         {
-            var order = await _context.Orders.FindAsync(orderId);
+            var order = await _context.Orders
+                .Include(o => o.OrderItems)
+                .FirstOrDefaultAsync(o => o.Id == orderId);
+                
             if (order == null)
                 throw new KeyNotFoundException($"Order with ID {orderId} not found");
 
             if (order.Status != OrderStatus.Pending)
                 throw new InvalidOperationException("Only pending orders can be cancelled");
+                
+            // Return the stock quantities for each book in the order
+            foreach (var orderItem in order.OrderItems)
+            {
+                var book = await _context.Books.FindAsync(orderItem.BookId);
+                if (book != null)
+                {
+                    book.StockQuantity += orderItem.Quantity;
+                    _context.Books.Update(book);
+                    _logger.LogInformation($"Returned {orderItem.Quantity} units to stock for book ID {book.Id}. New stock quantity: {book.StockQuantity}");
+                }
+            }
 
             order.Status = OrderStatus.Cancelled;
             order.IsCancelled = true;

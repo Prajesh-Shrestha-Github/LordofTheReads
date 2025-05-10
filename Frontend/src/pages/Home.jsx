@@ -50,12 +50,28 @@ function Home() {
   ];
 
   // Helper functions for categorizing books
-  // Now uses an actual API call instead of mock data
+  // Uses the bestsellers API endpoint to get top 5 bestsellers by sales
   const fetchBestsellers = async () => {
     try {
+      // Explicitly request exactly 5 bestsellers
       const bestsellerData = await getBestsellers(5);
-      console.log('Bestsellers from API:', bestsellerData);
-      setBestsellers(bestsellerData);
+      console.log('Top 5 Bestsellers from API:', bestsellerData);
+      
+      // Ensure we have exactly 5 bestsellers
+      if (bestsellerData.length < 5 && books.length >= 5) {
+        // If we have fewer than 5 bestsellers from the API but have enough books,
+        // fill in the remaining slots with random books that aren't already bestsellers
+        const existingIds = bestsellerData.map(book => book.id);
+        const additionalBooks = books
+          .filter(book => !existingIds.includes(book.id))
+          .sort(() => 0.5 - Math.random())
+          .slice(0, 5 - bestsellerData.length);
+        
+        setBestsellers([...bestsellerData, ...additionalBooks]);
+      } else {
+        // If we have exactly 5 or more bestsellers, just take the top 5
+        setBestsellers(bestsellerData.slice(0, 5));
+      }
     } catch (err) {
       console.error('Error fetching bestsellers:', err);
       // Fallback to random sorting if API fails
