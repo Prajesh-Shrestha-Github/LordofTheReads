@@ -7,13 +7,17 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LordofTheReads.Migrations
 {
     /// <inheritdoc />
-    public partial class FixCartItemPriceColumn : Migration
+    public partial class initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.EnsureSchema(
+                name: "public");
+
             migrationBuilder.CreateTable(
                 name: "Announcements",
+                schema: "public",
                 columns: table => new
                 {
                     announcement_id = table.Column<int>(type: "integer", nullable: false)
@@ -31,6 +35,7 @@ namespace LordofTheReads.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Authors",
+                schema: "public",
                 columns: table => new
                 {
                     author_id = table.Column<int>(type: "integer", nullable: false)
@@ -46,6 +51,7 @@ namespace LordofTheReads.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Books",
+                schema: "public",
                 columns: table => new
                 {
                     book_id = table.Column<int>(type: "integer", nullable: false)
@@ -73,6 +79,7 @@ namespace LordofTheReads.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Genres",
+                schema: "public",
                 columns: table => new
                 {
                     genre_id = table.Column<int>(type: "integer", nullable: false)
@@ -88,6 +95,7 @@ namespace LordofTheReads.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Users",
+                schema: "public",
                 columns: table => new
                 {
                     user_id = table.Column<int>(type: "integer", nullable: false)
@@ -108,6 +116,7 @@ namespace LordofTheReads.Migrations
 
             migrationBuilder.CreateTable(
                 name: "BookAuthors",
+                schema: "public",
                 columns: table => new
                 {
                     book_id = table.Column<int>(type: "integer", nullable: false),
@@ -119,12 +128,14 @@ namespace LordofTheReads.Migrations
                     table.ForeignKey(
                         name: "FK_BookAuthors_Authors_author_id",
                         column: x => x.author_id,
+                        principalSchema: "public",
                         principalTable: "Authors",
                         principalColumn: "author_id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_BookAuthors_Books_book_id",
                         column: x => x.book_id,
+                        principalSchema: "public",
                         principalTable: "Books",
                         principalColumn: "book_id",
                         onDelete: ReferentialAction.Cascade);
@@ -132,6 +143,7 @@ namespace LordofTheReads.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Discounts",
+                schema: "public",
                 columns: table => new
                 {
                     discount_id = table.Column<int>(type: "integer", nullable: false)
@@ -149,6 +161,7 @@ namespace LordofTheReads.Migrations
                     table.ForeignKey(
                         name: "FK_Discounts_Books_book_id",
                         column: x => x.book_id,
+                        principalSchema: "public",
                         principalTable: "Books",
                         principalColumn: "book_id",
                         onDelete: ReferentialAction.Cascade);
@@ -156,6 +169,7 @@ namespace LordofTheReads.Migrations
 
             migrationBuilder.CreateTable(
                 name: "BookGenres",
+                schema: "public",
                 columns: table => new
                 {
                     book_id = table.Column<int>(type: "integer", nullable: false),
@@ -167,12 +181,14 @@ namespace LordofTheReads.Migrations
                     table.ForeignKey(
                         name: "FK_BookGenres_Books_book_id",
                         column: x => x.book_id,
+                        principalSchema: "public",
                         principalTable: "Books",
                         principalColumn: "book_id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_BookGenres_Genres_genre_id",
                         column: x => x.genre_id,
+                        principalSchema: "public",
                         principalTable: "Genres",
                         principalColumn: "genre_id",
                         onDelete: ReferentialAction.Cascade);
@@ -180,6 +196,7 @@ namespace LordofTheReads.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Bookmarks",
+                schema: "public",
                 columns: table => new
                 {
                     bookmark_id = table.Column<int>(type: "integer", nullable: false)
@@ -194,12 +211,14 @@ namespace LordofTheReads.Migrations
                     table.ForeignKey(
                         name: "FK_Bookmarks_Books_book_id",
                         column: x => x.book_id,
+                        principalSchema: "public",
                         principalTable: "Books",
                         principalColumn: "book_id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_Bookmarks_Users_user_id",
                         column: x => x.user_id,
+                        principalSchema: "public",
                         principalTable: "Users",
                         principalColumn: "user_id",
                         onDelete: ReferentialAction.Cascade);
@@ -207,6 +226,7 @@ namespace LordofTheReads.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Carts",
+                schema: "public",
                 columns: table => new
                 {
                     cart_id = table.Column<int>(type: "integer", nullable: false)
@@ -221,6 +241,7 @@ namespace LordofTheReads.Migrations
                     table.ForeignKey(
                         name: "FK_Carts_Users_user_id",
                         column: x => x.user_id,
+                        principalSchema: "public",
                         principalTable: "Users",
                         principalColumn: "user_id",
                         onDelete: ReferentialAction.Cascade);
@@ -228,6 +249,7 @@ namespace LordofTheReads.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Orders",
+                schema: "public",
                 columns: table => new
                 {
                     order_id = table.Column<int>(type: "integer", nullable: false)
@@ -249,6 +271,7 @@ namespace LordofTheReads.Migrations
                     table.ForeignKey(
                         name: "FK_Orders_Users_user_id",
                         column: x => x.user_id,
+                        principalSchema: "public",
                         principalTable: "Users",
                         principalColumn: "user_id",
                         onDelete: ReferentialAction.Cascade);
@@ -256,6 +279,7 @@ namespace LordofTheReads.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Reviews",
+                schema: "public",
                 columns: table => new
                 {
                     review_id = table.Column<int>(type: "integer", nullable: false)
@@ -273,12 +297,14 @@ namespace LordofTheReads.Migrations
                     table.ForeignKey(
                         name: "FK_Reviews_Books_book_id",
                         column: x => x.book_id,
+                        principalSchema: "public",
                         principalTable: "Books",
                         principalColumn: "book_id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_Reviews_Users_user_id",
                         column: x => x.user_id,
+                        principalSchema: "public",
                         principalTable: "Users",
                         principalColumn: "user_id",
                         onDelete: ReferentialAction.Cascade);
@@ -286,6 +312,7 @@ namespace LordofTheReads.Migrations
 
             migrationBuilder.CreateTable(
                 name: "UserDiscounts",
+                schema: "public",
                 columns: table => new
                 {
                     user_discount_id = table.Column<int>(type: "integer", nullable: false)
@@ -303,6 +330,7 @@ namespace LordofTheReads.Migrations
                     table.ForeignKey(
                         name: "FK_UserDiscounts_Users_user_id",
                         column: x => x.user_id,
+                        principalSchema: "public",
                         principalTable: "Users",
                         principalColumn: "user_id",
                         onDelete: ReferentialAction.Cascade);
@@ -310,6 +338,7 @@ namespace LordofTheReads.Migrations
 
             migrationBuilder.CreateTable(
                 name: "CartItems",
+                schema: "public",
                 columns: table => new
                 {
                     cart_item_id = table.Column<int>(type: "integer", nullable: false)
@@ -327,12 +356,14 @@ namespace LordofTheReads.Migrations
                     table.ForeignKey(
                         name: "FK_CartItems_Books_book_id",
                         column: x => x.book_id,
+                        principalSchema: "public",
                         principalTable: "Books",
                         principalColumn: "book_id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_CartItems_Carts_cart_id",
                         column: x => x.cart_id,
+                        principalSchema: "public",
                         principalTable: "Carts",
                         principalColumn: "cart_id",
                         onDelete: ReferentialAction.Cascade);
@@ -340,6 +371,7 @@ namespace LordofTheReads.Migrations
 
             migrationBuilder.CreateTable(
                 name: "OrderItems",
+                schema: "public",
                 columns: table => new
                 {
                     order_item_id = table.Column<int>(type: "integer", nullable: false)
@@ -357,12 +389,14 @@ namespace LordofTheReads.Migrations
                     table.ForeignKey(
                         name: "FK_OrderItems_Books_book_id",
                         column: x => x.book_id,
+                        principalSchema: "public",
                         principalTable: "Books",
                         principalColumn: "book_id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_OrderItems_Orders_order_id",
                         column: x => x.order_id,
+                        principalSchema: "public",
                         principalTable: "Orders",
                         principalColumn: "order_id",
                         onDelete: ReferentialAction.Cascade);
@@ -370,102 +404,121 @@ namespace LordofTheReads.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "IX_BookAuthors_author_id",
+                schema: "public",
                 table: "BookAuthors",
                 column: "author_id");
 
             migrationBuilder.CreateIndex(
                 name: "IX_BookGenres_genre_id",
+                schema: "public",
                 table: "BookGenres",
                 column: "genre_id");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Bookmarks_book_id",
+                schema: "public",
                 table: "Bookmarks",
                 column: "book_id");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Bookmarks_user_id_book_id",
+                schema: "public",
                 table: "Bookmarks",
                 columns: new[] { "user_id", "book_id" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Books_ISBN",
+                schema: "public",
                 table: "Books",
                 column: "ISBN",
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_CartItems_book_id",
+                schema: "public",
                 table: "CartItems",
                 column: "book_id");
 
             migrationBuilder.CreateIndex(
                 name: "IX_CartItems_cart_id",
+                schema: "public",
                 table: "CartItems",
                 column: "cart_id");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Carts_user_id",
+                schema: "public",
                 table: "Carts",
                 column: "user_id");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Discounts_book_id",
+                schema: "public",
                 table: "Discounts",
                 column: "book_id");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Genres_Name",
+                schema: "public",
                 table: "Genres",
                 column: "Name",
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_OrderItems_book_id",
+                schema: "public",
                 table: "OrderItems",
                 column: "book_id");
 
             migrationBuilder.CreateIndex(
                 name: "IX_OrderItems_order_id",
+                schema: "public",
                 table: "OrderItems",
                 column: "order_id");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Orders_claim_code",
+                schema: "public",
                 table: "Orders",
                 column: "claim_code",
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Orders_user_id",
+                schema: "public",
                 table: "Orders",
                 column: "user_id");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Reviews_book_id",
+                schema: "public",
                 table: "Reviews",
                 column: "book_id");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Reviews_user_id_book_id",
+                schema: "public",
                 table: "Reviews",
                 columns: new[] { "user_id", "book_id" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserDiscounts_user_id",
+                schema: "public",
                 table: "UserDiscounts",
                 column: "user_id");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Users_Email",
+                schema: "public",
                 table: "Users",
                 column: "Email",
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Users_Username",
+                schema: "public",
                 table: "Users",
                 column: "Username",
                 unique: true);
@@ -475,49 +528,64 @@ namespace LordofTheReads.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "Announcements");
+                name: "Announcements",
+                schema: "public");
 
             migrationBuilder.DropTable(
-                name: "BookAuthors");
+                name: "BookAuthors",
+                schema: "public");
 
             migrationBuilder.DropTable(
-                name: "BookGenres");
+                name: "BookGenres",
+                schema: "public");
 
             migrationBuilder.DropTable(
-                name: "Bookmarks");
+                name: "Bookmarks",
+                schema: "public");
 
             migrationBuilder.DropTable(
-                name: "CartItems");
+                name: "CartItems",
+                schema: "public");
 
             migrationBuilder.DropTable(
-                name: "Discounts");
+                name: "Discounts",
+                schema: "public");
 
             migrationBuilder.DropTable(
-                name: "OrderItems");
+                name: "OrderItems",
+                schema: "public");
 
             migrationBuilder.DropTable(
-                name: "Reviews");
+                name: "Reviews",
+                schema: "public");
 
             migrationBuilder.DropTable(
-                name: "UserDiscounts");
+                name: "UserDiscounts",
+                schema: "public");
 
             migrationBuilder.DropTable(
-                name: "Authors");
+                name: "Authors",
+                schema: "public");
 
             migrationBuilder.DropTable(
-                name: "Genres");
+                name: "Genres",
+                schema: "public");
 
             migrationBuilder.DropTable(
-                name: "Carts");
+                name: "Carts",
+                schema: "public");
 
             migrationBuilder.DropTable(
-                name: "Orders");
+                name: "Orders",
+                schema: "public");
 
             migrationBuilder.DropTable(
-                name: "Books");
+                name: "Books",
+                schema: "public");
 
             migrationBuilder.DropTable(
-                name: "Users");
+                name: "Users",
+                schema: "public");
         }
     }
 }

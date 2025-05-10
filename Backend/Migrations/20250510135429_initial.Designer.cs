@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LordofTheReads.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250510061103_SyncModelChanges")]
-    partial class SyncModelChanges
+    [Migration("20250510135429_initial")]
+    partial class initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
