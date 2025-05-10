@@ -36,12 +36,13 @@ function Books() {
     category: genreParam || 'all',
     price: 'all',
     rating: 'all',
-    sale: 'all',
+    inStock: 'all',  // Changed from sale to inStock
     access: 'all',
     author: 'all',
     language: 'all',
     format: 'all',
     publisher: 'all',
+    onSale: false,    // Added for on sale items
     newRelease: false,
     newArrival: false,
     comingSoon: false,
@@ -149,10 +150,10 @@ function Books() {
         );
       }
       
-      // Apply sale filter
-      if (filters.sale === 'sale') {
+      // Apply in stock filter
+      if (filters.inStock === 'inStock') {
         filteredResults = filteredResults.filter(book => 
-          book.onSaleFlag === true
+          book.stockQuantity > 0
         );
       }
       
@@ -160,6 +161,13 @@ function Books() {
       if (filters.access === 'library') {
         filteredResults = filteredResults.filter(book => 
           book.physicalLibraryAccess === true
+        );
+      }
+      
+      // Apply on sale filter
+      if (filters.onSale) {
+        filteredResults = filteredResults.filter(book => 
+          book.onSaleFlag === true
         );
       }
       
@@ -237,6 +245,30 @@ function Books() {
           book.publicationDate && new Date(book.publicationDate) > today
         );
       }
+      
+      // Apply sorting
+      if (sortBy === 'price-low') {
+        filteredResults.sort((a, b) => {
+          // Use discounted price if available
+          const priceA = a.onSaleFlag ? a.price * (1 - a.discountPercentage/100) : a.price;
+          const priceB = b.onSaleFlag ? b.price * (1 - b.discountPercentage/100) : b.price;
+          return priceA - priceB;
+        });
+      } else if (sortBy === 'price-high') {
+        filteredResults.sort((a, b) => {
+          // Use discounted price if available
+          const priceA = a.onSaleFlag ? a.price * (1 - a.discountPercentage/100) : a.price;
+          const priceB = b.onSaleFlag ? b.price * (1 - b.discountPercentage/100) : b.price;
+          return priceB - priceA;
+        });
+      } else if (sortBy === 'newest') {
+        filteredResults.sort((a, b) => {
+          return new Date(b.publicationDate) - new Date(a.publicationDate);
+        });
+      } else if (sortBy === 'rating') {
+        filteredResults.sort((a, b) => b.rating - a.rating);
+      }
+      // Note: 'popularity' sorting would require sales data, which we don't have client-side
       
       // Apply pagination
       const totalCount = filteredResults.length;
@@ -492,7 +524,7 @@ function Books() {
                       category: 'all', 
                       price: 'all', 
                       rating: 'all', 
-                      sale: 'all', 
+                      inStock: 'all', 
                       access: 'all',
                       author: 'all',
                       language: 'all',
@@ -603,33 +635,77 @@ function Books() {
                 </div>
               </div>
               
-              {/* On Sale */}
+              {/* Availability */}
               <div className="mb-6">
-                <h3 className="font-medium text-navy mb-2">On Sale</h3>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="filter-sale"
-                    checked={filters.sale === 'sale'}
-                    onChange={() => handleFilterChange('sale', filters.sale === 'sale' ? 'all' : 'sale')}
-                    className="mr-2"
-                  />
-                  <label htmlFor="filter-sale" className="text-sm text-gray-600">On Sale</label>
+                <h3 className="font-medium text-navy mb-2">Availability</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="filter-inStock"
+                      checked={filters.inStock === 'inStock'}
+                      onChange={() => handleFilterChange('inStock', filters.inStock === 'inStock' ? 'all' : 'inStock')}
+                      className="mr-2"
+                    />
+                    <label htmlFor="filter-inStock" className="text-sm text-gray-600">In Stock</label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="filter-access"
+                      checked={filters.access === 'library'}
+                      onChange={() => handleFilterChange('access', filters.access === 'library' ? 'all' : 'library')}
+                      className="mr-2"
+                    />
+                    <label htmlFor="filter-access" className="text-sm text-gray-600">Physical Library Access</label>
+                  </div>
                 </div>
               </div>
               
-              {/* Library Access */}
+              {/* Special Categories */}
               <div className="mb-6">
-                <h3 className="font-medium text-navy mb-2">Library Access</h3>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="filter-access"
-                    checked={filters.access === 'library'}
-                    onChange={() => handleFilterChange('access', filters.access === 'library' ? 'all' : 'library')}
-                    className="mr-2"
-                  />
-                  <label htmlFor="filter-access" className="text-sm text-gray-600">Physical Library Access</label>
+                <h3 className="font-medium text-navy mb-2">Special Categories</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="filter-onSale"
+                      checked={filters.onSale}
+                      onChange={() => handleFilterChange('onSale', !filters.onSale)}
+                      className="mr-2"
+                    />
+                    <label htmlFor="filter-onSale" className="text-sm text-gray-600">On Sale</label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="filter-newRelease"
+                      checked={filters.newRelease}
+                      onChange={() => handleFilterChange('newRelease', !filters.newRelease)}
+                      className="mr-2"
+                    />
+                    <label htmlFor="filter-newRelease" className="text-sm text-gray-600">New Releases</label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="filter-newArrival"
+                      checked={filters.newArrival}
+                      onChange={() => handleFilterChange('newArrival', !filters.newArrival)}
+                      className="mr-2"
+                    />
+                    <label htmlFor="filter-newArrival" className="text-sm text-gray-600">New Arrivals</label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="filter-comingSoon"
+                      checked={filters.comingSoon}
+                      onChange={() => handleFilterChange('comingSoon', !filters.comingSoon)}
+                      className="mr-2"
+                    />
+                    <label htmlFor="filter-comingSoon" className="text-sm text-gray-600">Coming Soon</label>
+                  </div>
                 </div>
               </div>
               
@@ -772,42 +848,7 @@ function Books() {
                 </div>
               </div>
               
-              {/* New Releases & Arrivals */}
-              <div className="mb-6">
-                <h3 className="font-medium text-navy mb-2">Special Categories</h3>
-                <div className="space-y-2">
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="filter-new-release"
-                      checked={filters.newRelease}
-                      onChange={() => handleFilterChange('newRelease', !filters.newRelease)}
-                      className="mr-2"
-                    />
-                    <label htmlFor="filter-new-release" className="text-sm text-gray-600">New Releases</label>
-                  </div>
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="filter-new-arrival"
-                      checked={filters.newArrival}
-                      onChange={() => handleFilterChange('newArrival', !filters.newArrival)}
-                      className="mr-2"
-                    />
-                    <label htmlFor="filter-new-arrival" className="text-sm text-gray-600">New Arrivals</label>
-                  </div>
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="filter-coming-soon"
-                      checked={filters.comingSoon}
-                      onChange={() => handleFilterChange('comingSoon', !filters.comingSoon)}
-                      className="mr-2"
-                    />
-                    <label htmlFor="filter-coming-soon" className="text-sm text-gray-600">Coming Soon</label>
-                  </div>
-                </div>
-              </div>
+              {/* End of filters */}
             </div>
           </div>
           
@@ -899,7 +940,7 @@ function Books() {
                       category: 'all', 
                       price: 'all', 
                       rating: 'all', 
-                      sale: 'all', 
+                      inStock: 'all', 
                       access: 'all',
                       author: 'all',
                       language: 'all',
