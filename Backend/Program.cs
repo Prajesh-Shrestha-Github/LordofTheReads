@@ -11,6 +11,7 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,8 +25,8 @@ builder.Services.AddCors(options =>
         policy.WithOrigins("http://localhost:3000", "http://localhost:5173", "http://localhost:4200")
               .AllowAnyMethod()
               .AllowAnyHeader()
-              .WithExposedHeaders("WWW-Authenticate")
-              .SetIsOriginAllowed(origin => true); // Allow any origin temporarily for development
+              .AllowCredentials()
+              .WithExposedHeaders("WWW-Authenticate");
     });
 });
 
@@ -103,20 +104,14 @@ builder.Services.AddAuthentication()
         };
     });
 
-builder.Services.AddDbContext<AppDbContext>(
-    (options) =>
-    {
-        options.UseNpgsql(builder.Configuration.GetConnectionString("PostgresConnection")).LogTo(Console.WriteLine);
-    }
-);
-builder.Services.AddCors(options =>
+builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    options.AddPolicy("AllowReactApp", policy =>
-        policy.WithOrigins("http://localhost:5173")
-              .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials());
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("PostgresConnection"),
+        npgsqlOptions => npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "public")
+    ).LogTo(Console.WriteLine);
 });
+// Notification hub and SignalR are already covered by the AllowFrontend CORS policy
 
 builder.Services.AddScoped<IBookService, BookService>();
 // Register cart service
@@ -146,12 +141,9 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseCors("AllowReactApp");
+app.UseCors("AllowFrontend");
 
 app.UseHttpsRedirection();
-
-// Enable CORS
-app.UseCors("AllowReactApp");
 
 // Use Routing
 app.UseRouting();

@@ -29,54 +29,80 @@ namespace LordofTheReads.Controllers
         // Helper method to get the current user's ID from the JWT token
         private int GetUserId()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim))
+            try
             {
-                _logger.LogError("User ID claim not found in token");
-                throw new UnauthorizedAccessException("User not authenticated or missing user ID claim");
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdClaim))
+                {
+                    _logger.LogError("User ID claim not found in token");
+                    throw new UnauthorizedAccessException("User not authenticated or missing user ID claim");
+                }
+                
+                if (!int.TryParse(userIdClaim, out int userId))
+                {
+                    _logger.LogError($"Invalid user ID format in token: {userIdClaim}");
+                    throw new UnauthorizedAccessException("Invalid user ID format in token");
+                }
+                return userId;
             }
-            
-            if (!int.TryParse(userIdClaim, out int userId))
+            catch (Exception ex)
             {
-                _logger.LogError($"Invalid user ID format in token: {userIdClaim}");
-                throw new UnauthorizedAccessException("Invalid user ID format in token");
+                _logger.LogError(ex, "Error extracting user ID from token");
+                throw new UnauthorizedAccessException("Failed to authenticate user: " + ex.Message);
             }
-            return userId;
         }
 
         // Get cart items
         [HttpGet]
+        [AllowAnonymous] // Allow even without auth to improve error handling
         public async Task<ActionResult<Cart>> GetCart()
         {
             try
             {
+                // Check if user is authenticated first
+                if (!User.Identity.IsAuthenticated)
+                {
+                    _logger.LogWarning("Attempted to access cart without authentication");
+                    return Unauthorized("User not authenticated");
+                }
+                
                 var userId = GetUserId();
                 var cart = await _cartService.GetCartWithItemsAsync(userId);
                 return Ok(cart);
             }
             catch (UnauthorizedAccessException ex)
             {
+                _logger.LogWarning(ex, "Unauthorized cart access");
                 return Unauthorized(ex.Message);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving cart");
-                return StatusCode(500, "An error occurred while retrieving your cart");
+                return StatusCode(500, ex.Message);
             }
         }
 
         // Add item to cart
         [HttpPost("items")]
+        [AllowAnonymous] // Allow even without auth to improve error handling
         public async Task<ActionResult> AddToCart([FromBody] AddToCartRequest request)
         {
             try
             {
+                // Check if user is authenticated first
+                if (!User.Identity.IsAuthenticated)
+                {
+                    _logger.LogWarning("Attempted to add to cart without authentication");
+                    return Unauthorized("User not authenticated");
+                }
+                
                 var userId = GetUserId();
                 await _cartService.AddToCartAsync(userId, request.BookId, request.Quantity);
                 return Ok();
             }
             catch (UnauthorizedAccessException ex)
             {
+                _logger.LogWarning(ex, "Unauthorized cart access");
                 return Unauthorized(ex.Message);
             }
             catch (KeyNotFoundException ex)
@@ -86,7 +112,7 @@ namespace LordofTheReads.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error adding item to cart");
-                return StatusCode(500, "An error occurred while adding the item to your cart");
+                return StatusCode(500, ex.Message);
             }
         }
 

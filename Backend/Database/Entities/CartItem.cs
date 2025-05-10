@@ -20,7 +20,7 @@ namespace LordofTheReads.Database.Entities
         [Required]
         public int Quantity { get; set; } = 1;
 
-        [Column("Price")]
+        [Column("price", TypeName = "decimal(10, 2)")]
         [Required]
         public decimal Price { get; set; }
 

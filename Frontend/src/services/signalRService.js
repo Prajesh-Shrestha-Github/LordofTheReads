@@ -11,7 +11,8 @@ export const startConnection = (userId) => {
   
   connection = new signalR.HubConnectionBuilder()
     .withUrl('http://localhost:5253/hubs/notification', {
-      accessTokenFactory: () => authService.getToken()
+      accessTokenFactory: () => authService.getToken(),
+      withCredentials: true
     })
     .withAutomaticReconnect()
     .build();
