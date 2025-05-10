@@ -6,19 +6,29 @@ import Footer from '../components/Footer';
 import { addBookmark, isBookmarked, removeBookmark } from '../services/bookmarkService';
 import cartService from '../services/cartService';
 import { getAllGenres } from '../services/genreService';
+import { getCategories, getBestsellers } from '../services/bookService';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 function Home() {
   const [books, setBooks] = useState([]);
   const [genres, setGenres] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [genresLoading, setGenresLoading] = useState(true);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState({ show: false, message: '', type: '' });
   const { user, isAuthenticated, hasRole } = useAuth();
   const [bookmarkStates, setBookmarkStates] = useState({});
   const navigate = useNavigate();
+  
+  // Special category states
+  const [bestsellers, setBestsellers] = useState([]);
+  const [awardWinners, setAwardWinners] = useState([]);
+  const [newReleases, setNewReleases] = useState([]);
+  const [newArrivals, setNewArrivals] = useState([]);
+  const [comingSoon, setComingSoon] = useState([]);
 
   // Sample testimonials
   const testimonials = [
@@ -39,12 +49,96 @@ function Home() {
     }
   ];
 
+  // Helper functions for categorizing books
+  // Now uses an actual API call instead of mock data
+  const fetchBestsellers = async () => {
+    try {
+      const bestsellerData = await getBestsellers(5);
+      console.log('Bestsellers from API:', bestsellerData);
+      setBestsellers(bestsellerData);
+    } catch (err) {
+      console.error('Error fetching bestsellers:', err);
+      // Fallback to random sorting if API fails
+      const randomBooks = [...books]
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 5);
+      setBestsellers(randomBooks);
+    }
+  };
+
+  const getMockAwardWinners = (books) => {
+    // Hard-coded random books
+    return [...books]
+      .sort(() => 0.5 - Math.random())
+      .slice(0, 5);
+  };
+
+  const getNewReleases = (books) => {
+    // Books published within the last 3 months
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    console.log('Three months ago:', threeMonthsAgo);
+    
+    // Filter for books published in the last 3 months
+    const releases = books.filter(book => {
+      if (!book.publicationDate) return false;
+      const publishDate = new Date(book.publicationDate);
+      return publishDate >= threeMonthsAgo;
+    });
+    
+    // Sort by publication date descending (newest first)
+    const sortedReleases = [...releases].sort((a, b) => {
+      const dateA = new Date(a.publicationDate);
+      const dateB = new Date(b.publicationDate);
+      return dateB - dateA; // Descending order (newest first)
+    });
+    
+    console.log('Found new releases:', sortedReleases.length);
+    return sortedReleases.slice(0, 5);
+  };
+
+  const getNewArrivals = (books) => {
+    // Most recently added 5 books
+    return [...books]
+      .sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+        const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+        return dateB - dateA;
+      })
+      .slice(0, 5);
+  };
+
+  const getMockComingSoon = (books) => {
+    // Hard-coded random books
+    return [...books]
+      .sort(() => 0.5 - Math.random())
+      .slice(0, 5);
+  };
+
+  const getOnSaleBooks = (books) => {
+    // Books with discount/on sale
+    return books
+      .filter(book => book.onSaleFlag || (book.discountPercentage && book.discountPercentage > 0))
+      .slice(0, 5);
+  };
+
   useEffect(() => {
     const fetchBooks = async () => {
       try {
         const response = await axios.get('http://localhost:5253/api/book');
         console.log('API Response:', response.data);
-        setBooks(response.data);
+        const allBooks = response.data;
+        setBooks(allBooks);
+        
+        // Populate special categories (except bestsellers which has its own API call)
+        setAwardWinners(getMockAwardWinners(allBooks));
+        setNewReleases(getNewReleases(allBooks));
+        setNewArrivals(getNewArrivals(allBooks));
+        setComingSoon(getMockComingSoon(allBooks));
+        
+        // Fetch bestsellers from the API using actual sales data
+        fetchBestsellers();
+        
         setLoading(false);
       } catch (err) {
         console.error('Error fetching books:', err);
@@ -78,6 +172,23 @@ function Home() {
     };
 
     fetchGenres();
+  }, []);
+
+  // Fetch categories from the database
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setCategoriesLoading(true);
+        const data = await getCategories();
+        setCategories(data);
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    fetchCategories();
   }, []);
 
   // Load bookmark states for all books
@@ -207,10 +318,61 @@ function Home() {
         </div>
       </section>
 
-      {/* Featured Books Section */}
+      {/* Explore Categories Section */}
       <section className="py-12 bg-white">
         <div className="container mx-auto px-4">
-          <h2 className="text-xl font-bold text-navy text-center mb-8">Featured Books</h2>
+          <h2 className="text-xl font-bold text-navy text-center mb-8">Explore Categories</h2>
+          <div className="flex justify-center gap-4 flex-wrap">
+            <Link
+              to="/books"
+              className="bg-navy text-white px-4 py-2 rounded-md hover:bg-gold hover:text-navy transition-colors"
+            >
+              All Books
+            </Link>
+            <Link
+              to="#bestsellers"
+              className="bg-navy text-white px-4 py-2 rounded-md hover:bg-gold hover:text-navy transition-colors"
+            >
+              Bestsellers
+            </Link>
+            <Link
+              to="#awardwinners"
+              className="bg-navy text-white px-4 py-2 rounded-md hover:bg-gold hover:text-navy transition-colors"
+            >
+              Award Winners
+            </Link>
+            <Link
+              to="#newreleases"
+              className="bg-navy text-white px-4 py-2 rounded-md hover:bg-gold hover:text-navy transition-colors"
+            >
+              New Releases
+            </Link>
+            <Link
+              to="#newarrivals"
+              className="bg-navy text-white px-4 py-2 rounded-md hover:bg-gold hover:text-navy transition-colors"
+            >
+              New Arrivals
+            </Link>
+            <Link
+              to="#comingsoon"
+              className="bg-navy text-white px-4 py-2 rounded-md hover:bg-gold hover:text-navy transition-colors"
+            >
+              Coming Soon
+            </Link>
+            <Link
+              to="/books?sale=true"
+              className="bg-navy text-white px-4 py-2 rounded-md hover:bg-gold hover:text-navy transition-colors"
+            >
+              Deals
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Bestsellers Section */}
+      <section id="bestsellers" className="py-12 bg-white">
+        <div className="container mx-auto px-4">
+          <h2 className="text-xl font-bold text-navy text-center mb-8">Bestsellers</h2>
           
           {loading ? (
             <div className="text-center py-10">
@@ -219,10 +381,9 @@ function Home() {
             </div>
           ) : error ? (
             <div className="text-center text-red-500 py-10">{error}</div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {[...books.filter(book => book.id >= 8 && book.id <= 12).slice(0, 4), 
-                ...books.filter(book => book.id < 8 || book.id > 12)].slice(0, 8).map(book => (
+          ) : bestsellers.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {bestsellers.map(book => (
                 <div key={book.id} className="flex flex-col">
                   <div className="bg-beige aspect-[2/3] mb-3 flex items-center justify-center relative overflow-hidden">
                     <Link to={`/book/${book.id}`} className="w-full h-full">
@@ -231,6 +392,11 @@ function Home() {
                         alt={book.title}
                         className="object-contain h-full w-full"
                       />
+                      {book.onSaleFlag && (
+                        <div className="absolute top-0 left-0 bg-red-500 text-white px-2 py-1 text-xs font-bold">
+                          {book.discountPercentage}% OFF
+                        </div>
+                      )}
                     </Link>
                     <button 
                       onClick={() => handleBookmarkToggle(book)}
@@ -255,29 +421,340 @@ function Home() {
                     </Link>
                     <p className="text-xs text-gray">{book.author || book.authors?.join(', ') || 'Unknown Author'}</p>
                     <div className="flex justify-between items-center mt-2">
-                      <span className="text-xs font-bold text-navy">${(book.price || 0).toFixed(2)}</span>
-                      <div className="flex space-x-2">
-                        <button 
-                          onClick={() => handleAddToCart(book)}
-                          className="text-xs bg-navy text-white px-2 py-1 rounded-sm hover:bg-gold hover:text-navy transition-colors"
-                        >
-                          Add to Cart
-                        </button>
-                      </div>
+                      {book.onSaleFlag ? (
+                        <div className="flex items-baseline space-x-2">
+                          <span className="text-xs text-gray-500 line-through">${book.price.toFixed(2)}</span>
+                          <span className="text-xs font-bold text-navy">${(book.price * (1 - book.discountPercentage/100)).toFixed(2)}</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs font-bold text-navy">${(book.price || 0).toFixed(2)}</span>
+                      )}
+                      <button 
+                        onClick={() => handleAddToCart(book)}
+                        className="text-xs bg-navy text-white px-2 py-1 rounded-sm hover:bg-gold hover:text-navy transition-colors"
+                      >
+                        Add to Cart
+                      </button>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
+          ) : (
+            <div className="text-center text-navy">No bestsellers available</div>
           )}
-          
-          <div className="text-center mt-8">
-            <Link to="/books" className="text-xs border border-gray px-4 py-2 rounded-md hover:bg-beige transition-colors">View All Books</Link>
-          </div>
         </div>
       </section>
 
-      {/* Categories Section */}
+      {/* Award Winners Section */}
+      <section id="awardwinners" className="py-12 bg-beige">
+        <div className="container mx-auto px-4">
+          <h2 className="text-xl font-bold text-navy text-center mb-8">Award Winners</h2>
+          
+          {loading ? (
+            <div className="text-center py-10">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-navy mx-auto"></div>
+              <p className="mt-4 text-navy">Loading books...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center text-red-500 py-10">{error}</div>
+          ) : awardWinners.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {awardWinners.map(book => (
+                <div key={book.id} className="flex flex-col">
+                  <div className="bg-white aspect-[2/3] mb-3 flex items-center justify-center relative overflow-hidden">
+                    <Link to={`/book/${book.id}`} className="w-full h-full">
+                      <img 
+                        src={book.imageUrl || `https://placehold.co/300x450?text=${encodeURIComponent(book.title)}`}
+                        alt={book.title}
+                        className="object-contain h-full w-full"
+                      />
+                      {book.onSaleFlag && (
+                        <div className="absolute top-0 left-0 bg-red-500 text-white px-2 py-1 text-xs font-bold">
+                          {book.discountPercentage}% OFF
+                        </div>
+                      )}
+                    </Link>
+                    <button 
+                      onClick={() => handleBookmarkToggle(book)}
+                      className="absolute top-2 right-2 bg-white p-1.5 rounded-md shadow-md"
+                      aria-label={bookmarkStates[book.id] ? "Remove from bookmarks" : "Add to bookmarks"}
+                    >
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        className="h-5 w-5" 
+                        fill={bookmarkStates[book.id] ? "#2563EB" : "none"} 
+                        viewBox="0 0 24 24" 
+                        stroke={bookmarkStates[book.id] ? "#2563EB" : "#1E2B38"} 
+                        strokeWidth={2}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div>
+                    <Link to={`/book/${book.id}`} className="hover:text-gold">
+                      <h3 className="text-xs font-medium text-navy">{book.title}</h3>
+                    </Link>
+                    <p className="text-xs text-gray">{book.author || book.authors?.join(', ') || 'Unknown Author'}</p>
+                    <div className="flex justify-between items-center mt-2">
+                      {book.onSaleFlag ? (
+                        <div className="flex items-baseline space-x-2">
+                          <span className="text-xs text-gray-500 line-through">${book.price.toFixed(2)}</span>
+                          <span className="text-xs font-bold text-navy">${(book.price * (1 - book.discountPercentage/100)).toFixed(2)}</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs font-bold text-navy">${(book.price || 0).toFixed(2)}</span>
+                      )}
+                      <button 
+                        onClick={() => handleAddToCart(book)}
+                        className="text-xs bg-navy text-white px-2 py-1 rounded-sm hover:bg-gold hover:text-navy transition-colors"
+                      >
+                        Add to Cart
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-navy">No award winners available</div>
+          )}
+        </div>
+      </section>
+
+      {/* New Releases Section */}
+      <section id="newreleases" className="py-12 bg-white">
+        <div className="container mx-auto px-4">
+          <h2 className="text-xl font-bold text-navy text-center mb-8">New Releases</h2>
+          
+          {loading ? (
+            <div className="text-center py-10">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-navy mx-auto"></div>
+              <p className="mt-4 text-navy">Loading books...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center text-red-500 py-10">{error}</div>
+          ) : newReleases.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {newReleases.map(book => (
+                <div key={book.id} className="flex flex-col">
+                  <div className="bg-beige aspect-[2/3] mb-3 flex items-center justify-center relative overflow-hidden">
+                    <Link to={`/book/${book.id}`} className="w-full h-full">
+                      <img 
+                        src={book.imageUrl || `https://placehold.co/300x450?text=${encodeURIComponent(book.title)}`}
+                        alt={book.title}
+                        className="object-contain h-full w-full"
+                      />
+                      {book.onSaleFlag && (
+                        <div className="absolute top-0 left-0 bg-red-500 text-white px-2 py-1 text-xs font-bold">
+                          {book.discountPercentage}% OFF
+                        </div>
+                      )}
+                    </Link>
+                    <button 
+                      onClick={() => handleBookmarkToggle(book)}
+                      className="absolute top-2 right-2 bg-white p-1.5 rounded-md shadow-md"
+                      aria-label={bookmarkStates[book.id] ? "Remove from bookmarks" : "Add to bookmarks"}
+                    >
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        className="h-5 w-5" 
+                        fill={bookmarkStates[book.id] ? "#2563EB" : "none"} 
+                        viewBox="0 0 24 24" 
+                        stroke={bookmarkStates[book.id] ? "#2563EB" : "#1E2B38"} 
+                        strokeWidth={2}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div>
+                    <Link to={`/book/${book.id}`} className="hover:text-gold">
+                      <h3 className="text-xs font-medium text-navy">{book.title}</h3>
+                    </Link>
+                    <p className="text-xs text-gray">{book.author || book.authors?.join(', ') || 'Unknown Author'}</p>
+                    <div className="flex justify-between items-center mt-2">
+                      {book.onSaleFlag ? (
+                        <div className="flex items-baseline space-x-2">
+                          <span className="text-xs text-gray-500 line-through">${book.price.toFixed(2)}</span>
+                          <span className="text-xs font-bold text-navy">${(book.price * (1 - book.discountPercentage/100)).toFixed(2)}</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs font-bold text-navy">${(book.price || 0).toFixed(2)}</span>
+                      )}
+                      <button 
+                        onClick={() => handleAddToCart(book)}
+                        className="text-xs bg-navy text-white px-2 py-1 rounded-sm hover:bg-gold hover:text-navy transition-colors"
+                      >
+                        Add to Cart
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-navy">No new releases available</div>
+          )}
+        </div>
+      </section>
+      
+      {/* New Arrivals Section */}
+      <section id="newarrivals" className="py-12 bg-beige">
+        <div className="container mx-auto px-4">
+          <h2 className="text-xl font-bold text-navy text-center mb-8">New Arrivals</h2>
+          
+          {loading ? (
+            <div className="text-center py-10">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-navy mx-auto"></div>
+              <p className="mt-4 text-navy">Loading books...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center text-red-500 py-10">{error}</div>
+          ) : newArrivals.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {newArrivals.map(book => (
+                <div key={book.id} className="flex flex-col">
+                  <div className="bg-white aspect-[2/3] mb-3 flex items-center justify-center relative overflow-hidden">
+                    <Link to={`/book/${book.id}`} className="w-full h-full">
+                      <img 
+                        src={book.imageUrl || `https://placehold.co/300x450?text=${encodeURIComponent(book.title)}`}
+                        alt={book.title}
+                        className="object-contain h-full w-full"
+                      />
+                      {book.onSaleFlag && (
+                        <div className="absolute top-0 left-0 bg-red-500 text-white px-2 py-1 text-xs font-bold">
+                          {book.discountPercentage}% OFF
+                        </div>
+                      )}
+                    </Link>
+                    <button 
+                      onClick={() => handleBookmarkToggle(book)}
+                      className="absolute top-2 right-2 bg-white p-1.5 rounded-md shadow-md"
+                      aria-label={bookmarkStates[book.id] ? "Remove from bookmarks" : "Add to bookmarks"}
+                    >
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        className="h-5 w-5" 
+                        fill={bookmarkStates[book.id] ? "#2563EB" : "none"} 
+                        viewBox="0 0 24 24" 
+                        stroke={bookmarkStates[book.id] ? "#2563EB" : "#1E2B38"} 
+                        strokeWidth={2}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div>
+                    <Link to={`/book/${book.id}`} className="hover:text-gold">
+                      <h3 className="text-xs font-medium text-navy">{book.title}</h3>
+                    </Link>
+                    <p className="text-xs text-gray">{book.author || book.authors?.join(', ') || 'Unknown Author'}</p>
+                    <div className="flex justify-between items-center mt-2">
+                      {book.onSaleFlag ? (
+                        <div className="flex items-baseline space-x-2">
+                          <span className="text-xs text-gray-500 line-through">${book.price.toFixed(2)}</span>
+                          <span className="text-xs font-bold text-navy">${(book.price * (1 - book.discountPercentage/100)).toFixed(2)}</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs font-bold text-navy">${(book.price || 0).toFixed(2)}</span>
+                      )}
+                      <button 
+                        onClick={() => handleAddToCart(book)}
+                        className="text-xs bg-navy text-white px-2 py-1 rounded-sm hover:bg-gold hover:text-navy transition-colors"
+                      >
+                        Add to Cart
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-navy">No new arrivals available</div>
+          )}
+        </div>
+      </section>
+      
+      {/* Coming Soon Section */}
+      <section id="comingsoon" className="py-12 bg-white">
+        <div className="container mx-auto px-4">
+          <h2 className="text-xl font-bold text-navy text-center mb-8">Coming Soon</h2>
+          
+          {loading ? (
+            <div className="text-center py-10">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-navy mx-auto"></div>
+              <p className="mt-4 text-navy">Loading books...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center text-red-500 py-10">{error}</div>
+          ) : comingSoon.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {comingSoon.map(book => (
+                <div key={book.id} className="flex flex-col">
+                  <div className="bg-beige aspect-[2/3] mb-3 flex items-center justify-center relative overflow-hidden">
+                    <Link to={`/book/${book.id}`} className="w-full h-full">
+                      <img 
+                        src={book.imageUrl || `https://placehold.co/300x450?text=${encodeURIComponent(book.title)}`}
+                        alt={book.title}
+                        className="object-contain h-full w-full"
+                      />
+                      {book.onSaleFlag && (
+                        <div className="absolute top-0 left-0 bg-red-500 text-white px-2 py-1 text-xs font-bold">
+                          {book.discountPercentage}% OFF
+                        </div>
+                      )}
+                    </Link>
+                    <button 
+                      onClick={() => handleBookmarkToggle(book)}
+                      className="absolute top-2 right-2 bg-white p-1.5 rounded-md shadow-md"
+                      aria-label={bookmarkStates[book.id] ? "Remove from bookmarks" : "Add to bookmarks"}
+                    >
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        className="h-5 w-5" 
+                        fill={bookmarkStates[book.id] ? "#2563EB" : "none"} 
+                        viewBox="0 0 24 24" 
+                        stroke={bookmarkStates[book.id] ? "#2563EB" : "#1E2B38"} 
+                        strokeWidth={2}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div>
+                    <Link to={`/book/${book.id}`} className="hover:text-gold">
+                      <h3 className="text-xs font-medium text-navy">{book.title}</h3>
+                    </Link>
+                    <p className="text-xs text-gray">{book.author || book.authors?.join(', ') || 'Unknown Author'}</p>
+                    <div className="flex justify-between items-center mt-2">
+                      {book.onSaleFlag ? (
+                        <div className="flex items-baseline space-x-2">
+                          <span className="text-xs text-gray-500 line-through">${book.price.toFixed(2)}</span>
+                          <span className="text-xs font-bold text-navy">${(book.price * (1 - book.discountPercentage/100)).toFixed(2)}</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs font-bold text-navy">${(book.price || 0).toFixed(2)}</span>
+                      )}
+                      <button 
+                        onClick={() => handleAddToCart(book)}
+                        className="text-xs bg-navy text-white px-2 py-1 rounded-sm hover:bg-gold hover:text-navy transition-colors"
+                      >
+                        Add to Cart
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-navy">No coming soon titles available</div>
+          )}
+        </div>
+      </section>
+      
+      {/* Browse by Genre Section */}
       <section className="py-12 bg-beige">
         <div className="container mx-auto px-4">
           <h2 className="text-xl font-bold text-navy text-center mb-8">Browse by Genre</h2>

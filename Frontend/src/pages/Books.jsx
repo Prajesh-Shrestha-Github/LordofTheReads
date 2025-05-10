@@ -13,6 +13,7 @@ function Books() {
   // Get search parameters from URL
   const [searchParams] = useSearchParams();
   const genreParam = searchParams.get('genre');
+  const saleParam = searchParams.get('sale');
   
   // Books data
   const [books, setBooks] = useState([]);
@@ -36,7 +37,7 @@ function Books() {
     category: genreParam || 'all',
     price: 'all',
     rating: 'all',
-    sale: 'all',
+    sale: saleParam === 'true' ? 'sale' : 'all',
     access: 'all',
     author: 'all',
     language: 'all',

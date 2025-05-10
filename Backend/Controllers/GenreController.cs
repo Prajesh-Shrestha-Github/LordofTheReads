@@ -26,7 +26,14 @@ namespace LordofTheReads.Controllers
         {
             try
             {
-                var genres = _context.Genres.Select(g => new { g.Id, g.Name }).ToList();
+                // Get only valid genres from the database table - filter out empty or seeding data
+                var genres = _context.Genres
+                    .Where(g => !string.IsNullOrWhiteSpace(g.Name) && g.Id > 0)
+                    .Select(g => new { g.Id, g.Name })
+                    .OrderBy(g => g.Name) // Order alphabetically
+                    .ToList();
+                    
+                _logger.LogInformation("Retrieved {Count} valid genres from database", genres.Count);
                 return Ok(genres);
             }
             catch (Exception ex)

@@ -77,13 +77,22 @@ const filterBooks = async (filterOptions) => {
       console.error('Response data:', error.response.data);
       console.error('Response status:', error.response.status);
       console.error('Response headers:', error.response.headers);
-      
     } else if (error.request) {
       console.error('Request was made but no response received:', error.request);
     } else {
-      // Something happened in setting up the request that triggered an Error
       console.error('Error setting up request:', error.message);
     }
+    throw error;
+  }
+};
+
+// Get book categories
+const getCategories = async () => {
+  try {
+    const response = await api.get('/books/categories');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching book categories:', error);
     throw error;
   }
 };
@@ -101,8 +110,19 @@ const bookmarkBook = async (bookId) => {
   }
 };
 
+// Get bestsellers based on sales data
+const getBestsellers = async (count = 5) => {
+  try {
+    const response = await api.get(`/book/bestsellers?count=${count}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching bestsellers:', error);
+    throw error;
+  }
+};
+
 // Export all functions as named exports
-export { getAllBooks, getBookById, bookmarkBook, searchBooks, filterBooks };
+export { getAllBooks, getBookById, bookmarkBook, searchBooks, filterBooks, getCategories, getBestsellers };
 
 // Also export as default for backward compatibility
 const bookService = {
@@ -110,7 +130,9 @@ const bookService = {
   getBookById,
   bookmarkBook,
   searchBooks,
-  filterBooks
+  filterBooks,
+  getCategories,
+  getBestsellers
 };
 
 export default bookService;

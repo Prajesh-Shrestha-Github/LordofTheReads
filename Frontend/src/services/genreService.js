@@ -4,7 +4,20 @@ import api from './api';
 const getAllGenres = async () => {
   try {
     const response = await api.get('/genres');
-    return response.data;
+    console.log('Raw genres from API:', response.data);
+    
+    // Filter out any seeding data or placeholder genres
+    // Only return genres that have valid IDs and names
+    const validGenres = response.data.filter(genre => 
+      genre && 
+      genre.id && 
+      genre.name && 
+      typeof genre.name === 'string' && 
+      genre.name.trim() !== ''
+    );
+    
+    console.log('Filtered valid genres:', validGenres);
+    return validGenres;
   } catch (error) {
     console.error('Error fetching genres:', error);
     throw error;

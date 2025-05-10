@@ -75,7 +75,9 @@ const BookForm = () => {
     try {
       const payload = { ...formData,
         price: parseFloat(formData.price) || 0,
-        stockQuantity: parseInt(formData.stockQuantity,10) || 0
+        stockQuantity: parseInt(formData.stockQuantity,10) || 0,
+        // Ensure publicationDate is null if empty to avoid model binding errors
+        publicationDate: formData.publicationDate ? formData.publicationDate : null
       };
       if (isEditMode) await bookService.updateBook(id, payload);
       else await bookService.createBook(payload);
