@@ -122,6 +122,8 @@ builder.Services.AddScoped<IBookmarkService, BookmarkService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 // Register notification service and SignalR
 builder.Services.AddScoped<INotificationService, NotificationService>();
+// Register email service
+builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddSignalR();
 
 var app = builder.Build();

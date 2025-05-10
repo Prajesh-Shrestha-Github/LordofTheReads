@@ -9,6 +9,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace LordofTheReads.Services
 {
@@ -18,13 +19,15 @@ namespace LordofTheReads.Services
         private readonly ICartService _cartService;
         private readonly ILogger<OrderService> _logger;
         private readonly INotificationService _notificationService;
+        private readonly IEmailService _emailService;
 
-        public OrderService(AppDbContext context, ICartService cartService, ILogger<OrderService> logger, INotificationService notificationService = null)
+        public OrderService(AppDbContext context, ICartService cartService, ILogger<OrderService> logger, INotificationService notificationService = null, IEmailService emailService = null)
         {
             _context = context;
             _cartService = cartService;
             _logger = logger;
             _notificationService = notificationService;
+            _emailService = emailService;
         }
 
         public async Task<Order> CreateOrderFromCartAsync(int userId)
@@ -46,6 +49,8 @@ namespace LordofTheReads.Services
             var cart = await _context.Carts
                 .Include(c => c.CartItems)
                 .ThenInclude(ci => ci.Book)
+                .ThenInclude(b => b.BookAuthors)
+                .ThenInclude(ba => ba.Author)
                 .FirstOrDefaultAsync(c => c.UserId == userId);
 
             if (cart == null)
@@ -77,6 +82,9 @@ namespace LordofTheReads.Services
             // Check if user has earned the 10% discount (after 10 successful orders)
             var successfulOrdersCount = await _context.Orders
                 .CountAsync(o => o.UserId == userId && o.Status == OrderStatus.Completed);
+                
+            // Get user's email for sending notifications
+            var userEmail = user.Email;
             
             var userDiscount = await _context.UserDiscounts
                 .FirstOrDefaultAsync(ud => ud.UserId == userId && !ud.IsUsed);
@@ -133,6 +141,9 @@ namespace LordofTheReads.Services
             // Save order to database
             _context.Orders.Add(order);
             
+            // Copy cart items for email before clearing
+            var cartItemsForEmail = cart.CartItems.ToList();
+            
             // Clear the cart
             await _cartService.ClearCartAsync(userId);
             
@@ -150,6 +161,87 @@ namespace LordofTheReads.Services
             }
             
             await _context.SaveChangesAsync();
+            
+            // Prepare order details for email
+            var orderDetailsBuilder = new StringBuilder();
+            orderDetailsBuilder.AppendLine("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse;'>");
+            orderDetailsBuilder.AppendLine("<tr><th>Book</th><th>Author</th><th>Quantity</th><th>Price</th><th>Subtotal</th></tr>");
+            
+            _logger.LogInformation($"Preparing order details for {cartItemsForEmail.Count} items");
+            foreach (var cartItem in cartItemsForEmail)
+            {
+                _logger.LogInformation($"Processing item: {cartItem.Book.Title}");
+                string authors = "Unknown";
+                
+                if (cartItem.Book.BookAuthors != null && cartItem.Book.BookAuthors.Any())
+                {
+                    // Safe way to get author names with null checks
+                    var authorNames = cartItem.Book.BookAuthors
+                        .Where(ba => ba.Author != null && !string.IsNullOrEmpty(ba.Author.Name))
+                        .Select(ba => ba.Author.Name)
+                        .ToList();
+                        
+                    if (authorNames.Any())
+                    {
+                        authors = string.Join(", ", authorNames);
+                        _logger.LogInformation($"Authors for {cartItem.Book.Title}: {authors}");
+                    }
+                    else
+                    {
+                        _logger.LogWarning($"No author names found for {cartItem.Book.Title}");
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning($"No BookAuthors collection for {cartItem.Book.Title}");
+                }
+                
+                orderDetailsBuilder.AppendLine($"<tr>");
+                orderDetailsBuilder.AppendLine($"<td>{System.Web.HttpUtility.HtmlEncode(cartItem.Book.Title)}</td>");
+                orderDetailsBuilder.AppendLine($"<td>{System.Web.HttpUtility.HtmlEncode(authors)}</td>");
+                orderDetailsBuilder.AppendLine($"<td>{cartItem.Quantity}</td>");
+                orderDetailsBuilder.AppendLine($"<td>${cartItem.Price:F2}</td>");
+                orderDetailsBuilder.AppendLine($"<td>${cartItem.Price * cartItem.Quantity:F2}</td>");
+                orderDetailsBuilder.AppendLine($"</tr>");
+            }
+            
+            // Add discount information if applicable
+            if (discountAmount > 0)
+            {
+                orderDetailsBuilder.AppendLine($"<tr><td colspan='4' align='right'><strong>Subtotal:</strong></td><td>${totalAmount + discountAmount:F2}</td></tr>");
+                orderDetailsBuilder.AppendLine($"<tr><td colspan='4' align='right'><strong>Discount:</strong></td><td>-${discountAmount:F2}</td></tr>");
+            }
+            
+            orderDetailsBuilder.AppendLine($"<tr><td colspan='4' align='right'><strong>Total:</strong></td><td>${totalAmount - discountAmount:F2}</td></tr>");
+            orderDetailsBuilder.AppendLine("</table>");
+            
+            // Notify the user if the notification service is available
+            if (_notificationService != null)
+            {
+                await _notificationService.SendOrderProcessedNotification(userId, $"Your order has been created successfully! Your claim code is: {order.ClaimCode}");
+            }
+            
+            // Send email notification if email service is available
+            if (_emailService != null && !string.IsNullOrEmpty(userEmail))
+            {
+                try
+                {
+                    await _emailService.SendOrderConfirmationAsync(
+                        userEmail,
+                        user.Username,
+                        order.Id,
+                        order.ClaimCode,
+                        order.TotalAmount,
+                        orderDetailsBuilder.ToString());
+                    
+                    _logger.LogInformation($"Order confirmation email sent to {userEmail}");
+                }
+                catch (Exception ex)
+                {
+                    // Log the error but don't interrupt the order process
+                    _logger.LogError(ex, $"Failed to send order confirmation email: {ex.Message}");
+                }
+            }
             
             return order;
         }
@@ -282,6 +374,25 @@ namespace LordofTheReads.Services
                 // Send notification to the user
                 var message = $"Your order #{order.Id} has been processed successfully!";
                 await _notificationService.SendOrderProcessedNotification(userId, message);
+            }
+            
+            // Send email notification if email service is available
+            if (_emailService != null && order.User != null && !string.IsNullOrEmpty(order.User.Email))
+            {
+                try 
+                {
+                    await _emailService.SendOrderCompletedAsync(
+                        order.User.Email,
+                        order.User.Username,
+                        order.Id);
+                        
+                    _logger.LogInformation($"Order completion email sent to {order.User.Email}");
+                }
+                catch (Exception ex)
+                {
+                    // Log the error but don't interrupt the order process
+                    _logger.LogError(ex, $"Failed to send order completion email: {ex.Message}");
+                }
             }
             
             return true;
