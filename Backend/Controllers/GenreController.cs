@@ -26,15 +26,17 @@ namespace LordofTheReads.Controllers
         {
             try
             {
-                // Get only valid genres from the database table - filter out empty or seeding data
-                var genres = _context.Genres
+                // Get only genres that have associated books
+                var genresWithBooks = _context.BookGenres
+                    .Select(bg => bg.Genre)
+                    .Distinct()
                     .Where(g => !string.IsNullOrWhiteSpace(g.Name) && g.Id > 0)
                     .Select(g => new { g.Id, g.Name })
                     .OrderBy(g => g.Name) // Order alphabetically
                     .ToList();
                     
-                _logger.LogInformation("Retrieved {Count} valid genres from database", genres.Count);
-                return Ok(genres);
+                _logger.LogInformation("Retrieved {0} genres that have associated books", genresWithBooks.Count);
+                return Ok(genresWithBooks);
             }
             catch (Exception ex)
             {
