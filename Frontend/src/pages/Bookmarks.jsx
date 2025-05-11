@@ -131,7 +131,7 @@ function Bookmarks() {
                     <div className="flex justify-between items-center">
                       <span className="text-xs font-bold text-navy">${bookmark.book.price.toFixed(2)}</span>
                       <Link 
-                        to={`/books/${bookmark.bookId}`}
+                        to={`/book/${bookmark.bookId}`}
                         className="text-xs text-gold hover:text-navy"
                       >
                         View Details
