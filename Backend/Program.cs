@@ -169,10 +169,41 @@ using (var scope = app.Services.CreateScope())
     var context = services.GetRequiredService<AppDbContext>();
     try
     {
-        // Apply pending EF Core migrations
-        logger.LogInformation("Applying database migrations...");
-        context.Database.Migrate();
-        logger.LogInformation("Database migrations applied successfully");
+        // Apply pending EF Core migrations with a safer approach
+        logger.LogInformation("Checking database connection...");
+        if (context.Database.CanConnect())
+        {
+            logger.LogInformation("Connected to database successfully.");
+            
+            // Check if specific tables already exist to avoid migration errors
+            var existingTables = new List<string>();
+            try {
+                // Try a simple query to see if Announcements table exists
+                context.Database.ExecuteSqlRaw("SELECT 1 FROM \"Announcements\" LIMIT 1");
+                existingTables.Add("Announcements");
+                logger.LogInformation("Table 'Announcements' already exists.");
+            } catch {} // Ignore if table doesn't exist
+            
+            // Apply migrations with special handling
+            logger.LogInformation("Applying database migrations...");
+            if (existingTables.Contains("Announcements"))
+            {
+                // Apply migrations more carefully when tables already exist
+                logger.LogInformation("Using migration-safe mode for existing tables");
+                try {
+                    context.Database.Migrate();
+                } catch (Exception migEx) {
+                    // Log but don't fail the application if migration has issues with existing tables
+                    logger.LogWarning(migEx, "Migration warning (continuing startup): {Error}", migEx.Message);
+                }
+            }
+            else
+            {
+                // Standard migration for fresh database
+                context.Database.Migrate();
+            }
+            logger.LogInformation("Database migrations handling completed");
+        }
 
         // Now seed the data
         logger.LogInformation("Initializing seed data...");

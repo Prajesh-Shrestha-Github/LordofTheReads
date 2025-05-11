@@ -10,6 +10,7 @@ function Cart() {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [discountInfo, setDiscountInfo] = useState(null);
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
@@ -32,6 +33,18 @@ function Cart() {
           setCartItems([]);
           setLoading(false);
           return;
+        }
+        
+        // Check if a loyalty discount is included in the cart
+        if (cart.discountAmount && cart.discountAmount > 0) {
+          console.log('Discount found in cart:', cart.discountAmount, cart.discountType);
+          
+          setDiscountInfo({
+            amount: cart.discountAmount,
+            percentage: cart.discountPercentage || 10,
+            isLoyaltyDiscount: cart.discountType === 'Loyalty Discount',
+            type: cart.discountType
+          });
         }
         
         // Transform the data structure to match component expectations
@@ -58,8 +71,9 @@ function Cart() {
   const subtotal = cartItems.reduce((total, item) => 
     total + (item.price || item.book?.price || 0) * item.quantity, 0);
   
-  // Calculate total (no tax)
-  const total = subtotal;
+  // Calculate total with loyalty discount if applicable
+  const discountValue = discountInfo?.amount || 0;
+  const total = Math.max(0, subtotal - discountValue);
 
   // Handle quantity change
   const updateQuantity = async (bookId, newQuantity) => {
@@ -208,6 +222,15 @@ function Cart() {
                     <span>Subtotal</span>
                     <span>${subtotal.toFixed(2)}</span>
                   </div>
+                  
+                  {/* Show loyalty discount if available */}
+                  {discountInfo && discountInfo.isLoyaltyDiscount && (
+                    <div className="flex justify-between text-green-600 font-medium">
+                      <span>Loyalty Discount (10%)</span>
+                      <span>-${discountInfo.amount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  
                   <div className="flex justify-between text-navy">
                     <span>Shipping</span>
                     <span>Free</span>

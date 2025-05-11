@@ -57,12 +57,23 @@ namespace LordofTheReads.Services
             await SendEmailAsync(email, subject, body.ToString());
         }
 
-        public async Task SendOrderCompletedAsync(string email, string username, int orderId)
+        public async Task SendOrderCompletedAsync(string email, string username, int orderId, int ordersUntilNextDiscount)
         {
             var subject = $"Your Order #{orderId} is Completed!";
             var body = new StringBuilder();
             body.AppendLine($"<h2>Hello {username},</h2>");
             body.AppendLine($"<p>Great news! Your Order #{orderId} has been successfully completed. We hope you enjoy your books.</p>");
+    
+            // Add loyalty program information
+            if (ordersUntilNextDiscount > 0)
+            {
+                body.AppendLine($"<p><strong>Loyalty Program:</strong> You are now {ordersUntilNextDiscount} order(s) away from earning a 10% discount on your next purchase!</p>");
+            }
+            else if (ordersUntilNextDiscount == 0)
+            {
+                body.AppendLine($"<p><strong>Congratulations!</strong> You have earned a 10% discount that will be applied to your next order!</p>");
+            }
+            
             body.AppendLine("<p>Thank you for shopping with us!</p>");
             body.AppendLine("<p>Please don't forget to leave a review on your order page to share your feedback.</p>");
             

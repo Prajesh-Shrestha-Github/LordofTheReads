@@ -23,6 +23,10 @@ namespace LordofTheReads.Database.Entities
         [Column("price", TypeName = "decimal(10, 2)")]
         [Required]
         public decimal Price { get; set; }
+        
+        // Original price before any discounts (not stored in database)
+        [NotMapped]
+        public decimal? OriginalPrice { get; set; }
 
         [Column("added_at")]
         public DateTime AddedAt { get; set; } = DateTime.UtcNow;

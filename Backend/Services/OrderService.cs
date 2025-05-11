@@ -74,6 +74,9 @@ namespace LordofTheReads.Services
             int totalBooks = cart.CartItems.Sum(ci => ci.Quantity);
             decimal discountAmount = 0;
             
+            // Initialize orders until next discount variable
+            int ordersUntilNextDiscount = 0;
+            
             if (totalBooks >= 5)
             {
                 discountAmount += totalAmount * 0.05m; // 5% discount for 5+ books
@@ -86,6 +89,9 @@ namespace LordofTheReads.Services
             // Get user's email for sending notifications
             var userEmail = user.Email;
             
+            // Calculate the number of orders until next discount
+            ordersUntilNextDiscount = 10 - (successfulOrdersCount % 10);
+            
             var userDiscount = await _context.UserDiscounts
                 .FirstOrDefaultAsync(ud => ud.UserId == userId && !ud.IsUsed);
             
@@ -97,18 +103,21 @@ namespace LordofTheReads.Services
             }
             else if (successfulOrdersCount > 0 && successfulOrdersCount % 10 == 0)
             {
-                // Create a new discount for the user's next order
-                var newDiscount = new UserDiscount
+                // Apply the discount to the current order for milestone (10th, 20th, etc. order)
+                discountAmount += totalAmount * 0.10m;
+                
+                // Create a record that this milestone discount was used
+                var milestoneDiscount = new UserDiscount
                 {
                     UserId = userId,
                     DiscountPercentage = 10,
                     CreatedAt = DateTime.UtcNow,
-                    IsUsed = true // Mark as used since we're applying it now
+                    IsUsed = true,
+                    UsedAt = DateTime.UtcNow
                 };
-                _context.UserDiscounts.Add(newDiscount);
+                _context.UserDiscounts.Add(milestoneDiscount);
                 
-                // Apply the discount to the current order
-                discountAmount += totalAmount * 0.10m;
+                _logger.LogInformation($"Applied 10% loyalty discount for user {userId} on their {successfulOrdersCount}th completed order");
             }
 
             // Create claim code
@@ -166,9 +175,11 @@ namespace LordofTheReads.Services
             // Clear the cart
             await _cartService.ClearCartAsync(userId);
             
-            // Check if user qualifies for a new discount after this order
-            if (successfulOrdersCount > 0 && (successfulOrdersCount + 1) % 10 == 0)
+            // Check if user will qualify for a new discount after this order completes
+            // If they'll have completed 9, 19, 29, etc. orders (one away from milestone)
+            if ((successfulOrdersCount + 1) % 10 == 9)
             {
+                // Create a discount for their next order after this one
                 var newDiscount = new UserDiscount
                 {
                     UserId = userId,
@@ -177,6 +188,7 @@ namespace LordofTheReads.Services
                     IsUsed = false
                 };
                 _context.UserDiscounts.Add(newDiscount);
+                _logger.LogInformation($"Created new 10% discount for user ID {userId} to be used on their next order after completing {successfulOrdersCount + 1} orders");
             }
             
             await _context.SaveChangesAsync();
@@ -415,10 +427,42 @@ namespace LordofTheReads.Services
             {
                 try 
                 {
+                    // Count completed orders for this user (including the one we just processed)
+                    var successfulOrdersCount = await _context.Orders
+                        .CountAsync(o => o.UserId == order.UserId && o.Status == OrderStatus.Completed);
+                    
+                    // Calculate orders until next discount
+                    int ordersUntilNextDiscount = 10 - (successfulOrdersCount % 10);
+                    if (ordersUntilNextDiscount == 10) ordersUntilNextDiscount = 0; // They just earned a discount
+                    
+                    // If this is a milestone order (10th, 20th, etc.), create a discount for future use if not already done
+                    if (successfulOrdersCount % 10 == 0 && ordersUntilNextDiscount == 0)
+                    {
+                        // Check if a discount has already been created for this milestone
+                        var existingDiscount = await _context.UserDiscounts
+                            .FirstOrDefaultAsync(ud => ud.UserId == order.UserId && !ud.IsUsed);
+                        
+                        if (existingDiscount == null)
+                        {
+                            // Create a new discount for their next purchase
+                            var newDiscount = new UserDiscount
+                            {
+                                UserId = order.UserId,
+                                DiscountPercentage = 10,
+                                CreatedAt = DateTime.UtcNow,
+                                IsUsed = false
+                            };
+                            _context.UserDiscounts.Add(newDiscount);
+                            await _context.SaveChangesAsync();
+                            _logger.LogInformation($"Created new 10% loyalty discount for user {order.UserId} after their {successfulOrdersCount}th completed order");
+                        }
+                    }
+                    
                     await _emailService.SendOrderCompletedAsync(
                         order.User.Email,
                         order.User.Username,
-                        order.Id);
+                        order.Id,
+                        ordersUntilNextDiscount);
                         
                     _logger.LogInformation($"Order completion email sent to {order.User.Email}");
                 }
