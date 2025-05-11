@@ -1,10 +1,12 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LordofTheReads.Database;
 using LordofTheReads.Database.Entities;
 using LordofTheReads.Services;
 using LordofTheReads.DTOs;
 using LordofTheReads.DTOs.Book;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace LordofTheReads.Controllers
 {
@@ -313,6 +315,90 @@ namespace LordofTheReads.Controllers
             {
                 return StatusCode(500, new { message = ex.Message });
             }
+        }
+
+        [HttpGet("can-review/{bookId:int}")]
+        [Authorize]
+        public async Task<IActionResult> CanReview(int bookId)
+        {
+            // 1) get the current user ID from the JWT
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+
+            // 2) see if any of their Orders contains that book
+            var hasPurchased = await _context.OrderItems
+                .Where(oi => oi.BookId == bookId)
+                .Join(
+                  _context.Orders,
+                  oi => oi.OrderId,
+                  o => o.Id,
+                  (oi, o) => new { oi, o }
+                )
+                .AnyAsync(x => x.o.UserId == userId);
+
+            // 3) return { canReview: true/false }
+            return Ok(new { canReview = hasPurchased });
+        }
+
+        [HttpPost("{bookId:int}/reviews")]
+        [Authorize]
+        public async Task<IActionResult> PostReview(int bookId, [FromBody] CreateReviewRequestDto dto)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+
+            var hasPurchased = await (
+                from oi in _context.OrderItems
+                join o in _context.Orders on oi.OrderId equals o.Id
+                where oi.BookId == bookId && o.UserId == userId
+                select oi
+            ).AnyAsync();
+            if (!hasPurchased) return Forbid("You can only review books you’ve purchased.");
+
+            var exists = await _context.Reviews.AnyAsync(r => r.UserId == userId && r.BookId == bookId);
+            if (exists) return BadRequest("You’ve already reviewed this book.");
+
+            var review = new Review
+            {
+                UserId = userId,
+                BookId = bookId,
+                Rating = dto.Rating,
+                Comment = dto.Comment,
+                CreatedAt = DateTime.UtcNow
+            };
+            _context.Reviews.Add(review);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetReviewById),
+                new { id = review.Id },
+                review);
+        }
+
+        // GET api/books/reviews/{id}
+        [HttpGet("reviews/{id:int}")]
+        public async Task<IActionResult> GetReviewById(int id)
+        {
+            var r = await _context.Reviews.FindAsync(id);
+            if (r == null) return NotFound();
+            return Ok(r);
+        }
+
+        [HttpGet("{bookId:int}/reviews")]
+        public async Task<IActionResult> GetReviewsForBook(int bookId)
+        {
+            var reviews = await _context.Reviews
+                .Where(r => r.BookId == bookId)
+                .Include(r => r.User)   
+                .Select(r => new CreateReviewDto
+                {
+                    Id = r.Id,
+                    UserId = r.UserId,
+                    Rating = r.Rating,
+                    Comment = r.Comment,
+                    CreatedAt = r.CreatedAt,
+                    UserName = r.User.Username
+                })
+                .ToListAsync();
+
+            return Ok(reviews);
         }
     }
 }
