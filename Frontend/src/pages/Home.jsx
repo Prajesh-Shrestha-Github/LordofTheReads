@@ -264,6 +264,26 @@ function Home() {
     }, 3000);
   };
 
+  // Handle notification click
+  const handleNotificationClick = () => {
+    if (notification.type === 'login') {
+      navigate('/login');
+    } else if (notification.type === 'cart') {
+      navigate('/cart');
+    } else if (notification.type === 'bookmark') {
+      navigate('/bookmarks');
+    }
+    setNotification({ show: false, message: '', type: '' });
+  };
+
+  // Handle smooth scrolling to sections
+  const scrollToSection = (sectionId) => {
+    const section = document.getElementById(sectionId);
+    if (section) {
+      section.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   // Handle bookmark toggle
   const handleBookmarkToggle = async (book) => {
     try {
@@ -345,36 +365,36 @@ function Home() {
             >
               All Books
             </Link>
-            <Link
-              to="#bestsellers"
+            <button
+              onClick={() => scrollToSection('bestsellers')}
               className="bg-navy text-white px-4 py-2 rounded-md hover:bg-gold hover:text-navy transition-colors"
             >
               Bestsellers
-            </Link>
-            <Link
-              to="#awardwinners"
+            </button>
+            <button
+              onClick={() => scrollToSection('awardwinners')}
               className="bg-navy text-white px-4 py-2 rounded-md hover:bg-gold hover:text-navy transition-colors"
             >
               Award Winners
-            </Link>
-            <Link
-              to="#newreleases"
+            </button>
+            <button
+              onClick={() => scrollToSection('newreleases')}
               className="bg-navy text-white px-4 py-2 rounded-md hover:bg-gold hover:text-navy transition-colors"
             >
               New Releases
-            </Link>
-            <Link
-              to="#newarrivals"
+            </button>
+            <button
+              onClick={() => scrollToSection('newarrivals')}
               className="bg-navy text-white px-4 py-2 rounded-md hover:bg-gold hover:text-navy transition-colors"
             >
               New Arrivals
-            </Link>
-            <Link
-              to="#comingsoon"
+            </button>
+            <button
+              onClick={() => scrollToSection('comingsoon')}
               className="bg-navy text-white px-4 py-2 rounded-md hover:bg-gold hover:text-navy transition-colors"
             >
               Coming Soon
-            </Link>
+            </button>
             <Link
               to="/books?sale=true"
               className="bg-navy text-white px-4 py-2 rounded-md hover:bg-gold hover:text-navy transition-colors"
@@ -552,64 +572,74 @@ function Home() {
           ) : error ? (
             <div className="text-center text-red-500 py-10">{error}</div>
           ) : newReleases.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              {newReleases.map(book => (
-                <div key={book.id} className="flex flex-col">
-                  <div className="bg-beige aspect-[2/3] mb-3 flex items-center justify-center relative overflow-hidden">
-                    <Link to={`/book/${book.id}`} className="w-full h-full">
-                      <img 
-                        src={book.imageUrl || `https://placehold.co/300x450?text=${encodeURIComponent(book.title)}`}
-                        alt={book.title}
-                        className="object-contain h-full w-full"
-                      />
-                      {book.onSaleFlag && (
-                        <div className="absolute top-0 left-0 bg-red-500 text-white px-2 py-1 text-xs font-bold">
-                          {book.discountPercentage}% OFF
-                        </div>
-                      )}
-                    </Link>
-                    <button 
-                      onClick={() => handleBookmarkToggle(book)}
-                      className="absolute top-2 right-2 bg-white p-1.5 rounded-md shadow-md"
-                      aria-label={bookmarkStates[book.id] ? "Remove from bookmarks" : "Add to bookmarks"}
-                    >
-                      <svg 
-                        xmlns="http://www.w3.org/2000/svg" 
-                        className="h-5 w-5" 
-                        fill={bookmarkStates[book.id] ? "#2563EB" : "none"} 
-                        viewBox="0 0 24 24" 
-                        stroke={bookmarkStates[book.id] ? "#2563EB" : "#1E2B38"} 
-                        strokeWidth={2}
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                      </svg>
-                    </button>
-                  </div>
-                  <div>
-                    <Link to={`/book/${book.id}`} className="hover:text-gold">
-                      <h3 className="text-xs font-medium text-navy">{book.title}</h3>
-                    </Link>
-                    <p className="text-xs text-gray">{book.author || book.authors?.join(', ') || 'Unknown Author'}</p>
-                    <div className="flex justify-between items-center mt-2">
-                      {book.onSaleFlag ? (
-                        <div className="flex items-baseline space-x-2">
-                          <span className="text-xs text-gray-500 line-through">${book.price.toFixed(2)}</span>
-                          <span className="text-xs font-bold text-navy">${(book.price * (1 - book.discountPercentage/100)).toFixed(2)}</span>
-                        </div>
-                      ) : (
-                        <span className="text-xs font-bold text-navy">${(book.price || 0).toFixed(2)}</span>
-                      )}
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                {newReleases.map(book => (
+                  <div key={book.id} className="flex flex-col">
+                    <div className="bg-beige aspect-[2/3] mb-3 flex items-center justify-center relative overflow-hidden">
+                      <Link to={`/book/${book.id}`} className="w-full h-full">
+                        <img 
+                          src={book.imageUrl || `https://placehold.co/300x450?text=${encodeURIComponent(book.title)}`}
+                          alt={book.title}
+                          className="object-contain h-full w-full"
+                        />
+                        {book.onSaleFlag && (
+                          <div className="absolute top-0 left-0 bg-red-500 text-white px-2 py-1 text-xs font-bold">
+                            {book.discountPercentage}% OFF
+                          </div>
+                        )}
+                      </Link>
                       <button 
-                        onClick={() => handleAddToCart(book)}
-                        className="text-xs bg-navy text-white px-2 py-1 rounded-sm hover:bg-gold hover:text-navy transition-colors"
+                        onClick={() => handleBookmarkToggle(book)}
+                        className="absolute top-2 right-2 bg-white p-1.5 rounded-md shadow-md"
+                        aria-label={bookmarkStates[book.id] ? "Remove from bookmarks" : "Add to bookmarks"}
                       >
-                        Add to Cart
+                        <svg 
+                          xmlns="http://www.w3.org/2000/svg" 
+                          className="h-5 w-5" 
+                          fill={bookmarkStates[book.id] ? "#2563EB" : "none"} 
+                          viewBox="0 0 24 24" 
+                          stroke={bookmarkStates[book.id] ? "#2563EB" : "#1E2B38"} 
+                          strokeWidth={2}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                        </svg>
                       </button>
                     </div>
+                    <div>
+                      <Link to={`/book/${book.id}`} className="hover:text-gold">
+                        <h3 className="text-xs font-medium text-navy">{book.title}</h3>
+                      </Link>
+                      <p className="text-xs text-gray">{book.author || book.authors?.join(', ') || 'Unknown Author'}</p>
+                      <div className="flex justify-between items-center mt-2">
+                        {book.onSaleFlag ? (
+                          <div className="flex items-baseline space-x-2">
+                            <span className="text-xs text-gray-500 line-through">${book.price.toFixed(2)}</span>
+                            <span className="text-xs font-bold text-navy">${(book.price * (1 - book.discountPercentage/100)).toFixed(2)}</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs font-bold text-navy">${(book.price || 0).toFixed(2)}</span>
+                        )}
+                        <button 
+                          onClick={() => handleAddToCart(book)}
+                          className="text-xs bg-navy text-white px-2 py-1 rounded-sm hover:bg-gold hover:text-navy transition-colors"
+                        >
+                          Add to Cart
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+              <div className="mt-8 text-center">
+                <Link 
+                  to="/books?filter=new-releases" 
+                  className="inline-block bg-transparent text-navy border border-navy px-6 py-2 rounded-md hover:bg-gold hover:text-white hover:border-gold transition-colors"
+                >
+                  See More New Releases
+                </Link>
+              </div>
+            </>
           ) : (
             <div className="text-center text-navy">No new releases available</div>
           )}
@@ -629,7 +659,8 @@ function Home() {
           ) : error ? (
             <div className="text-center text-red-500 py-10">{error}</div>
           ) : newArrivals.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               {newArrivals.map(book => (
                 <div key={book.id} className="flex flex-col">
                   <div className="bg-white aspect-[2/3] mb-3 flex items-center justify-center relative overflow-hidden">
@@ -686,7 +717,16 @@ function Home() {
                   </div>
                 </div>
               ))}
-            </div>
+              </div>
+              <div className="mt-8 text-center">
+                <Link 
+                  to="/books?filter=new-arrivals" 
+                  className="inline-block bg-transparent text-navy border border-navy px-6 py-2 rounded-md hover:bg-gold hover:text-white hover:border-gold transition-colors"
+                >
+                  See More New Arrivals
+                </Link>
+              </div>
+            </>
           ) : (
             <div className="text-center text-navy">No new arrivals available</div>
           )}

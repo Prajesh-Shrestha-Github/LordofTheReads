@@ -14,6 +14,7 @@ function Books() {
   const [searchParams] = useSearchParams();
   const genreParam = searchParams.get('genre');
   const saleParam = searchParams.get('sale');
+  const filterParam = searchParams.get('filter');
   
   // Books data
   const [books, setBooks] = useState([]);
@@ -275,6 +276,32 @@ function Books() {
   useEffect(() => {
     fetchFilteredBooks();
   }, [currentPage, filters, sortBy, appliedSearchQuery]);
+
+  // Handle filter parameter from URL
+  useEffect(() => {
+    if (filterParam) {
+      // Create a new filters object to avoid direct state mutation
+      const updatedFilters = { ...filters };
+      
+      // Set the appropriate filter based on the URL parameter
+      if (filterParam === 'new-releases') {
+        updatedFilters.newRelease = true;
+        // Show filters panel when a specific filter is applied
+        setShowFilters(true);
+      } else if (filterParam === 'new-arrivals') {
+        updatedFilters.newArrival = true;
+        // Show filters panel when a specific filter is applied
+        setShowFilters(true);
+      } else if (filterParam === 'coming-soon') {
+        updatedFilters.comingSoon = true;
+        // Show filters panel when a specific filter is applied
+        setShowFilters(true);
+      }
+      
+      // Update the filters state
+      setFilters(updatedFilters);
+    }
+  }, [filterParam]); // Only run when filterParam changes
 
   // Fetch genres from the database
   useEffect(() => {
