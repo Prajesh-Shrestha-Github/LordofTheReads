@@ -18,10 +18,17 @@ function BookDetails() {
   const [quantity, setQuantity] = useState(1);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [notification, setNotification] = useState({ show: false, message: '', type: '' });
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, token, user } = useAuth();
   
   // State to store available formats from database
   const [availableFormats, setAvailableFormats] = useState([]);
+
+  // ─── Reviews state ─────────────────────────────────────────────────
+  const [reviews, setReviews]         = useState([]);
+  const [canReview, setCanReview]     = useState(false);
+  const [rating, setRating]           = useState(5);
+  const [comment, setComment]         = useState('');
+  const [reviewError, setReviewError] = useState('');
   
   useEffect(() => {
     const fetchBookDetails = async () => {
@@ -69,6 +76,26 @@ function BookDetails() {
     verifyBookmarkStatus();
   }, [book, isAuthenticated]);
   
+  // ─── Load reviews & check permission ───────────────────────────────
+  useEffect(() => {
+    if (!book) return;
+
+    // A) load existing reviews
+    bookService
+      .getBookReviews(id)
+      .then(data => setReviews(data))
+      .catch(err => {
+        console.error('Failed to load reviews', err);
+        setReviews([]);
+      });
+
+    // B) can they review?
+    bookService
+      .canReviewBook(id, token)
+      .then(can => setCanReview(can))
+      .catch(() => setCanReview(false));
+  }, [book, id, token]);
+
   const decrementQuantity = () => {
     if (quantity > 1) {
       setQuantity(quantity - 1);
@@ -160,6 +187,31 @@ function BookDetails() {
     }
   };
   
+ // ─── Submit a new review ────────────────────────────────────────────
+ const handleReviewSubmit = async e => {
+  e.preventDefault();
+  setReviewError('');
+
+  try {
+    // 1) POST via bookService (uses your `api` instance with JWT interceptor)
+    await bookService.postReview(id, { rating, comment });
+
+    // 2) refresh the reviews list
+    const fresh = await bookService.getBookReviews(id);
+    setReviews(fresh);
+
+    // 3) disable the form
+    setCanReview(false);
+  } catch (err) {
+    console.error('Review submission failed:', err.response || err);
+    const message =
+      err.response?.data?.error ||
+      err.response?.data?.message ||
+      `Failed to submit review`;
+    setReviewError(message);
+  }
+};
+
   if (loading) {
     return (
       <div className="flex min-h-screen flex-col bg-beige">
@@ -387,6 +439,71 @@ function BookDetails() {
             </div>
           </div>
         </div>
+
+        {/* ─── Reviews Section ─────────────────────────────────────────────── */}
+        <section className="mt-12">
+          <h2 className="text-xl font-bold text-navy mb-4">Reviews</h2>
+
+          {reviews.length > 0 ? (
+            reviews.map(r => (
+              <div key={r.id} className="mb-4 p-4 border rounded">
+                <div className="flex justify-between text-sm text-gray-600 mb-1">
+                  <span>{r.userName || 'Anonymous'}</span>
+                  <span>{new Date(r.createdAt).toLocaleDateString()}</span>
+                </div>
+                <div className="text-gold mb-1">Rating: {r.rating}/5</div>
+                <p className="text-navy">{r.comment}</p>
+              </div>
+            ))
+          ) : (
+            <p className="text-gray-600 mb-6">No reviews yet.</p>
+          )}
+
+          {!isAuthenticated() ? (
+            <p className="text-gray-600">
+              Log in to leave a review once you’ve purchased.
+            </p>
+          ) : reviews.some(r => r.userId === user?.id) ? (
+            <p className="text-gray-600">
+              You have already reviewed this book.
+            </p>
+          ) : !canReview ? (
+            <p className="text-gray-600">
+              You must purchase this book before leaving a review.
+            </p>
+          ) : (
+            <form onSubmit={handleReviewSubmit} className="mb-8">
+              {reviewError && <p className="text-red-500 mb-2">{reviewError}</p>}
+              <label className="block mb-2">
+                Rating:
+                <select
+                  className="ml-2 border rounded px-2"
+                  value={rating}
+                  onChange={e => setRating(+e.target.value)}
+                >
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="block mb-4">
+                Comment:
+                <textarea
+                  className="w-full border rounded p-2"
+                  rows={3}
+                  value={comment}
+                  onChange={e => setComment(e.target.value)}
+                />
+              </label>
+              <button
+                type="submit"
+                className="bg-navy text-white px-4 py-2 rounded hover:bg-gold hover:text-navy transition"
+              >
+                Submit Review
+              </button>
+            </form>
+          )}
+        </section>
       </div>
       
       <Footer />
