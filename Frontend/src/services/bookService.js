@@ -101,8 +101,36 @@ const bookmarkBook = async (bookId) => {
   }
 };
 
+const getBookReviews = async bookId => {
+  const { data } = await api.get(`/Books/${bookId}/reviews`);
+  return data;
+};
+
+const canReviewBook = async (bookId, token) => {
+  try {
+  const response = await api.get(
+    `/Books/can-review/${bookId}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return response.data.canReview;
+} catch (error) {
+  console.error(`Error checking canReview for book with ID ${bookId}:`, error);
+  return false;
+}
+};
+
+const postReview = async (bookId, dto) => {
+  try {
+    const response = await api.post(`/Books/${bookId}/reviews`, dto);
+    return response.data;
+  } catch (error) {
+    console.error(`Error posting review for book ${bookId}:`, error);
+    throw error;
+  }
+};
+
 // Export all functions as named exports
-export { getAllBooks, getBookById, bookmarkBook, searchBooks, filterBooks };
+export { getAllBooks, getBookById, bookmarkBook, searchBooks, filterBooks, getBookReviews, canReviewBook, postReview };
 
 // Also export as default for backward compatibility
 const bookService = {
@@ -110,7 +138,10 @@ const bookService = {
   getBookById,
   bookmarkBook,
   searchBooks,
-  filterBooks
+  filterBooks,
+  getBookReviews,
+  canReviewBook,
+  postReview
 };
 
 export default bookService;
