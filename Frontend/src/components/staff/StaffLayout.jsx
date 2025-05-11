@@ -58,6 +58,17 @@ const StaffLayout = () => {
                 <span>Pending Orders</span>
               </NavLink>
             </li>
+            <li>
+              <NavLink
+                to="/staff/processed"
+                className={({ isActive }) => `flex items-center px-4 py-3 rounded-lg ${
+                  isActive ? 'bg-teal-50 text-teal-600 font-medium' : 'text-gray-700 hover:bg-gray-50'
+                } transition-all duration-200`}
+              >
+                <List size={18} className="mr-3" />
+                <span>Processed Orders</span>
+              </NavLink>
+            </li>
           </ul>
 
           <div className="mt-8 pt-8 border-t border-gray-100">
@@ -76,7 +87,8 @@ const StaffLayout = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="bg-white border-b border-gray-100 py-3 px-6 flex justify-between items-center shadow-sm sticky top-0 z-10">
           <h1 className="text-xl font-semibold text-gray-800">
-            {activeSection === 'orders' && 'Pending Orders'}
+            {location.pathname === '/staff' && 'Pending Orders'}
+            {location.pathname === '/staff/processed' && 'Processed Orders'}
           </h1>
         </header>
         <div className="flex-1 overflow-auto">

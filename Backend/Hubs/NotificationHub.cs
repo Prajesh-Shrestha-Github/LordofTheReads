@@ -12,8 +12,11 @@ namespace LordofTheReads.Hubs
         // Register connection when a user connects
         public async Task RegisterConnection(string userId)
         {
+            Console.WriteLine($"[NotificationHub] RegisterConnection: user {userId}, conn {Context.ConnectionId}");
             UserConnections[userId] = Context.ConnectionId;
-            await Task.CompletedTask;
+            Console.WriteLine($"[NotificationHub] Adding connection {Context.ConnectionId} to group {userId}");
+            await Groups.AddToGroupAsync(Context.ConnectionId, userId);
+            Console.WriteLine($"[NotificationHub] Added connection {Context.ConnectionId} to group {userId}");
         }
 
         // Override OnConnectedAsync to handle connection
@@ -25,10 +28,13 @@ namespace LordofTheReads.Hubs
         // Override OnDisconnectedAsync to handle disconnection
         public override async Task OnDisconnectedAsync(Exception exception)
         {
+            Console.WriteLine($"[NotificationHub] OnDisconnected: connection {Context.ConnectionId}");
             // Remove the connection ID when user disconnects
             foreach (var pair in UserConnections.Where(p => p.Value == Context.ConnectionId).ToList())
             {
                 UserConnections.TryRemove(pair.Key, out _);
+                Console.WriteLine($"[NotificationHub] Removing connection {Context.ConnectionId} from group {pair.Key}");
+                await Groups.RemoveFromGroupAsync(Context.ConnectionId, pair.Key);
             }
             
             await base.OnDisconnectedAsync(exception);
@@ -44,11 +50,9 @@ namespace LordofTheReads.Hubs
         // Send notification to a specific user
         public async Task SendOrderProcessedNotification(string userId, string message)
         {
-            string connectionId = GetConnectionIdForUser(userId);
-            if (!string.IsNullOrEmpty(connectionId))
-            {
-                await Clients.Client(connectionId).SendAsync("ReceiveOrderProcessedNotification", message);
-            }
+            Console.WriteLine($"[NotificationHub] Sending to group {userId}: {message}");
+            await Clients.Group(userId)
+                .SendAsync("ReceiveOrderProcessedNotification", message);
         }
 
         // Broadcast notification to all users

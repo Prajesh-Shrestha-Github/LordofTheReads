@@ -5,18 +5,25 @@ const cartService = {
   // Get cart items from the database
   getCart: async () => {
     try {
-      const response = await api.get('/Cart');
+      // Check authentication first
+      const user = localStorage.getItem('user');
+      if (!user) {
+        console.log('User not authenticated, skipping cart fetch');
+        return { cartItems: [] }; // Return empty cart without making API call
+      }
+
+      const response = await api.get('/cart');
       return response.data;
     } catch (error) {
       console.error('Error fetching cart:', error);
-      throw error;
+      return { cartItems: [] }; // Return empty cart on error
     }
   },
   
   // Add item to cart
   addToCart: async (bookId, quantity = 1, format = null) => {
     try {
-      const response = await api.post('/Cart/items', {
+      const response = await api.post('/cart/items', {
         bookId,
         quantity,
         format
@@ -33,7 +40,7 @@ const cartService = {
   // Update cart item quantity
   updateQuantity: async (bookId, quantity) => {
     try {
-      const response = await api.put(`/Cart/items/${bookId}`, {
+      const response = await api.put(`/cart/items/${bookId}`, {
         quantity
       });
       // Dispatch event to update cart count in navbar
@@ -48,7 +55,7 @@ const cartService = {
   // Remove item from cart
   removeItem: async (bookId) => {
     try {
-      const response = await api.delete(`/Cart/items/${bookId}`);
+      const response = await api.delete(`/cart/items/${bookId}`);
       // Dispatch event to update cart count in navbar
       window.dispatchEvent(new Event('cartUpdated'));
       return response.data;
@@ -61,7 +68,7 @@ const cartService = {
   // Clear cart
   clearCart: async () => {
     try {
-      const response = await api.delete('/Cart');
+      const response = await api.delete('/cart');
       // Dispatch event to update cart count in navbar
       window.dispatchEvent(new Event('cartUpdated'));
       return response.data;
@@ -74,6 +81,14 @@ const cartService = {
   // Get cart count (for navbar display)
   getCartCount: async () => {
     try {
+      // Only attempt to get cart if user is authenticated
+      const user = localStorage.getItem('user');
+      if (!user) {
+        // User not logged in, return 0 without calling API
+        return 0;
+      }
+      
+      // getCart now handles authentication internally and returns empty cart on error
       const cart = await cartService.getCart();
       return cart?.cartItems?.length || 0;
     } catch (error) {

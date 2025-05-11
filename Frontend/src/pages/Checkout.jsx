@@ -54,8 +54,12 @@ function Checkout() {
   const isEligibleForQuantityDiscount = totalBooks >= 5;
   const quantityDiscountAmount = isEligibleForQuantityDiscount ? subtotal * 0.05 : 0;
   
-  // Total after discounts
-  const total = subtotal - quantityDiscountAmount;
+  // Check for loyalty discount (10%)
+  const hasLoyaltyDiscount = cart?.discountAmount > 0 && cart?.discountType === 'Loyalty Discount';
+  const loyaltyDiscountAmount = hasLoyaltyDiscount ? cart?.discountAmount : 0;
+  
+  // Total after all discounts
+  const total = subtotal - quantityDiscountAmount - loyaltyDiscountAmount;
 
   const handlePlaceOrder = async () => {
     try {
@@ -221,6 +225,14 @@ function Checkout() {
                   <div className="flex justify-between text-green-600">
                     <span>5% Discount (5+ books)</span>
                     <span>-${quantityDiscountAmount.toFixed(2)}</span>
+                  </div>
+                )}
+                
+                {/* Show loyalty discount if available */}
+                {hasLoyaltyDiscount && (
+                  <div className="flex justify-between text-green-600 font-medium">
+                    <span>Loyalty Discount (10%)</span>
+                    <span>-${loyaltyDiscountAmount.toFixed(2)}</span>
                   </div>
                 )}
                 

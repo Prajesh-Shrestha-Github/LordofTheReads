@@ -584,26 +584,71 @@ function Books() {
               {/* Price Range */}
               <div className="mb-6">
                 <h3 className="font-medium text-navy mb-2">Price Range</h3>
-                <input
-                  type="range"
-                  min="0"
-                  max="50"
-                  step="10"
-                  value={filters.price === 'all' ? 50 : parseInt(filters.price.split('-')[0])}
-                  onChange={(e) => {
-                    const value = parseInt(e.target.value);
-                    let priceFilter = 'all';
-                    if (value === 0) priceFilter = '0-10';
-                    else if (value === 10) priceFilter = '10-20';
-                    else if (value === 20) priceFilter = '20-30';
-                    else if (value === 30) priceFilter = '30-100';
-                    handleFilterChange('price', priceFilter);
-                  }}
-                  className="w-full accent-gold"
-                />
-                <div className="flex justify-between text-xs text-gray-600 mt-1">
-                  <span>$0</span>
-                  <span>$50+</span>
+                <div className="space-y-2">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="price-all"
+                      checked={filters.price === 'all'}
+                      onChange={() => handleFilterChange('price', 'all')}
+                      className="mr-2"
+                    />
+                    <label htmlFor="price-all" className="text-sm text-gray-600">
+                      All Prices
+                    </label>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="price-0-10"
+                      checked={filters.price === '0-10'}
+                      onChange={() => handleFilterChange('price', '0-10')}
+                      className="mr-2"
+                    />
+                    <label htmlFor="price-0-10" className="text-sm text-gray-600">
+                      Under $10
+                    </label>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="price-10-20"
+                      checked={filters.price === '10-20'}
+                      onChange={() => handleFilterChange('price', '10-20')}
+                      className="mr-2"
+                    />
+                    <label htmlFor="price-10-20" className="text-sm text-gray-600">
+                      $10 - $20
+                    </label>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="price-20-30"
+                      checked={filters.price === '20-30'}
+                      onChange={() => handleFilterChange('price', '20-30')}
+                      className="mr-2"
+                    />
+                    <label htmlFor="price-20-30" className="text-sm text-gray-600">
+                      $20 - $30
+                    </label>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="price-30-100"
+                      checked={filters.price === '30-100'}
+                      onChange={() => handleFilterChange('price', '30-100')}
+                      className="mr-2"
+                    />
+                    <label htmlFor="price-30-100" className="text-sm text-gray-600">
+                      Over $30
+                    </label>
+                  </div>
                 </div>
               </div>
               

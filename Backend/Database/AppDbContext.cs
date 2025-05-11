@@ -27,6 +27,8 @@ namespace LordofTheReads.Database
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.HasDefaultSchema("public");
+
             // Configure composite primary keys for junction tables
             modelBuilder.Entity<BookAuthor>().HasKey(ba => new { ba.BookId, ba.AuthorId });
             modelBuilder.Entity<BookGenre>().HasKey(bg => new { bg.BookId, bg.GenreId });

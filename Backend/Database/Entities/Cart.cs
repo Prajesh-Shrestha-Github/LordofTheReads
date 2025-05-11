@@ -18,6 +18,16 @@ namespace LordofTheReads.Database.Entities
 
         [Column("updated_at")]
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        
+        // Discount properties (not stored in database, calculated at runtime)
+        [NotMapped]
+        public decimal? DiscountAmount { get; set; }
+        
+        [NotMapped]
+        public string? DiscountType { get; set; }
+        
+        [NotMapped]
+        public int? DiscountPercentage { get; set; }
 
         // Navigation property
         public virtual ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();

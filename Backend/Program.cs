@@ -11,6 +11,7 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,8 +25,8 @@ builder.Services.AddCors(options =>
         policy.WithOrigins("http://localhost:3000", "http://localhost:5173", "http://localhost:4200")
               .AllowAnyMethod()
               .AllowAnyHeader()
-              .WithExposedHeaders("WWW-Authenticate")
-              .SetIsOriginAllowed(origin => true); // Allow any origin temporarily for development
+              .AllowCredentials()
+              .WithExposedHeaders("WWW-Authenticate");
     });
 });
 
@@ -103,20 +104,14 @@ builder.Services.AddAuthentication()
         };
     });
 
-builder.Services.AddDbContext<AppDbContext>(
-    (options) =>
-    {
-        options.UseNpgsql(builder.Configuration.GetConnectionString("PostgresConnection")).LogTo(Console.WriteLine);
-    }
-);
-builder.Services.AddCors(options =>
+builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    options.AddPolicy("AllowReactApp", policy =>
-        policy.WithOrigins("http://localhost:5173")
-              .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials());
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("PostgresConnection"),
+        npgsqlOptions => npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "public")
+    ).LogTo(Console.WriteLine);
 });
+// Notification hub and SignalR are already covered by the AllowFrontend CORS policy
 
 builder.Services.AddScoped<IBookService, BookService>();
 // Register cart service
@@ -127,6 +122,8 @@ builder.Services.AddScoped<IBookmarkService, BookmarkService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 // Register notification service and SignalR
 builder.Services.AddScoped<INotificationService, NotificationService>();
+// Register email service
+builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddSignalR();
 
 var app = builder.Build();
@@ -146,12 +143,9 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseCors("AllowReactApp");
+app.UseCors("AllowFrontend");
 
 app.UseHttpsRedirection();
-
-// Enable CORS
-app.UseCors("AllowReactApp");
 
 // Use Routing
 app.UseRouting();
@@ -175,10 +169,41 @@ using (var scope = app.Services.CreateScope())
     var context = services.GetRequiredService<AppDbContext>();
     try
     {
-        // Apply pending EF Core migrations
-        logger.LogInformation("Applying database migrations...");
-        context.Database.Migrate();
-        logger.LogInformation("Database migrations applied successfully");
+        // Apply pending EF Core migrations with a safer approach
+        logger.LogInformation("Checking database connection...");
+        if (context.Database.CanConnect())
+        {
+            logger.LogInformation("Connected to database successfully.");
+            
+            // Check if specific tables already exist to avoid migration errors
+            var existingTables = new List<string>();
+            try {
+                // Try a simple query to see if Announcements table exists
+                context.Database.ExecuteSqlRaw("SELECT 1 FROM \"Announcements\" LIMIT 1");
+                existingTables.Add("Announcements");
+                logger.LogInformation("Table 'Announcements' already exists.");
+            } catch {} // Ignore if table doesn't exist
+            
+            // Apply migrations with special handling
+            logger.LogInformation("Applying database migrations...");
+            if (existingTables.Contains("Announcements"))
+            {
+                // Apply migrations more carefully when tables already exist
+                logger.LogInformation("Using migration-safe mode for existing tables");
+                try {
+                    context.Database.Migrate();
+                } catch (Exception migEx) {
+                    // Log but don't fail the application if migration has issues with existing tables
+                    logger.LogWarning(migEx, "Migration warning (continuing startup): {Error}", migEx.Message);
+                }
+            }
+            else
+            {
+                // Standard migration for fresh database
+                context.Database.Migrate();
+            }
+            logger.LogInformation("Database migrations handling completed");
+        }
 
         // Now seed the data
         logger.LogInformation("Initializing seed data...");

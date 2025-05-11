@@ -37,6 +37,33 @@ namespace LordofTheReads.Services
                 .ThenInclude(b => b.BookAuthors)
                 .ThenInclude(ba => ba.Author)
                 .FirstOrDefaultAsync(c => c.Id == cart.Id);
+                
+            if (cartWithItems != null && cartWithItems.CartItems.Any())
+            {
+                // Calculate subtotal before applying any discounts
+                decimal subtotal = cartWithItems.CartItems.Sum(ci => ci.Price * ci.Quantity);
+                
+                // Check if user has a loyalty discount available
+                var userDiscount = await _context.UserDiscounts
+                    .FirstOrDefaultAsync(ud => ud.UserId == userId && !ud.IsUsed);
+                    
+                if (userDiscount != null)
+                {
+                    // Calculate the loyalty discount amount (10%)
+                    decimal discountAmount = subtotal * 0.10m;
+                    
+                    // Add discount information to the cart
+                    cartWithItems.DiscountAmount = discountAmount;
+                    cartWithItems.DiscountType = "Loyalty Discount";
+                    cartWithItems.DiscountPercentage = 10;
+                    
+                    // Store original prices for display purposes
+                    foreach (var item in cartWithItems.CartItems)
+                    {
+                        item.OriginalPrice = item.Price;
+                    }
+                }
+            }
 
             return cartWithItems;
         }
