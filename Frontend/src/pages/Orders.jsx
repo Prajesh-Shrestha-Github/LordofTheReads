@@ -4,6 +4,7 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { useAuth } from '../context/AuthContext';
 import orderService from '../services/orderService';
+import bookService from '../services/bookService';
 import { Calendar, Clock, ChevronRight, AlertTriangle } from 'lucide-react';
 import ConfirmationModal from '../components/ConfirmationModal';
 
@@ -13,8 +14,13 @@ function Orders() {
   const [error, setError] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+
+  // track which review form is open and its inputs/errors
+  const [reviewForms, setReviewForms] = useState({});
+  // cache reviews per bookId
+  const [reviewsByBook, setReviewsByBook] = useState({});
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -40,6 +46,67 @@ function Orders() {
     
     fetchOrders();
   }, [isAuthenticated, navigate]);
+
+  // ─── Prefetch reviews for all completed‐order books ─────────────────
+  useEffect(() => {
+    if (loading) return;
+    // collect all bookIds from completed orders
+    const completedBookIds = orders
+      .filter(o => o.status === 1)
+      .flatMap(o => o.orderItems.map(i => i.bookId));
+    const uniqueIds = Array.from(new Set(completedBookIds));
+
+    uniqueIds.forEach(bookId => {
+      bookService
+        .getBookReviews(bookId)
+        .then(data =>
+          setReviewsByBook(prev => ({ ...prev, [bookId]: data }))
+        )
+        .catch(err =>
+          console.error('Failed to load reviews for book', bookId, err)
+        );
+    });
+  }, [loading, orders]);
+  
+  // Helpers for review form
+  const openReviewForm = (bookId) => {
+    setReviewForms(prev => ({
+      ...prev,
+      [bookId]: { show: true, rating: 5, comment: '', error: '' }
+    }));
+  };
+
+  const handleReviewInputChange = (bookId, field, value) => {
+    setReviewForms(prev => ({
+      ...prev,
+      [bookId]: {
+        ...prev[bookId],
+        [field]: value
+      }
+    }));
+  };
+
+  const handleReviewSubmit = async (e, bookId) => {
+    e.preventDefault();
+    const { rating, comment } = reviewForms[bookId];
+    try {
+      await bookService.postReview(bookId, { rating, comment });
+      // close the form on success
+      setReviewForms(prev => ({
+        ...prev,
+        [bookId]: { ...prev[bookId], show: false }
+      }));
+    } catch (err) {
+      console.error('Review submission error:', err);
+      setReviewForms(prev => ({
+        ...prev,
+        [bookId]: {
+          ...prev[bookId],
+          error: err.response?.data?.error || 'Failed to submit review'
+        }
+      }));
+    }
+  };
 
   const formatDate = (dateString) => {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
@@ -236,6 +303,93 @@ function Orders() {
                     )}
                   </div>
                 </div>
+
+                {/* ─── REVIEW SECTION ───────────────────────────────────────── */}
+                {order.status === 1 && (
+                  <div className="p-6 border-t border-gray-200">
+                    <h3 className="font-medium text-navy mb-4">Leave Reviews</h3>
+                    <div className="space-y-4">
+                      {order.orderItems.map(item => {
+                        // ★ compute if user already reviewed this book
+                        const reviewsForThis = reviewsByBook[item.bookId] || [];
+                        const alreadyReviewed = reviewsForThis.some(r => r.userId === user?.id);
+
+                        return (
+                          <div
+                            key={item.id}
+                            className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+                          >
+                            <div className="flex items-center gap-4">
+                              <img
+                                src={item.bookImageUrl || '/placeholder-book.png'}
+                                alt={item.bookTitle}
+                                className="w-12 h-16 object-cover rounded"
+                              />
+                              <span className="text-navy">{item.bookTitle}</span>
+                            </div>
+
+                            {reviewForms[item.bookId]?.show ? (
+                              /* ── your existing form JSX ── */
+                              <form
+                                onSubmit={e => handleReviewSubmit(e, item.bookId)}
+                                className="flex flex-col gap-2 w-full md:w-auto"
+                              >
+                                {reviewForms[item.bookId].error && (
+                                  <p className="text-red-500">{reviewForms[item.bookId].error}</p>
+                                )}
+                                <div>
+                                  <label className="block text-sm mb-1">Rating</label>
+                                  <select
+                                    className="border rounded px-2 py-1"
+                                    value={reviewForms[item.bookId].rating}
+                                    onChange={e =>
+                                      handleReviewInputChange(item.bookId, 'rating', +e.target.value)
+                                    }
+                                  >
+                                    {[1, 2, 3, 4, 5].map(n => (
+                                      <option key={n} value={n}>{n}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="block text-sm mb-1">Comment</label>
+                                  <textarea
+                                    className="w-full border rounded p-2"
+                                    rows={2}
+                                    value={reviewForms[item.bookId].comment}
+                                    onChange={e =>
+                                      handleReviewInputChange(item.bookId, 'comment', e.target.value)
+                                    }
+                                  />
+                                </div>
+                                <button
+                                  type="submit"
+                                  className="self-end bg-navy text-white px-4 py-2 rounded-md hover:bg-gold hover:text-navy transition"
+                                >
+                                  Submit Review
+                                </button>
+                              </form>
+                            ) : alreadyReviewed ? (
+                              // ★ if already reviewed, show a message
+                              <p className="text-gray-600 text-sm">
+                                You have already reviewed this book.
+                              </p>
+                            ) : (
+                              // ★ otherwise show the Leave Review button
+                              <button
+                                onClick={() => openReviewForm(item.bookId)}
+                                className="bg-navy text-white px-4 py-2 rounded-md hover:bg-gold hover:text-navy transition"
+                              >
+                                Leave Review
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {/* ─── END REVIEW SECTION ─────────────────────────────────────── */}
               </div>
             ))}
           </div>
