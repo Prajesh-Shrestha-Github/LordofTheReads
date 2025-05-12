@@ -171,20 +171,22 @@ function Cart() {
                   </div>
                   
                   <div className="md:col-span-2">
-                    <div className="flex items-center border border-gray rounded-md overflow-hidden">
+                    <div className="inline-flex items-center border border-gray-200 rounded-md bg-white">
                       <button 
                         onClick={() => updateQuantity(item.bookId, item.quantity - 1)}
-                        className="px-2 py-1 text-gray hover:text-white hover:bg-navy transition-colors"
+                        className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-navy bg-white transition-colors"
                         disabled={item.quantity <= 1}
+                        aria-label="Decrease quantity"
                       >
-                        <Minus className="h-3 w-3" />
+                        −
                       </button>
-                      <span className="px-3 text-navy font-medium">{item.quantity}</span>
+                      <span className="w-8 flex items-center justify-center text-navy font-medium">{item.quantity}</span>
                       <button 
                         onClick={() => updateQuantity(item.bookId, item.quantity + 1)}
-                        className="px-2 py-1 text-gray hover:text-white hover:bg-navy transition-colors"
+                        className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-navy bg-white transition-colors"
+                        aria-label="Increase quantity"
                       >
-                        <Plus className="h-3 w-3" />
+                        +
                       </button>
                     </div>
                   </div>
