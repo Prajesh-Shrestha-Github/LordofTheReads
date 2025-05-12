@@ -79,6 +79,7 @@ namespace LordofTheReads.Controllers
             [FromQuery] string? category = null, 
             [FromQuery] string? priceRange = null,
             [FromQuery] int? minRating = null,
+            [FromQuery] int? maxRating = null,
             [FromQuery] bool? inStock = null,
             [FromQuery] bool? onSale = null,
             [FromQuery] bool? physicalLibraryAccess = null,
@@ -89,12 +90,20 @@ namespace LordofTheReads.Controllers
             [FromQuery] bool? isNewRelease = null,
             [FromQuery] bool? isNewArrival = null,
             [FromQuery] bool? isComingSoon = null,
-            [FromQuery] string? sortBy = null)
+            [FromQuery] string? sortBy = null,
+            [FromQuery] string? authorFilter = null,
+            [FromQuery] string? formatFilter = null)
         {
             try
             {
                 // Log the received parameters for debugging
                 Console.WriteLine($"Received filter parameters: page={page}, pageSize={pageSize}, category={category}, priceRange={priceRange}, sortBy={sortBy}");
+                
+                // Debug all query parameters
+                foreach (var param in Request.Query)
+                {
+                    Console.WriteLine($"Query parameter: {param.Key} = {param.Value}");
+                }
                 
                 // Create filter object manually from query parameters
                 var filter = new BookFilterDTO
@@ -104,6 +113,7 @@ namespace LordofTheReads.Controllers
                     Category = category,
                     PriceRange = priceRange,
                     MinRating = minRating,
+                    MaxRating = maxRating,
                     InStock = inStock,
                     OnSale = onSale,
                     PhysicalLibraryAccess = physicalLibraryAccess,
@@ -116,6 +126,20 @@ namespace LordofTheReads.Controllers
                     IsComingSoon = isComingSoon,
                     SortBy = sortBy
                 };
+                
+                // Handle author filter as an array if it exists
+                if (!string.IsNullOrEmpty(authorFilter))
+                {
+                    filter.Authors = new List<string> { authorFilter };
+                    Console.WriteLine($"Added author filter: {authorFilter}");
+                }
+                
+                // Handle format filter as an array if it exists
+                if (!string.IsNullOrEmpty(formatFilter))
+                {
+                    filter.Formats = new List<string> { formatFilter };
+                    Console.WriteLine($"Added format filter: {formatFilter}");
+                }
                 
                 // Validate pagination parameters
                 if (filter.Page < 1) filter.Page = 1;

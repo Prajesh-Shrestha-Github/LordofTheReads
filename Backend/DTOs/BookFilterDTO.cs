@@ -10,6 +10,7 @@ public class BookFilterDTO
     public decimal? MinPrice { get; set; } // Minimum price
     public decimal? MaxPrice { get; set; } // Maximum price
     public int? MinRating { get; set; } // Minimum rating
+    public int? MaxRating { get; set; } // Maximum rating - for exact star ratings
     
     // Availability filters
     public bool? InStock { get; set; } // Books in stock

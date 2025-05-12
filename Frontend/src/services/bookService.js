@@ -121,15 +121,21 @@ const getBestsellers = async (count = 5) => {
   }
 };
 
-// Get book reviews
+// Get reviews for a specific book
 const getBookReviews = async bookId => {
-  const { data } = await api.get(`/Books/${bookId}/reviews`);
-  return data;
+  try {
+    const { data } = await api.get(`/Books/${bookId}/reviews`);
+    return data;
+  } catch (error) {
+    console.error('Error fetching book reviews:', error);
+    throw error;
+  }
 };
 
 // Check if user can review a book
 const canReviewBook = async (bookId, token) => {
   try {
+    // Keep the bearer token in the request as it might be needed for authorization
     const response = await api.get(
       `/Books/can-review/${bookId}`,
       { headers: { Authorization: `Bearer ${token}` } }
@@ -144,7 +150,18 @@ const canReviewBook = async (bookId, token) => {
 // Post a review for a book
 const postReview = async (bookId, dto) => {
   try {
-    const response = await api.post(`/Books/${bookId}/reviews`, dto);
+    // Ensure dto has the required fields
+    if (!dto.rating || !dto.comment) {
+      throw new Error('Rating and comment are required');
+    }
+    
+    // Create proper review request dto
+    const reviewData = {
+      rating: dto.rating,
+      comment: dto.comment
+    };
+    
+    const response = await api.post(`/Books/${bookId}/reviews`, reviewData);
     return response.data;
   } catch (error) {
     console.error(`Error posting review for book ${bookId}:`, error);
@@ -153,18 +170,7 @@ const postReview = async (bookId, dto) => {
 };
 
 // Export all functions as named exports
-export { 
-  getAllBooks, 
-  getBookById, 
-  bookmarkBook, 
-  searchBooks, 
-  filterBooks, 
-  getCategories, 
-  getBestsellers, 
-  getBookReviews, 
-  canReviewBook, 
-  postReview 
-};
+export { getAllBooks, getBookById, bookmarkBook, searchBooks, filterBooks, getCategories, getBestsellers, getBookReviews, canReviewBook, postReview };
 
 // Also export as default for backward compatibility
 const bookService = {
