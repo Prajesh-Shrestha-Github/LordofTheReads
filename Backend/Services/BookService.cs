@@ -199,7 +199,27 @@ namespace LordofTheReads.Services
                 // 5. Rating filter
                 if (filter.MinRating.HasValue)
                 {
-                    query = query.Where(b => b.Reviews.Any() && b.Reviews.Average(r => r.Rating) >= filter.MinRating.Value);
+                    // If both min and max rating are set AND they're equal, it's an exact star rating (like "4 stars exactly")
+                    if (filter.MaxRating.HasValue && filter.MinRating.Value == filter.MaxRating.Value)
+                    {
+                        // Handle exact star rating (e.g., 4 stars means 4.0 to 4.99...)
+                        int exactRating = filter.MinRating.Value;
+                        query = query.Where(b => b.Reviews.Any() && 
+                            b.Reviews.Average(r => r.Rating) >= exactRating && 
+                            b.Reviews.Average(r => r.Rating) < exactRating + 1);
+                    }
+                    // If min and max are different, it's a custom range
+                    else if (filter.MaxRating.HasValue)
+                    {
+                        query = query.Where(b => b.Reviews.Any() && 
+                            b.Reviews.Average(r => r.Rating) >= filter.MinRating.Value && 
+                            b.Reviews.Average(r => r.Rating) <= filter.MaxRating.Value);
+                    }
+                    // Otherwise it's a minimum rating filter (like "3 stars & up")
+                    else
+                    {
+                        query = query.Where(b => b.Reviews.Any() && b.Reviews.Average(r => r.Rating) >= filter.MinRating.Value);
+                    }
                 }
 
                 // 6. Stock filter
@@ -230,7 +250,15 @@ namespace LordofTheReads.Services
                 if (filter.Formats != null && filter.Formats.Any())
                 {
                     var formats = filter.Formats.Select(f => f.ToLower()).ToList();
-                    query = query.Where(b => b.Format != null && formats.Contains(b.Format.ToLower()));
+                    // Added debug logging
+                    _logger.LogInformation($"Filtering by formats: {string.Join(", ", formats)}");
+                    
+                    // Use partial matching for formats (e.g., 'paperback' will match 'Trade Paperback')
+                    query = query.Where(b => b.Format != null && formats.Any(f => b.Format.ToLower().Contains(f)));
+                    
+                    // Debug: Log all formats in the database
+                    var allFormats = _context.Books.Where(b => b.Format != null).Select(b => b.Format).Distinct().ToList();
+                    _logger.LogInformation($"Available formats in database: {string.Join(", ", allFormats)}");
                 }
 
                 // 11. Publisher filter
@@ -239,14 +267,18 @@ namespace LordofTheReads.Services
                     query = query.Where(b => b.Publisher != null && b.Publisher.ToLower() == filter.Publisher.ToLower());
                 }
 
-                // 12. Search query filter (title, ISBN, description)
+                // 12. Search query filter (title, ISBN, description, and author names)
                 if (!string.IsNullOrEmpty(filter.SearchQuery))
                 {
                     var searchQuery = filter.SearchQuery.ToLower();
+                    _logger.LogInformation($"Searching with query: {searchQuery}");
+                    
                     query = query.Where(b => 
                         (b.Title != null && b.Title.ToLower().Contains(searchQuery)) ||
                         (b.ISBN != null && b.ISBN.ToLower().Contains(searchQuery)) ||
-                        (b.Description != null && b.Description.ToLower().Contains(searchQuery)));
+                        (b.Description != null && b.Description.ToLower().Contains(searchQuery)) ||
+                        // Include search by author name
+                        b.BookAuthors.Any(ba => ba.Author.Name.ToLower().Contains(searchQuery)));
                 }
 
                 // 13. Category tab filter

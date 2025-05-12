@@ -71,10 +71,11 @@ function Books() {
   // Rating options
   const ratingOptions = [
     { id: 'all', name: 'All Ratings' },
-    { id: '4-up', name: '4 Stars & Up' },
-    { id: '3-up', name: '3 Stars & Up' },
-    { id: '2-up', name: '2 Stars & Up' },
-    { id: '1-up', name: '1 Star & Up' },
+    { id: '5', name: '5 Stars' },
+    { id: '4', name: '4 Stars' },
+    { id: '3', name: '3 Stars' },
+    { id: '2', name: '2 Stars' },
+    { id: '1', name: '1 Star' },
   ];
   
   // Sort options
@@ -86,202 +87,144 @@ function Books() {
     { id: 'rating', name: 'Average Rating' },
   ];
 
-  // Fetch books with filters
+  // Fetch books with filters using server-side filtering
   const fetchFilteredBooks = async () => {
     setLoading(true);
     try {
-      console.log('Fetching all books from the regular endpoint');
+      console.log('Fetching filtered books from the server');
       
-      // Use the regular book endpoint directly
-      const response = await fetch('http://localhost:5253/api/book');
+      // Build query parameters based on current filters
+      const queryParams = new URLSearchParams();
+      
+      // Add pagination parameters - only fetch the exact books needed for the current page
+      queryParams.append('page', currentPage);
+      queryParams.append('pageSize', booksPerPage); // Exactly 12 books per page
+      
+      // Add category filter
+      if (filters.category && filters.category !== 'all') {
+        queryParams.append('category', filters.category);
+      }
+      
+      // Add price range filter
+      if (filters.price && filters.price !== 'all') {
+        queryParams.append('priceRange', filters.price);
+      }
+      
+      // Add rating filter - important change to use exact star ratings
+      if (filters.rating && filters.rating !== 'all') {
+        // Parse the exact rating (now just a single number)
+        const exactRating = parseInt(filters.rating);
+        
+        // For exact ratings, just use the same value for min and max
+        // The backend will handle the range (rating >= exactRating && rating < exactRating+1)
+        queryParams.append('minRating', exactRating);
+        queryParams.append('maxRating', exactRating);
+      }
+      
+      // Add in-stock filter
+      if (filters.inStock === 'inStock') {
+        queryParams.append('inStock', true);
+      }
+      
+      // Add library access filter
+      if (filters.access === 'library') {
+        queryParams.append('physicalLibraryAccess', true);
+      }
+      
+      // Add on sale filter
+      if (filters.onSale) {
+        queryParams.append('onSale', true);
+      }
+      
+      // Add author filter
+      if (filters.author && filters.author !== 'all') {
+        // Use the new authorFilter parameter
+        queryParams.append('authorFilter', filters.author);
+      }
+      
+      // Add language filter
+      if (filters.language && filters.language !== 'all') {
+        queryParams.append('language', filters.language);
+      }
+      
+      // Add format filter
+      if (filters.format && filters.format !== 'all') {
+        // Use the new formatFilter parameter
+        queryParams.append('formatFilter', filters.format);
+      }
+      
+      // Add publisher filter
+      if (filters.publisher && filters.publisher !== 'all') {
+        queryParams.append('publisher', filters.publisher);
+      }
+      
+      // Add search query if any
+      if (appliedSearchQuery) {
+        queryParams.append('searchQuery', appliedSearchQuery);
+        
+        // For author search optimization, also try to check if the search query matches any author
+        // This helps ensure author searches return more relevant results
+        const lowerSearchQuery = appliedSearchQuery.toLowerCase();
+        const matchingAuthor = availableAuthors.find(author => 
+          author.toLowerCase().includes(lowerSearchQuery));
+        
+        if (matchingAuthor) {
+          console.log('Search query matches potential author:', matchingAuthor);
+          // Add author filter to improve search relevance
+          queryParams.append('authorFilter', matchingAuthor);
+        }
+      }
+      
+      // Add sorting parameter
+      if (sortBy) {
+        // Map frontend sort options to backend API format
+        const backendSortParam = mapSortByToApi(sortBy);
+        queryParams.append('sortBy', backendSortParam);
+        console.log(`Sorting by: ${sortBy} (backend param: ${backendSortParam})`);
+      }
+      
+      // Use the filtered endpoint with query parameters
+      const url = `http://localhost:5253/api/Books/filtered?${queryParams.toString()}`;
+      console.log('Calling API with URL:', url);
+      
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`API responded with status: ${response.status}`);
       }
       
-      const fetchedBooks = await response.json();
-      console.log('Fetched all books:', fetchedBooks);
+      const result = await response.json();
+      console.log('Fetched filtered books from server:', result);
       
-      // Store all books for filter options
-      setAllBooks(fetchedBooks);
+      // The API returns { books, totalCount, pageSize, currentPage, totalPages }
+      const fetchedBooks = result.books || [];
       
-      // Extract unique filter options once when all books are loaded
-      if (availableAuthors.length === 0) {
+      // Extract unique filter options once when books are loaded (even from filtered data)
+      if (availableAuthors.length === 0 && fetchedBooks.length > 0) {
         const authors = [...new Set(fetchedBooks.flatMap(book => book.authors || []))].sort();
         setAvailableAuthors(authors);
       }
       
-      if (availableLanguages.length === 0) {
+      if (availableLanguages.length === 0 && fetchedBooks.length > 0) {
         const languages = [...new Set(fetchedBooks.map(book => book.language).filter(Boolean))].sort();
         setAvailableLanguages(languages);
       }
       
-      if (availablePublishers.length === 0) {
+      if (availablePublishers.length === 0 && fetchedBooks.length > 0) {
         const publishers = [...new Set(fetchedBooks.map(book => book.publisher).filter(Boolean))].sort();
         setAvailablePublishers(publishers);
       }
       
-      // Apply filters on the client side
-      let filteredResults = [...fetchedBooks];
+      // Store all fetched books for reference
+      setAllBooks(fetchedBooks);
       
-      // Apply category filter
-      if (filters.category !== 'all') {
-        filteredResults = filteredResults.filter(book => 
-          book.genres && book.genres.some(genre => 
-            genre.toLowerCase() === filters.category.toLowerCase()
-          )
-        );
-      }
+      // Update state with the filtered results from the API
+      setFilteredBooks(fetchedBooks);
+      setBooks(fetchedBooks);
       
-      // Apply search filter
-      if (appliedSearchQuery) {
-        const query = appliedSearchQuery.toLowerCase();
-        filteredResults = filteredResults.filter(book => 
-          (book.title && book.title.toLowerCase().includes(query)) ||
-          (book.description && book.description.toLowerCase().includes(query)) ||
-          (book.authors && book.authors.some(author => author.toLowerCase().includes(query)))
-        );
-      }
-      
-      // Apply rating filter
-      if (filters.rating !== 'all') {
-        const minRating = parseInt(filters.rating.split('-')[0]);
-        filteredResults = filteredResults.filter(book => 
-          book.rating >= minRating
-        );
-      }
-      
-      // Apply in stock filter
-      if (filters.inStock === 'inStock') {
-        filteredResults = filteredResults.filter(book => 
-          book.stockQuantity > 0
-        );
-      }
-      
-      // Apply library access filter
-      if (filters.access === 'library') {
-        filteredResults = filteredResults.filter(book => 
-          book.physicalLibraryAccess === true
-        );
-      }
-      
-      // Apply on sale filter
-      if (filters.onSale) {
-        filteredResults = filteredResults.filter(book => 
-          book.onSaleFlag === true
-        );
-      }
-      
-      // Apply price filter
-      if (filters.price !== 'all') {
-        const [minPrice, maxPrice] = filters.price.split('-').map(p => parseFloat(p));
-        filteredResults = filteredResults.filter(book => 
-          book.price >= minPrice && book.price <= maxPrice
-        );
-      }
-      
-      // Apply author filter
-      if (filters.author !== 'all') {
-        filteredResults = filteredResults.filter(book => 
-          book.authors && book.authors.some(author => 
-            author.toLowerCase() === filters.author.toLowerCase()
-          )
-        );
-      }
-      
-      // Apply language filter
-      if (filters.language !== 'all') {
-        filteredResults = filteredResults.filter(book => 
-          book.language && book.language.toLowerCase() === filters.language.toLowerCase()
-        );
-      }
-      
-      // Apply format filter
-      if (filters.format !== 'all') {
-        // For format filtering, we need to be more flexible since formats might be stored differently
-        // or a book might be available in multiple formats
-        filteredResults = filteredResults.filter(book => {
-          if (!book.format) return false;
-          
-          // Check if the format is contained within the book's format string
-          // This handles cases where format might be stored as "Hardcover, Paperback" etc.
-          return book.format.toLowerCase().includes(filters.format.toLowerCase());
-        });
-      }
-      
-      // Apply publisher filter
-      if (filters.publisher !== 'all') {
-        filteredResults = filteredResults.filter(book => 
-          book.publisher && book.publisher.toLowerCase() === filters.publisher.toLowerCase()
-        );
-      }
-      
-      // Apply new release filter
-      if (filters.newRelease) {
-        // New releases are books published in the last 3 months
-        const threeMonthsAgo = new Date();
-        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-        filteredResults = filteredResults.filter(book => 
-          book.publicationDate && new Date(book.publicationDate) >= threeMonthsAgo
-        );
-      }
-      
-      // Apply new arrival filter
-      if (filters.newArrival) {
-        // New arrivals are books added to the store in the last month
-        // Assuming createdAt field exists, otherwise we'll use publicationDate as a fallback
-        const oneMonthAgo = new Date();
-        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-        filteredResults = filteredResults.filter(book => 
-          (book.createdAt && new Date(book.createdAt) >= oneMonthAgo) ||
-          (book.publicationDate && new Date(book.publicationDate) >= oneMonthAgo)
-        );
-      }
-      
-      // Apply coming soon filter
-      if (filters.comingSoon) {
-        // Coming soon books have a future publication date
-        const today = new Date();
-        filteredResults = filteredResults.filter(book => 
-          book.publicationDate && new Date(book.publicationDate) > today
-        );
-      }
-      
-      // Apply sorting
-      if (sortBy === 'price-low') {
-        filteredResults.sort((a, b) => {
-          // Use discounted price if available
-          const priceA = a.onSaleFlag ? a.price * (1 - a.discountPercentage/100) : a.price;
-          const priceB = b.onSaleFlag ? b.price * (1 - b.discountPercentage/100) : b.price;
-          return priceA - priceB;
-        });
-      } else if (sortBy === 'price-high') {
-        filteredResults.sort((a, b) => {
-          // Use discounted price if available
-          const priceA = a.onSaleFlag ? a.price * (1 - a.discountPercentage/100) : a.price;
-          const priceB = b.onSaleFlag ? b.price * (1 - b.discountPercentage/100) : b.price;
-          return priceB - priceA;
-        });
-      } else if (sortBy === 'newest') {
-        filteredResults.sort((a, b) => {
-          return new Date(b.publicationDate) - new Date(a.publicationDate);
-        });
-      } else if (sortBy === 'rating') {
-        filteredResults.sort((a, b) => b.rating - a.rating);
-      }
-      // Note: 'popularity' sorting would require sales data, which we don't have client-side
-      
-      // Apply pagination
-      const totalCount = filteredResults.length;
-      const startIndex = (currentPage - 1) * booksPerPage;
-      const paginatedResults = filteredResults.slice(startIndex, startIndex + booksPerPage);
-      
-      console.log('Filtered and paginated results:', paginatedResults);
-      
-      // Update state with filtered results
-      setBooks(paginatedResults);
-      setFilteredBooks(paginatedResults);
-      setTotalBooks(totalCount);
-      setTotalPages(Math.ceil(totalCount / booksPerPage));
+      // Update pagination information from server response
+      setTotalBooks(result.totalCount || fetchedBooks.length);
+      setTotalPages(result.totalPages || Math.ceil((result.totalCount || fetchedBooks.length) / booksPerPage));
+      console.log(`Showing page ${currentPage} of ${result.totalPages || Math.ceil(fetchedBooks.length / booksPerPage)} (${result.totalCount || fetchedBooks.length} total books)`);
       setLoading(false);
     } catch (err) {
       console.error('Error fetching books:', err);
@@ -455,6 +398,7 @@ function Books() {
 
   // Handle sort change
   const handleSortChange = (value) => {
+    console.log(`Changing sort to: ${value} (backend param: ${mapSortByToApi(value)})`); 
     setSortBy(value);
     setCurrentPage(1); // Reset to first page when sort changes
   };
@@ -476,8 +420,11 @@ function Books() {
   const indexOfLastBook = Math.min(currentPage * booksPerPage, totalBooks);
   const indexOfFirstBook = (currentPage - 1) * booksPerPage + 1;
 
-  // Change page
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  // Change page and fetch data for the new page
+  const paginate = (pageNumber) => {
+    setCurrentPage(pageNumber);
+    // Note: fetchFilteredBooks will be triggered by the useEffect that depends on currentPage
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-beige">
@@ -907,7 +854,7 @@ function Books() {
                   <form onSubmit={handleSearch} className="relative">
                     <input
                       type="text"
-                      placeholder="Search by title or author..."
+                      placeholder="Search by title, author, ISBN or description..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-md text-navy text-sm focus:outline-none focus:ring-1 focus:ring-gold"
@@ -1070,8 +1017,19 @@ function Books() {
             )}
             
             {/* Pagination */}
-            {!loading && !error && totalPages > 1 && (
-              <div className="mt-8 flex justify-center">
+            {!error && totalPages > 0 && (
+              <div className="mt-8 flex flex-col items-center">
+                {/* Pagination status/info */}
+                <div className="mb-4 text-sm text-gray-600">
+                  {loading ? (
+                    <span>Loading books...</span>
+                  ) : (
+                    <span>
+                      Showing <span className="font-medium">{indexOfFirstBook}</span> to <span className="font-medium">{indexOfLastBook}</span> of <span className="font-medium">{totalBooks}</span> books
+                    </span>
+                  )}
+                </div>
+                
                 <nav className="flex items-center gap-1">
                   {/* Previous button */}
                   <button
@@ -1082,38 +1040,117 @@ function Books() {
                     &lt;
                   </button>
                   
-                  {/* Page numbers */}
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    // Show pages around current page
-                    let pageNum;
-                    if (totalPages <= 5) {
-                      // If 5 or fewer pages, show all
-                      pageNum = i + 1;
-                    } else if (currentPage <= 3) {
-                      // If near start, show first 5 pages
-                      pageNum = i + 1;
-                    } else if (currentPage >= totalPages - 2) {
-                      // If near end, show last 5 pages
-                      pageNum = totalPages - 4 + i;
-                    } else {
-                      // Otherwise show current page and 2 pages on each side
-                      pageNum = currentPage - 2 + i;
-                    }
+                  {/* Page numbers with ellipses for better UX */}
+                  {(() => {
+                    // Create array to hold page button elements
+                    const pageButtons = [];
                     
-                    return (
+                    // Always show first page
+                    pageButtons.push(
                       <button
-                        key={pageNum}
-                        onClick={() => paginate(pageNum)}
+                        key={1}
+                        onClick={() => paginate(1)}
                         className={`w-8 h-8 flex items-center justify-center rounded-md ${
-                          currentPage === pageNum
-                            ? 'bg-navy text-white'
+                          currentPage === 1
+                            ? 'bg-navy text-white font-medium'
                             : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
                         }`}
+                        aria-label={`Go to page 1`}
                       >
-                        {pageNum}
+                        1
                       </button>
                     );
-                  })}
+                    
+                    // Logic for showing ellipses and middle pages
+                    if (totalPages > 5) {
+                      // If current page is more than 3 pages away from start, show ellipsis
+                      if (currentPage > 3) {
+                        pageButtons.push(
+                          <span key="ellipsis-1" className="px-2 text-gray-500">
+                            ...
+                          </span>
+                        );
+                      }
+                      
+                      // Determine range of middle pages to show
+                      let startPage = Math.max(2, currentPage - 1);
+                      let endPage = Math.min(totalPages - 1, currentPage + 1);
+                      
+                      // Make sure we show at least 3 middle pages if possible
+                      if (endPage - startPage < 2 && totalPages > 4) {
+                        if (currentPage < totalPages / 2) {
+                          endPage = Math.min(totalPages - 1, startPage + 2);
+                        } else {
+                          startPage = Math.max(2, endPage - 2);
+                        }
+                      }
+                      
+                      // Add middle page buttons
+                      for (let i = startPage; i <= endPage; i++) {
+                        pageButtons.push(
+                          <button
+                            key={i}
+                            onClick={() => paginate(i)}
+                            className={`w-8 h-8 flex items-center justify-center rounded-md ${
+                              currentPage === i
+                                ? 'bg-navy text-white font-medium'
+                                : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
+                            }`}
+                            aria-label={`Go to page ${i}`}
+                          >
+                            {i}
+                          </button>
+                        );
+                      }
+                      
+                      // If current page is more than 3 pages away from end, show ellipsis
+                      if (currentPage < totalPages - 2) {
+                        pageButtons.push(
+                          <span key="ellipsis-2" className="px-2 text-gray-500">
+                            ...
+                          </span>
+                        );
+                      }
+                    } else {
+                      // For 5 or fewer pages, show all pages between 2 and totalPages-1
+                      for (let i = 2; i < totalPages; i++) {
+                        pageButtons.push(
+                          <button
+                            key={i}
+                            onClick={() => paginate(i)}
+                            className={`w-8 h-8 flex items-center justify-center rounded-md ${
+                              currentPage === i
+                                ? 'bg-navy text-white font-medium'
+                                : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
+                            }`}
+                            aria-label={`Go to page ${i}`}
+                          >
+                            {i}
+                          </button>
+                        );
+                      }
+                    }
+                    
+                    // Always show last page if there's more than one page
+                    if (totalPages > 1) {
+                      pageButtons.push(
+                        <button
+                          key={totalPages}
+                          onClick={() => paginate(totalPages)}
+                          className={`w-8 h-8 flex items-center justify-center rounded-md ${
+                            currentPage === totalPages
+                              ? 'bg-navy text-white font-medium'
+                              : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
+                          }`}
+                          aria-label={`Go to page ${totalPages}`}
+                        >
+                          {totalPages}
+                        </button>
+                      );
+                    }
+                    
+                    return pageButtons;
+                  })()}
                   
                   {/* Next button */}
                   <button

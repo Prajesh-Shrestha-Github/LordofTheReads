@@ -4,7 +4,8 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { useAuth } from '../context/AuthContext';
 import orderService from '../services/orderService';
-import { Calendar, Clock, ChevronRight, AlertTriangle } from 'lucide-react';
+import bookService from '../services/bookService';
+import { Calendar, Clock, ChevronRight, AlertTriangle, Star } from 'lucide-react';
 import ConfirmationModal from '../components/ConfirmationModal';
 
 function Orders() {
@@ -13,8 +14,15 @@ function Orders() {
   const [error, setError] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+
+  // track which review form is open and its inputs/errors
+  const [reviewForms, setReviewForms] = useState({});
+  // cache reviews per bookId
+  const [reviewsByBook, setReviewsByBook] = useState({});
+  // Track hover state for star ratings
+  const [hoverRating, setHoverRating] = useState({});
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -40,6 +48,88 @@ function Orders() {
     
     fetchOrders();
   }, [isAuthenticated, navigate]);
+
+  // ─── Prefetch reviews for all completed‐order books ─────────────────
+  useEffect(() => {
+    if (loading) return;
+    // collect all bookIds from completed orders
+    const completedBookIds = orders
+      .filter(o => o.status === 1)
+      .flatMap(o => o.orderItems.map(i => i.bookId));
+    const uniqueIds = Array.from(new Set(completedBookIds));
+
+    uniqueIds.forEach(bookId => {
+      bookService
+        .getBookReviews(bookId)
+        .then(data =>
+          setReviewsByBook(prev => ({ ...prev, [bookId]: data }))
+        )
+        .catch(err =>
+          console.error('Failed to load reviews for book', bookId, err)
+        );
+    });
+  }, [loading, orders]);
+  
+  // Helpers for review form
+  const openReviewForm = (bookId) => {
+    setReviewForms(prev => ({
+      ...prev,
+      [bookId]: { show: true, rating: 5, comment: '', error: '' }
+    }));
+    // Reset hover rating when opening form
+    setHoverRating(prev => ({
+      ...prev,
+      [bookId]: 0
+    }));
+  };
+  
+  // Handle star hover
+  const handleStarHover = (bookId, rating) => {
+    setHoverRating(prev => ({
+      ...prev,
+      [bookId]: rating
+    }));
+  };
+  
+  // Handle star mouse leave
+  const handleStarLeave = (bookId) => {
+    setHoverRating(prev => ({
+      ...prev,
+      [bookId]: 0
+    }));
+  };
+
+  const handleReviewInputChange = (bookId, field, value) => {
+    setReviewForms(prev => ({
+      ...prev,
+      [bookId]: {
+        ...prev[bookId],
+        [field]: value
+      }
+    }));
+  };
+
+  const handleReviewSubmit = async (e, bookId) => {
+    e.preventDefault();
+    const { rating, comment } = reviewForms[bookId];
+    try {
+      await bookService.postReview(bookId, { rating, comment });
+      // close the form on success
+      setReviewForms(prev => ({
+        ...prev,
+        [bookId]: { ...prev[bookId], show: false }
+      }));
+    } catch (err) {
+      console.error('Review submission error:', err);
+      setReviewForms(prev => ({
+        ...prev,
+        [bookId]: {
+          ...prev[bookId],
+          error: err.response?.data?.error || 'Failed to submit review'
+        }
+      }));
+    }
+  };
 
   const formatDate = (dateString) => {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
@@ -236,6 +326,128 @@ function Orders() {
                     )}
                   </div>
                 </div>
+
+                {/* ─── REVIEW SECTION ───────────────────────────────────────── */}
+                {order.status === 1 && (
+                  <div className="p-6 border-t border-gray-200">
+                    <h3 className="font-medium text-navy mb-4">Leave Reviews</h3>
+                    <div className="space-y-4">
+                      {order.orderItems.map(item => {
+                        // ★ compute if user already reviewed this book
+                        const reviewsForThis = reviewsByBook[item.bookId] || [];
+                        const alreadyReviewed = reviewsForThis.some(r => r.userId === user?.id);
+
+                        return (
+                          <div
+                            key={item.id}
+                            className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+                          >
+                            <div className="flex items-center gap-4">
+                              <img
+                                src={item.bookImageUrl || '/placeholder-book.png'}
+                                alt={item.bookTitle}
+                                className="w-12 h-16 object-cover rounded"
+                              />
+                              <span className="text-navy">{item.bookTitle}</span>
+                            </div>
+
+                            {reviewForms[item.bookId]?.show ? (
+                              /* ── your existing form JSX ── */
+                              <form
+                                onSubmit={e => handleReviewSubmit(e, item.bookId)}
+                                className="flex flex-col gap-4 w-full md:w-auto bg-beige/20 p-4 rounded-lg shadow-sm border border-gray-100"
+                              >
+                                {reviewForms[item.bookId].error && (
+                                  <div className="bg-red-50 text-red-600 p-2 rounded-md text-sm border-l-4 border-red-500">
+                                    {reviewForms[item.bookId].error}
+                                  </div>
+                                )}
+                                
+                                <div>
+                                  <label className="block text-sm font-medium text-navy mb-2">Your Rating</label>
+                                  <div className="flex items-center gap-1 bg-beige/30 p-2 rounded-md border border-gray-100">
+                                    {[1, 2, 3, 4, 5].map(star => (
+                                      <button
+                                        key={star}
+                                        type="button"
+                                        onClick={() => handleReviewInputChange(item.bookId, 'rating', star)}
+                                        onMouseEnter={() => handleStarHover(item.bookId, star)}
+                                        onMouseLeave={() => handleStarLeave(item.bookId)}
+                                        className="focus:outline-none bg-transparent p-0.5 rounded-sm hover:bg-white/50 transition-colors"
+                                      >
+                                        <Star 
+                                          strokeWidth={1.5}
+                                          className={`h-5 w-5 ${(hoverRating[item.bookId] || reviewForms[item.bookId].rating) >= star 
+                                            ? 'fill-gold text-gold' 
+                                            : 'text-gray-400 fill-transparent'}`} 
+                                        />
+                                      </button>
+                                    ))}
+                                    <span className="ml-2 text-sm text-navy">
+                                      {reviewForms[item.bookId].rating} out of 5
+                                    </span>
+                                  </div>
+                                </div>
+                                
+                                <div>
+                                  <label className="block text-sm font-medium text-navy mb-2">Your Review</label>
+                                  <textarea
+                                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-navy focus:border-navy transition-all"
+                                    rows={3}
+                                    placeholder="Share your thoughts about this book..."
+                                    value={reviewForms[item.bookId].comment}
+                                    onChange={e =>
+                                      handleReviewInputChange(item.bookId, 'comment', e.target.value)
+                                    }
+                                  />
+                                  <p className="text-right text-sm text-gray-500 mt-1">
+                                    {reviewForms[item.bookId].comment.length} characters
+                                    {reviewForms[item.bookId].comment.length < 10 && reviewForms[item.bookId].comment.length > 0 && 
+                                      <span className="text-red-500"> (minimum 10 characters)</span>}
+                                  </p>
+                                </div>
+                                
+                                <div className="flex justify-between mt-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setReviewForms(prev => ({
+                                      ...prev,
+                                      [item.bookId]: { ...prev[item.bookId], show: false }
+                                    }))}
+                                    className="border border-gray-300 bg-white text-navy hover:bg-gray-100 transition-colors px-4 py-2 rounded-md text-sm font-medium"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    type="submit"
+                                    disabled={!reviewForms[item.bookId].comment || reviewForms[item.bookId].comment.length < 10}
+                                    className={`bg-navy text-white px-6 py-2 rounded-md hover:bg-gold hover:text-navy transition-colors text-sm font-medium ${(!reviewForms[item.bookId].comment || reviewForms[item.bookId].comment.length < 10) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                  >
+                                    Submit Review
+                                  </button>
+                                </div>
+                              </form>
+                            ) : alreadyReviewed ? (
+                              // ★ if already reviewed, show a message
+                              <p className="text-gray-600 text-sm">
+                                You have already reviewed this book.
+                              </p>
+                            ) : (
+                              // ★ otherwise show the Leave Review button
+                              <button
+                                onClick={() => openReviewForm(item.bookId)}
+                                className="bg-navy text-white px-4 py-2 rounded-md hover:bg-gold hover:text-navy transition"
+                              >
+                                Leave Review
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {/* ─── END REVIEW SECTION ─────────────────────────────────────── */}
               </div>
             ))}
           </div>
