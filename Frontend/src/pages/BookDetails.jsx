@@ -280,6 +280,11 @@ function BookDetails() {
                   {book.discountPercentage}% Off
                 </div>
               )}
+              {book.isAwardWinning && (
+                <div className="absolute top-0 right-0 bg-gold text-navy text-xs font-bold px-2 py-1 z-10">
+                  Award Winner
+                </div>
+              )}
               {book.rating > 4 && (
                 <div className="absolute top-2 left-2 bg-gold text-navy text-xs font-bold px-2 py-1 rounded">
                   Bestseller

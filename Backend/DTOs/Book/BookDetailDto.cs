@@ -12,6 +12,7 @@ namespace LordofTheReads.DTOs.Book
         public string? Language { get; set; }
         public string? Format { get; set; }
         public bool PhysicalLibraryAccess { get; set; }
+        public bool IsAwardWinning { get; set; }
         public string? Publisher { get; set; }
         public string? ImageUrl { get; set; }
         public DateTime? CreatedAt { get; set; }

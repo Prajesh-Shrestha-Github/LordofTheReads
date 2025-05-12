@@ -57,7 +57,8 @@ namespace LordofTheReads.Controllers
                         UpdatedAt = b.UpdatedAt,
                         Language = b.Language,
                         Format = b.Format,
-                        PhysicalLibraryAccess = b.PhysicalLibraryAccess
+                        PhysicalLibraryAccess = b.PhysicalLibraryAccess,
+                        IsAwardWinning = b.IsAwardWinning
                     })
                     .ToListAsync();
 
@@ -113,6 +114,7 @@ namespace LordofTheReads.Controllers
                     Language = book.Language,
                     Format = book.Format,
                     PhysicalLibraryAccess = book.PhysicalLibraryAccess,
+                    IsAwardWinning = book.IsAwardWinning,
                     Authors = book.BookAuthors?.Select(ba => new AuthorDto
                     {
                         Id = ba.Author.Id,
@@ -304,6 +306,7 @@ namespace LordofTheReads.Controllers
                     Language = bookCreateDto.Language,
                     Format = bookCreateDto.Format,
                     PhysicalLibraryAccess = bookCreateDto.PhysicalLibraryAccess,
+                    IsAwardWinning = bookCreateDto.IsAwardWinning,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
@@ -419,6 +422,7 @@ namespace LordofTheReads.Controllers
                 book.Language = bookUpdateDto.Language;
                 book.Format = bookUpdateDto.Format;
                 book.PhysicalLibraryAccess = bookUpdateDto.PhysicalLibraryAccess;
+                book.IsAwardWinning = bookUpdateDto.IsAwardWinning;
                 book.UpdatedAt = DateTime.UtcNow;
 
                 // Process new authors if provided

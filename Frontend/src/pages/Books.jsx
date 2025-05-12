@@ -48,6 +48,7 @@ function Books() {
     newRelease: false,
     newArrival: false,
     comingSoon: false,
+    awardWinning: false, // Added for award-winning books
   });
   const [sortBy, setSortBy] = useState('popularity');
   const [searchQuery, setSearchQuery] = useState('');
@@ -248,6 +249,12 @@ function Books() {
         );
       }
       
+      // Apply award-winning filter
+      if (filters.awardWinning) {
+        // Filter books that are marked as award winning
+        filteredResults = filteredResults.filter(book => book.isAwardWinning);
+      }
+      
       // Apply sorting
       if (sortBy === 'price-low') {
         filteredResults.sort((a, b) => {
@@ -326,6 +333,12 @@ function Books() {
         setShowFilters(true);
       } else if (filterParam === 'coming-soon') {
         updatedFilters.comingSoon = true;
+        // Show filters panel when a specific filter is applied
+        setShowFilters(true);
+      } else if (filterParam === 'award-winners') {
+        // For award winners, we'll need to filter the books in the fetchFilteredBooks function
+        // Set a flag to indicate we're looking for award-winning books
+        updatedFilters.awardWinning = true;
         // Show filters panel when a specific filter is applied
         setShowFilters(true);
       }
@@ -779,6 +792,16 @@ function Books() {
                     />
                     <label htmlFor="filter-comingSoon" className="text-sm text-gray-600">Coming Soon</label>
                   </div>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="filter-awardWinning"
+                      checked={filters.awardWinning}
+                      onChange={() => handleFilterChange('awardWinning', !filters.awardWinning)}
+                      className="mr-2"
+                    />
+                    <label htmlFor="filter-awardWinning" className="text-sm text-gray-600">Award Winners</label>
+                  </div>
                 </div>
               </div>
               
@@ -1048,6 +1071,12 @@ function Books() {
                       {book.onSaleFlag && (
                         <div className="absolute top-0 left-0 bg-red-500 text-white text-xs font-bold px-2 py-1 z-10">
                           {book.discountPercentage}% Off
+                        </div>
+                      )}
+                      {/* Award Winner Tag */}
+                      {book.isAwardWinning && (
+                        <div className="absolute top-0 right-0 bg-gold text-navy text-xs font-bold px-2 py-1 z-10">
+                          Award Winner
                         </div>
                       )}
                       {/* Coming Soon Tag */}

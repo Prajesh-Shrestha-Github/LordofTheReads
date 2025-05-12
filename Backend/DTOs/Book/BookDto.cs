@@ -31,5 +31,8 @@ namespace LordofTheReads.DTOs.Book
         
         // Average rating of the book
         public decimal Rating { get; set; }
+        
+        // Whether the book has won an award
+        public bool IsAwardWinning { get; set; }
     }
 }

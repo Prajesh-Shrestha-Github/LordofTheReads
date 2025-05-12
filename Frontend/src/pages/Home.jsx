@@ -82,11 +82,9 @@ function Home() {
     }
   };
 
-  const getMockAwardWinners = (books) => {
-    // Hard-coded random books
-    return [...books]
-      .sort(() => 0.5 - Math.random())
-      .slice(0, 5);
+  const getAwardWinners = (books) => {
+    // Only return books that are marked as award winning
+    return books.filter(book => book.isAwardWinning).slice(0, 5);
   };
 
   const getNewReleases = (books) => {
@@ -178,7 +176,7 @@ function Home() {
         setBooks(allBooks);
         
         // Populate special categories (except bestsellers which has its own API call)
-        setAwardWinners(getMockAwardWinners(allBooks));
+        setAwardWinners(getAwardWinners(allBooks));
         setNewReleases(getNewReleases(allBooks));
         setNewArrivals(getNewArrivals(allBooks));
         setComingSoon(getComingSoonBooks(allBooks));
@@ -516,7 +514,12 @@ function Home() {
       {/* Award Winners Section */}
       <section id="awardwinners" className="py-12 bg-beige">
         <div className="container mx-auto px-4">
-          <h2 className="text-xl font-bold text-navy text-center mb-8">Award Winners</h2>
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-xl font-bold text-navy">Award Winners</h2>
+            <Link to="/books?filter=award-winners" className="text-sm text-navy hover:text-gold transition-colors">
+              See More
+            </Link>
+          </div>
           
           {loading ? (
             <div className="text-center py-10">
@@ -704,6 +707,11 @@ function Home() {
                       {book.onSaleFlag && (
                         <div className="absolute top-0 left-0 bg-red-500 text-white px-2 py-1 text-xs font-bold">
                           {book.discountPercentage}% OFF
+                        </div>
+                      )}
+                      {book.isAwardWinning && (
+                        <div className="absolute top-0 right-0 bg-gold text-navy px-2 py-1 text-xs font-bold">
+                          Award Winner
                         </div>
                       )}
                     </Link>

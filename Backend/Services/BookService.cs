@@ -49,6 +49,7 @@ namespace LordofTheReads.Services
                         Language = b.Language,
                         Format = b.Format,
                         PhysicalLibraryAccess = b.PhysicalLibraryAccess,
+                        IsAwardWinning = b.IsAwardWinning,
                         // Use the actual image URL if it exists
                         ImageUrl = b.ImageUrl ?? "https://placehold.co/300x450?text=No+Cover",
                         CreatedAt = b.CreatedAt,
@@ -116,6 +117,7 @@ namespace LordofTheReads.Services
                     Language = bookEntity.Language,
                     Format = bookEntity.Format,
                     PhysicalLibraryAccess = bookEntity.PhysicalLibraryAccess,
+                    IsAwardWinning = bookEntity.IsAwardWinning,
                     // Use the actual image URL if it exists
                     ImageUrl = bookEntity.ImageUrl ?? "https://placehold.co/300x450?text=No+Cover",
                     CreatedAt = bookEntity.CreatedAt,
@@ -259,9 +261,8 @@ namespace LordofTheReads.Services
                             query = query.OrderByDescending(b => b.OrderItems.Count()).Take(50);
                             break;
                         case "award-winners":
-                            // This would require an additional field in the database
-                            // For now, we'll just return books with high ratings
-                            query = query.Where(b => b.Reviews.Any() && b.Reviews.Average(r => r.Rating) >= 4.5);
+                            // Use the IsAwardWinning property to filter award-winning books
+                            query = query.Where(b => b.IsAwardWinning);
                             break;
                         case "new-releases":
                             // Books published in the last 3 months
@@ -368,6 +369,7 @@ namespace LordofTheReads.Services
                         Language = b.Language,
                         Format = b.Format,
                         PhysicalLibraryAccess = b.PhysicalLibraryAccess,
+                        IsAwardWinning = b.IsAwardWinning,
                         ImageUrl = b.ImageUrl ?? "https://placehold.co/300x450?text=No+Cover",
                         CreatedAt = b.CreatedAt,
                         UpdatedAt = b.UpdatedAt,

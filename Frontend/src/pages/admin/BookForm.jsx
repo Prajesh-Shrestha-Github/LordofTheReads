@@ -12,7 +12,8 @@ const BookForm = () => {
   const [formData, setFormData] = useState({
     title: '', isbn: '', description: '', price: '',
     publicationDate: '', stockQuantity: '', publisher: '', imageUrl: '',
-    authorIds: [], genreIds: [], newAuthors: [], newGenres: [], language: '', format: '', physicalLibraryAccess: false
+    authorIds: [], genreIds: [], newAuthors: [], newGenres: [], language: '', format: '', 
+    physicalLibraryAccess: false, isAwardWinning: false
   });
   const [authors, setAuthors] = useState([]);
   const [genres, setGenres] = useState([]);
@@ -44,7 +45,9 @@ const BookForm = () => {
             publisher: book.publisher || '', imageUrl: book.imageUrl || '',
             authorIds: book.authors?.map(a => a.id) || [],
             genreIds: book.genres?.map(g => g.id) || [],
-            newAuthors: [], newGenres: [], language: book.language || '', format: book.format || '', physicalLibraryAccess: book.physicalLibraryAccess
+            newAuthors: [], newGenres: [], language: book.language || '', format: book.format || '', 
+            physicalLibraryAccess: book.physicalLibraryAccess || false, 
+            isAwardWinning: book.isAwardWinning || false
           });
         }
       } catch (e) {
@@ -188,6 +191,16 @@ const BookForm = () => {
                 checked={formData.physicalLibraryAccess}
                 onChange={e => setFormData(prev => ({ ...prev, physicalLibraryAccess: e.target.checked }))}
               />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="mr-2">Award Winning Book</label>
+              <input
+                type="checkbox"
+                name="isAwardWinning"
+                checked={formData.isAwardWinning}
+                onChange={e => setFormData(prev => ({ ...prev, isAwardWinning: e.target.checked }))}
+              />
+              <span className="text-xs text-gray-500 ml-2">(Will display an award badge on the book)</span>
             </div>
             <div><label>Image URL</label><input name="imageUrl" value={formData.imageUrl} onChange={handleChange} className="w-full p-2 border"/></div>
             {formData.imageUrl && (

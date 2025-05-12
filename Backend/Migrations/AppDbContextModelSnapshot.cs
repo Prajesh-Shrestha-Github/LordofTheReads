@@ -113,6 +113,10 @@ namespace LordofTheReads.Migrations
                         .HasColumnType("character varying(255)")
                         .HasColumnName("image_url");
 
+                    b.Property<bool>("IsAwardWinning")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_award_winning");
+
                     b.Property<string>("Language")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")

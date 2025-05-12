@@ -43,6 +43,9 @@ namespace LordofTheReads.Database.Entities
         [Column("physical_library_access")]
         public bool PhysicalLibraryAccess { get; set; } = false;
 
+        [Column("is_award_winning")]
+        public bool IsAwardWinning { get; set; } = false;
+
         [StringLength(255)]
         [Column("image_url")]
         public string? ImageUrl { get; set; }
