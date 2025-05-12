@@ -1020,7 +1020,7 @@ function Books() {
             {!error && totalPages > 0 && (
               <div className="mt-8 flex flex-col items-center">
                 {/* Pagination status/info */}
-                <div className="mb-4 text-sm text-gray-600">
+                <div className="mb-4 text-sm text-navy/60">
                   {loading ? (
                     <span>Loading books...</span>
                   ) : (
@@ -1035,7 +1035,7 @@ function Books() {
                   <button
                     onClick={() => paginate(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
-                    className="w-8 h-8 flex items-center justify-center rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-8 h-8 flex items-center justify-center rounded-md bg-transparent border border-navy/30 text-navy/80 hover:bg-beige/20 hover:text-navy disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     &lt;
                   </button>
@@ -1051,10 +1051,10 @@ function Books() {
                         key={1}
                         onClick={() => paginate(1)}
                         className={`w-8 h-8 flex items-center justify-center rounded-md ${
-                          currentPage === 1
-                            ? 'bg-navy text-white font-medium'
-                            : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
-                        }`}
+                            currentPage === 1
+                              ? 'bg-navy/80 text-white font-medium'
+                              : 'bg-transparent border border-navy/30 text-navy/80 hover:bg-beige/20 hover:text-navy'
+                          }`}
                         aria-label={`Go to page 1`}
                       >
                         1
@@ -1066,7 +1066,7 @@ function Books() {
                       // If current page is more than 3 pages away from start, show ellipsis
                       if (currentPage > 3) {
                         pageButtons.push(
-                          <span key="ellipsis-1" className="px-2 text-gray-500">
+                          <span key="ellipsis-1" className="px-2 text-navy/50">
                             ...
                           </span>
                         );
@@ -1093,8 +1093,8 @@ function Books() {
                             onClick={() => paginate(i)}
                             className={`w-8 h-8 flex items-center justify-center rounded-md ${
                               currentPage === i
-                                ? 'bg-navy text-white font-medium'
-                                : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
+                                ? 'bg-navy/80 text-white font-medium'
+                                : 'bg-transparent border border-navy/30 text-navy/80 hover:bg-beige/20 hover:text-navy'
                             }`}
                             aria-label={`Go to page ${i}`}
                           >
@@ -1106,7 +1106,7 @@ function Books() {
                       // If current page is more than 3 pages away from end, show ellipsis
                       if (currentPage < totalPages - 2) {
                         pageButtons.push(
-                          <span key="ellipsis-2" className="px-2 text-gray-500">
+                          <span key="ellipsis-2" className="px-2 text-navy/50">
                             ...
                           </span>
                         );
@@ -1120,8 +1120,8 @@ function Books() {
                             onClick={() => paginate(i)}
                             className={`w-8 h-8 flex items-center justify-center rounded-md ${
                               currentPage === i
-                                ? 'bg-navy text-white font-medium'
-                                : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
+                                ? 'bg-navy/80 text-white font-medium'
+                                : 'bg-transparent border border-navy/30 text-navy/80 hover:bg-beige/20 hover:text-navy'
                             }`}
                             aria-label={`Go to page ${i}`}
                           >
@@ -1139,8 +1139,8 @@ function Books() {
                           onClick={() => paginate(totalPages)}
                           className={`w-8 h-8 flex items-center justify-center rounded-md ${
                             currentPage === totalPages
-                              ? 'bg-navy text-white font-medium'
-                              : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
+                              ? 'bg-navy/80 text-white font-medium'
+                              : 'bg-transparent border border-navy/30 text-navy/80 hover:bg-beige/20 hover:text-navy'
                           }`}
                           aria-label={`Go to page ${totalPages}`}
                         >
@@ -1156,7 +1156,7 @@ function Books() {
                   <button
                     onClick={() => paginate(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
-                    className="w-8 h-8 flex items-center justify-center rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-8 h-8 flex items-center justify-center rounded-md bg-transparent border border-navy/30 text-navy/80 hover:bg-beige/20 hover:text-navy disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     &gt;
                   </button>
