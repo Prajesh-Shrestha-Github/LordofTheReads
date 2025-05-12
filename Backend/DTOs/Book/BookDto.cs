@@ -34,5 +34,8 @@ namespace LordofTheReads.DTOs.Book
         
         // Whether the book has won an award
         public bool IsAwardWinning { get; set; }
+        
+        // Number of times the book has been ordered (for bestseller ranking)
+        public int OrderCount { get; set; }
     }
 }

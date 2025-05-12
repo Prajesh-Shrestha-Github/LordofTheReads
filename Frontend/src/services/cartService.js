@@ -33,6 +33,10 @@ const cartService = {
       return response.data;
     } catch (error) {
       console.error('Error adding item to cart:', error);
+      // Check if it's a stock quantity error
+      if (error.response && error.response.status === 400 && error.response.data.includes('Not enough stock')) {
+        throw new Error(error.response.data);
+      }
       throw error;
     }
   },
@@ -48,6 +52,10 @@ const cartService = {
       return response.data;
     } catch (error) {
       console.error('Error updating cart item:', error);
+      // Check if it's a stock quantity error
+      if (error.response && error.response.status === 400 && error.response.data.includes('Not enough stock')) {
+        throw new Error(error.response.data);
+      }
       throw error;
     }
   },

@@ -156,9 +156,14 @@ function BookDetails() {
       }, 3000);
     } catch (err) {
       console.error('Error adding book to cart:', err);
+      // Check if it's a stock quantity error
+      const errorMessage = err.message && err.message.includes('Not enough stock') 
+        ? err.message 
+        : 'Failed to add book to cart. Please try again.';
+        
       setNotification({
         show: true,
-        message: 'Failed to add book to cart. Please try again.',
+        message: errorMessage,
         type: 'error'
       });
       setTimeout(() => {

@@ -276,8 +276,38 @@ function Books() {
         });
       } else if (sortBy === 'rating') {
         filteredResults.sort((a, b) => b.rating - a.rating);
+      } else if (sortBy === 'popularity') {
+        // Sort by popularity (bestsellers) based on order count, review count, and rating
+        filteredResults.sort((a, b) => {
+          // Calculate a popularity score based on multiple factors
+          // 1. Order count (if available)
+          const aOrderCount = a.orderCount || 0;
+          const bOrderCount = b.orderCount || 0;
+          
+          // 2. Review count
+          const aReviewCount = a.reviewCount || 0;
+          const bReviewCount = b.reviewCount || 0;
+          
+          // 3. Rating
+          const aRating = a.rating || 0;
+          const bRating = b.rating || 0;
+          
+          // 4. Award-winning status (give a boost to award-winning books)
+          const aAwardBonus = a.isAwardWinning ? 5 : 0;
+          const bAwardBonus = b.isAwardWinning ? 5 : 0;
+          
+          // Calculate weighted popularity score
+          // Order count is the primary factor (weight: 3)
+          // Review count is secondary (weight: 1)
+          // Rating adds additional weight (weight: 2)
+          // Award-winning status gives a boost
+          const aPopularity = (aOrderCount * 3) + aReviewCount + (aRating * 2) + aAwardBonus;
+          const bPopularity = (bOrderCount * 3) + bReviewCount + (bRating * 2) + bAwardBonus;
+          
+          // Sort in descending order (higher score first)
+          return bPopularity - aPopularity;
+        });
       }
-      // Note: 'popularity' sorting would require sales data, which we don't have client-side
       
       // Apply pagination
       const totalCount = filteredResults.length;

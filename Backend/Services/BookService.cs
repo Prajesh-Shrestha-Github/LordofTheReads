@@ -36,6 +36,7 @@ namespace LordofTheReads.Services
                     .Include(b => b.BookGenres)
                     .ThenInclude(bg => bg.Genre)
                     .Include(b => b.Reviews)
+                    .Include(b => b.OrderItems)
                     .Select(b => new BookDto
                     {
                         Id = b.Id,
@@ -62,6 +63,8 @@ namespace LordofTheReads.Services
                         Genres = b.BookGenres.Select(bg => bg.Genre.Name).ToList(),
                         // Number of reviews for the book
                         ReviewCount = b.Reviews.Count(),
+                        // Number of times the book has been ordered (for popularity/bestseller sorting)
+                        OrderCount = b.OrderItems.Count(),
                     })
                     .ToListAsync();
 

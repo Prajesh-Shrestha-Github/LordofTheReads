@@ -76,6 +76,12 @@ namespace LordofTheReads.Services
                 .FirstOrDefaultAsync(b => b.Id == bookId);
                 
             if (book == null) throw new KeyNotFoundException($"Book with ID {bookId} not found");
+            
+            // Check if there's enough stock
+            if (book.StockQuantity < quantity)
+            {
+                throw new InvalidOperationException($"Not enough stock available. Only {book.StockQuantity} copies of '{book.Title}' are available.");
+            }
 
             var cart = await GetOrCreateCartAsync(userId);
 
@@ -138,6 +144,14 @@ namespace LordofTheReads.Services
                 var book = await _context.Books
                     .Include(b => b.Discounts)
                     .FirstOrDefaultAsync(b => b.Id == bookId);
+                
+                if (book == null) throw new KeyNotFoundException($"Book with ID {bookId} not found");
+                
+                // Check if there's enough stock
+                if (book.StockQuantity < quantity)
+                {
+                    throw new InvalidOperationException($"Not enough stock available. Only {book.StockQuantity} copies of '{book.Title}' are available.");
+                }
                 
                 if (book != null)
                 {

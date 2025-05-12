@@ -89,8 +89,25 @@ function Cart() {
       ));
     } catch (err) {
       console.error('Error updating cart item quantity:', err);
+      
+      // Check if it's a stock quantity error
+      const errorMessage = err.message && err.message.includes('Not enough stock')
+        ? err.message
+        : 'Failed to update item quantity. Please try again.';
+      
       // Show error to user
-      alert('Failed to update item quantity. Please try again.');
+      setNotification({
+        show: true,
+        message: errorMessage,
+        type: 'error'
+      });
+      
+      // Reset the cart display to show accurate quantities
+      fetchCartItems();
+      
+      setTimeout(() => {
+        setNotification({ show: false, message: '', type: '' });
+      }, 3000);
     }
   };
 

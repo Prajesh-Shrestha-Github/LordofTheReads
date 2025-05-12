@@ -109,6 +109,11 @@ namespace LordofTheReads.Controllers
             {
                 return NotFound(ex.Message);
             }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Stock quantity error");
+                return BadRequest(ex.Message);
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error adding item to cart");
@@ -133,6 +138,11 @@ namespace LordofTheReads.Controllers
             catch (KeyNotFoundException ex)
             {
                 return NotFound(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Stock quantity error");
+                return BadRequest(ex.Message);
             }
             catch (Exception ex)
             {
