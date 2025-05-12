@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { bookService, authorGenreService } from '../../services/adminService';
-import { Save, CheckCircle } from 'lucide-react';
+import { Save, CheckCircle, AlertCircle, Loader, X } from 'lucide-react';
 import CreatableSelect from 'react-select/creatable';
+import { toast } from 'react-toastify';
 
 const BookForm = () => {
   const { id } = useParams();
@@ -15,12 +16,15 @@ const BookForm = () => {
     authorIds: [], genreIds: [], newAuthors: [], newGenres: [], language: '', format: '', 
     physicalLibraryAccess: false, isAwardWinning: false
   });
+  const [formErrors, setFormErrors] = useState({});
   const [authors, setAuthors] = useState([]);
   const [genres, setGenres] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState('basic');
+  const [initialLoad, setInitialLoad] = useState(true);
 
   // Add static dropdown options for language and format
   const languageOptions = ["English", "Spanish", "French", "German", "Chinese", "Japanese"];
@@ -59,7 +63,52 @@ const BookForm = () => {
     })();
   }, [id, isEditMode]);
 
-  const handleChange = e => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleChange = e => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear error for this field when user starts typing
+    if (formErrors[name]) {
+      setFormErrors(prev => ({ ...prev, [name]: undefined }));
+    }
+  };
+  
+  const validateForm = () => {
+    const errors = {};
+    
+    // Required fields validation
+    if (!formData.title?.trim()) errors.title = 'Title is required';
+    if (!formData.isbn?.trim()) errors.isbn = 'ISBN is required';
+    if (!formData.price) errors.price = 'Price is required';
+    if (!formData.stockQuantity) errors.stockQuantity = 'Stock quantity is required';
+    if (!formData.publisher?.trim()) errors.publisher = 'Publisher is required';
+    
+    // Format validation
+    if (formData.price && isNaN(parseFloat(formData.price))) {
+      errors.price = 'Price must be a valid number';
+    }
+    
+    if (formData.stockQuantity && isNaN(parseInt(formData.stockQuantity))) {
+      errors.stockQuantity = 'Stock quantity must be a valid number';
+    }
+    
+    // ISBN format validation (basic check)
+    if (formData.isbn?.trim() && !/^\d{10}(\d{3})?$/.test(formData.isbn.replace(/-/g, ''))) {
+      errors.isbn = 'ISBN must be a valid 10 or 13 digit number';
+    }
+    
+    // Author/Genre validation
+    if (formData.authorIds.length === 0 && formData.newAuthors.length === 0) {
+      errors.authors = 'At least one author is required';
+    }
+    
+    if (formData.genreIds.length === 0 && formData.newGenres.length === 0) {
+      errors.genres = 'At least one genre is required';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleAuthorsChange = options => {
     const ids = options.filter(o => typeof o.value === 'number').map(o => o.value);
@@ -74,49 +123,134 @@ const BookForm = () => {
 
   const handleSubmit = async e => {
     e.preventDefault();
-    setLoading(true); setError('');
+    setError('');
+    
+    // Validate form before submission
+    if (!validateForm()) {
+      // Show toast with the first validation error
+      const firstError = Object.values(formErrors)[0];
+      if (firstError) {
+        toast.error(firstError);
+      }
+      // Scroll to the first error field
+      const firstErrorField = document.querySelector(`[name="${Object.keys(formErrors)[0]}"]`);
+      if (firstErrorField) {
+        firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        firstErrorField.focus();
+      }
+      return;
+    }
+    
+    setSubmitting(true);
     try {
       const payload = { ...formData,
         price: parseFloat(formData.price) || 0,
-        stockQuantity: parseInt(formData.stockQuantity,10) || 0,
+        stockQuantity: parseInt(formData.stockQuantity, 10) || 0,
         // Ensure publicationDate is null if empty to avoid model binding errors
         publicationDate: formData.publicationDate ? formData.publicationDate : null
       };
-      if (isEditMode) await bookService.updateBook(id, payload);
-      else await bookService.createBook(payload);
+      
+      if (isEditMode) {
+        await bookService.updateBook(id, payload);
+        toast.success('Book updated successfully!');
+      } else {
+        await bookService.createBook(payload);
+        toast.success('Book created successfully!');
+      }
+      
       setSuccess(true);
-      setTimeout(() => navigate('/admin/books'), 1200);
+      // Delay navigation to allow user to see success message
+      setTimeout(() => navigate('/admin/books'), 1500);
     } catch (e) {
       console.error('Error saving book:', e);
-      // Log full server response
       console.error('Server response data:', e.response?.data);
-      // Flatten ModelState errors or use message
-      let msg = 'Failed to save book';
-      const data = e.response?.data;
-      if (data) {
-        if (typeof data === 'object') {
-          // data is ModelState dictionary
-          const errors = Object.values(data).flat();
-          if (errors.length) msg = errors.join(', ');
-        } else if (typeof data === 'string') {
-          msg = data;
-        } else if (data.message) {
-          msg = data.message;
+      
+      // Handle API validation errors
+      if (e.response?.data?.errors) {
+        const apiErrors = e.response.data.errors;
+        const formattedErrors = {};
+        
+        // Convert API errors to form errors
+        Object.keys(apiErrors).forEach(key => {
+          const fieldName = key.charAt(0).toLowerCase() + key.slice(1); // Convert to camelCase
+          formattedErrors[fieldName] = apiErrors[key][0];
+        });
+        
+        setFormErrors(formattedErrors);
+        const firstError = Object.values(formattedErrors)[0];
+        if (firstError) {
+          toast.error(firstError);
+          
+          // Scroll to the first error field
+          const firstErrorField = document.querySelector(`[name="${Object.keys(formattedErrors)[0]}"]`);
+          if (firstErrorField) {
+            firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            firstErrorField.focus();
+          }
         }
+      } else {
+        // Handle general error
+        let msg = 'Failed to save book';
+        const data = e.response?.data;
+        
+        if (data) {
+          if (typeof data === 'object' && !data.errors) {
+            // data is ModelState dictionary
+            const errors = Object.values(data).flat();
+            if (errors.length) msg = errors.join(', ');
+          } else if (typeof data === 'string') {
+            msg = data;
+          } else if (data.message) {
+            msg = data.message;
+          }
+        }
+        
+        setError(msg);
+        toast.error(msg);
       }
-      setError(msg);
-    } finally { setLoading(false); }
+    } finally { 
+      setSubmitting(false); 
+    }
   };
 
-  if (loading && isEditMode && !formData.title) return <div>Loading...</div>;
+  if (loading && isEditMode && !formData.title) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center h-64">
+        <Loader className="w-10 h-10 text-teal-500 animate-spin mb-4" />
+        <p className="text-gray-600">Loading book details...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-800">{isEditMode ? 'Edit' : 'Add'} Book</h2>
       </div>
-      {error && <div className="text-red-600 mb-4">{error}</div>}
-      {success && <div className="text-green-600 mb-4">Success!</div>}
+      
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md flex items-start">
+          <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 mr-2 flex-shrink-0" />
+          <div>
+            <p className="text-red-700 font-medium">Error</p>
+            <p className="text-red-600">{error}</p>
+          </div>
+          <button 
+            onClick={() => setError('')} 
+            className="ml-auto text-red-400 hover:text-red-600"
+            aria-label="Dismiss error"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+      
+      {success && (
+        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md flex items-center">
+          <CheckCircle className="w-5 h-5 text-green-500 mr-2 flex-shrink-0" />
+          <p className="text-green-700">Book saved successfully! Redirecting to books list...</p>
+        </div>
+      )}
       <div className="mb-8">
         <div className="flex justify-center gap-4 mb-2">
           <button
@@ -154,18 +288,91 @@ const BookForm = () => {
       <form onSubmit={handleSubmit} className="space-y-4">
         {activeTab==='basic' && (
           <>
-            <div><label>Title</label><input required name="title" value={formData.title} onChange={handleChange} className="w-full p-2 border"/></div>
-            <div><label>ISBN</label><input name="isbn" value={formData.isbn} onChange={handleChange} className="w-full p-2 border"/></div>
-            <div><label>Description</label><textarea name="description" value={formData.description} onChange={handleChange} className="w-full p-2 border"/></div>
+            <div className="mb-3">
+              <label className="block text-gray-700 mb-1">Title <span className="text-red-500">*</span></label>
+              <input 
+                name="title" 
+                value={formData.title} 
+                onChange={handleChange} 
+                className={`w-full p-2 border rounded-md ${formErrors.title ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
+              />
+              {formErrors.title && <p className="text-red-500 text-xs mt-1">{formErrors.title}</p>}
+            </div>
+            
+            <div className="mb-3">
+              <label className="block text-gray-700 mb-1">ISBN <span className="text-red-500">*</span></label>
+              <input 
+                name="isbn" 
+                value={formData.isbn} 
+                onChange={handleChange} 
+                className={`w-full p-2 border rounded-md ${formErrors.isbn ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
+              />
+              {formErrors.isbn && <p className="text-red-500 text-xs mt-1">{formErrors.isbn}</p>}
+              <p className="text-xs text-gray-500 mt-1">Format: 10 or 13 digits (e.g., 9781234567890)</p>
+            </div>
+            
+            <div className="mb-3">
+              <label className="block text-gray-700 mb-1">Description</label>
+              <textarea 
+                name="description" 
+                value={formData.description} 
+                onChange={handleChange} 
+                className="w-full p-2 border rounded-md border-gray-300 h-32"
+              ></textarea>
+            </div>
           </>
         )}
         {activeTab==='details' && (
           <>
-            <div><label>Price</label><input type="number" step="0.01" name="price" value={formData.price} onChange={handleChange} className="w-full p-2 border"/></div>
-            <div><label>Stock Quantity</label><input type="number" name="stockQuantity" value={formData.stockQuantity} onChange={handleChange} className="w-full p-2 border"/></div>
-            <div><label>Publication Date</label><input type="date" name="publicationDate" value={formData.publicationDate} onChange={handleChange} className="w-full p-2 border"/></div>
-            <div><label>Publisher</label><input name="publisher" value={formData.publisher} onChange={handleChange} className="w-full p-2 border"/></div>
-            <div><label>Language</label>
+            <div className="mb-3">
+              <label className="block text-gray-700 mb-1">Price <span className="text-red-500">*</span></label>
+              <input 
+                name="price" 
+                type="number" 
+                step="0.01" 
+                value={formData.price} 
+                onChange={handleChange} 
+                className={`w-full p-2 border rounded-md ${formErrors.price ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
+              />
+              {formErrors.price && <p className="text-red-500 text-xs mt-1">{formErrors.price}</p>}
+            </div>
+            
+            <div className="mb-3">
+              <label className="block text-gray-700 mb-1">Stock Quantity <span className="text-red-500">*</span></label>
+              <input 
+                name="stockQuantity" 
+                type="number" 
+                value={formData.stockQuantity} 
+                onChange={handleChange} 
+                className={`w-full p-2 border rounded-md ${formErrors.stockQuantity ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
+              />
+              {formErrors.stockQuantity && <p className="text-red-500 text-xs mt-1">{formErrors.stockQuantity}</p>}
+            </div>
+            
+            <div className="mb-3">
+              <label className="block text-gray-700 mb-1">Publisher <span className="text-red-500">*</span></label>
+              <input 
+                name="publisher" 
+                value={formData.publisher} 
+                onChange={handleChange} 
+                className={`w-full p-2 border rounded-md ${formErrors.publisher ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
+              />
+              {formErrors.publisher && <p className="text-red-500 text-xs mt-1">{formErrors.publisher}</p>}
+            </div>
+            
+            <div className="mb-3">
+              <label className="block text-gray-700 mb-1">Publication Date</label>
+              <input 
+                name="publicationDate" 
+                type="date" 
+                value={formData.publicationDate} 
+                onChange={handleChange} 
+                className="w-full p-2 border rounded-md border-gray-300"
+              />
+            </div>
+            
+            <div className="mb-3">
+              <label className="block text-gray-700 mb-1">Language</label>
               <CreatableSelect
                 isClearable
                 name="language"
@@ -215,8 +422,8 @@ const BookForm = () => {
         )}
         {activeTab==='authors' && (
           <>
-            <div>
-              <label>Authors & New</label>
+            <div className="mb-3">
+              <label className="block text-gray-700 mb-1">Authors <span className="text-red-500">*</span></label>
               <CreatableSelect
                 isMulti
                 options={authors
@@ -235,12 +442,18 @@ const BookForm = () => {
                 isClearable={true}
                 menuPortalTarget={document.body}
                 styles={{
-                  menuPortal: base => ({ ...base, zIndex: 9999 })
+                  menuPortal: base => ({ ...base, zIndex: 9999 }),
+                  control: (base) => ({
+                    ...base,
+                    borderColor: formErrors.authors ? '#f56565' : base.borderColor,
+                    backgroundColor: formErrors.authors ? '#FEF2F2' : base.backgroundColor
+                  })
                 }}
               />
+              {formErrors.authors && <p className="text-red-500 text-xs mt-1">{formErrors.authors}</p>}
             </div>
-            <div>
-              <label>Genres & New</label>
+            <div className="mb-3">
+              <label className="block text-gray-700 mb-1">Genres <span className="text-red-500">*</span></label>
               <CreatableSelect
                 isMulti
                 options={genres
@@ -259,18 +472,29 @@ const BookForm = () => {
                 isClearable={true}
                 menuPortalTarget={document.body}
                 styles={{
-                  menuPortal: base => ({ ...base, zIndex: 9999 })
+                  menuPortal: base => ({ ...base, zIndex: 9999 }),
+                  control: (base) => ({
+                    ...base,
+                    borderColor: formErrors.genres ? '#f56565' : base.borderColor,
+                    backgroundColor: formErrors.genres ? '#FEF2F2' : base.backgroundColor
+                  })
                 }}
               />
+              {formErrors.genres && <p className="text-red-500 text-xs mt-1">{formErrors.genres}</p>}
             </div>
           </>
         )}
         <button 
           type="submit" 
-          disabled={loading} 
-          className="px-4 py-2 bg-teal-500 text-white rounded-md hover:bg-teal-600 transition-colors flex items-center"
+          disabled={submitting}
+          className={`px-4 py-2 ${submitting ? 'bg-teal-400 cursor-not-allowed' : 'bg-teal-500 hover:bg-teal-600'} text-white rounded-md transition-colors flex items-center justify-center min-w-[100px]`}
         >
-          {loading ? 'Saving...' : (
+          {submitting ? (
+            <>
+              <Loader className="w-4 h-4 mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
             <>
               <Save className="w-4 h-4 mr-2" />
               Save

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { bookService } from '../../services/adminService';
-import { Plus, Edit, Trash2, Search, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Eye, AlertCircle, RefreshCw } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 const BooksManagement = () => {
   const [books, setBooks] = useState([]);
@@ -17,26 +18,35 @@ const BooksManagement = () => {
   const fetchBooks = async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await bookService.getAllBooks();
       setBooks(data);
-      setError(null);
     } catch (err) {
       console.error('Error fetching books:', err);
-      setError('Failed to load books. Please try again.');
+      const errorMessage = err.response?.data?.message || 'Failed to load books. Please try again.';
+      setError(errorMessage);
+      toast.error(`Error: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this book?')) return;
+    if (!window.confirm('Are you sure you want to delete this book? This action cannot be undone.')) return;
 
     try {
+      setLoading(true);
       await bookService.deleteBook(id);
       setBooks(books.filter(book => book.id !== id));
+      toast.success('Book deleted successfully');
+      setError(null);
     } catch (err) {
       console.error('Error deleting book:', err);
-      setError('Failed to delete book. Please try again.');
+      const errorMessage = err.response?.data?.message || 'Failed to delete book. Please try again.';
+      setError(errorMessage);
+      toast.error(`Error: ${errorMessage}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -48,8 +58,9 @@ const BooksManagement = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
+      <div className="flex flex-col justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mb-4"></div>
+        <p className="text-gray-600">Loading books...</p>
       </div>
     );
   }
@@ -67,8 +78,18 @@ const BooksManagement = () => {
       </div>
 
       {error && (
-        <div className="bg-orange-50 border border-orange-200 text-orange-700 p-4 rounded-md mb-4">
-          <p>{error}</p>
+        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-md mb-4 flex items-start">
+          <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="font-medium">{error}</p>
+            <button 
+              onClick={fetchBooks}
+              className="mt-2 inline-flex items-center text-sm font-medium text-red-700 hover:text-red-900"
+            >
+              <RefreshCw className="h-4 w-4 mr-1" />
+              Retry
+            </button>
+          </div>
         </div>
       )}
 

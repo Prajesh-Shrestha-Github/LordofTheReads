@@ -17,11 +17,14 @@ const PendingOrders = () => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await staffOrderService.getPendingOrders();
       setOrders(data);
     } catch (err) {
       console.error('Error fetching pending orders:', err);
-      setError('Failed to fetch pending orders');
+      const errorMessage = err.response?.data?.message || 'Failed to fetch pending orders';
+      setError(errorMessage);
+      toast.error(`Error: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -46,6 +49,12 @@ const PendingOrders = () => {
     if (!selectedOrder) return;
     if (!claimCode) {
       setError('Please enter claim code');
+      toast.error('Claim code is required');
+      return;
+    }
+    if (claimCode.trim().length < 3) {
+      setError('Claim code must be at least 3 characters');
+      toast.error('Invalid claim code format');
       return;
     }
     try {
@@ -70,8 +79,10 @@ const PendingOrders = () => {
         setSuccessMessage(null);
       }, 2000);
     } catch (err) {
+      console.error('Error processing order:', err);
       const message = err.response?.data?.message || `Failed to process order ${selectedOrder.id}`;
       setError(message);
+      toast.error(`Error: ${message}`);
     } finally {
       setProcessingOrder(false);
     }
@@ -79,6 +90,9 @@ const PendingOrders = () => {
 
   const handleCancel = async () => {
     if (!selectedOrder) return;
+    if (!window.confirm(`Are you sure you want to delete order #${selectedOrder.id}? This action cannot be undone.`)) {
+      return;
+    }
     try {
       setDeletingOrder(true);
       setError(null);
@@ -101,8 +115,10 @@ const PendingOrders = () => {
         setSuccessMessage(null);
       }, 2000);
     } catch (err) {
+      console.error('Error canceling order:', err);
       const message = err.response?.data?.message || `Failed to cancel order ${selectedOrder.id}`;
       setError(message);
+      toast.error(`Error: ${message}`);
     } finally {
       setDeletingOrder(false);
     }
@@ -114,7 +130,19 @@ const PendingOrders = () => {
       <p className="text-gray-600">Loading orders...</p>
     </div>
   );
-  if (error) return <div className="p-6 text-red-600">{error}</div>;
+  
+  if (error) return (
+    <div className="p-6 flex flex-col items-center justify-center h-64">
+      <AlertCircle className="h-8 w-8 text-red-600 mb-4" />
+      <p className="text-red-600 font-medium mb-4">{error}</p>
+      <button 
+        onClick={fetchOrders}
+        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+      >
+        Try Again
+      </button>
+    </div>
+  );
 
   return (
     <div className="p-6">
