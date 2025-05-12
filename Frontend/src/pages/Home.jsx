@@ -124,11 +124,42 @@ function Home() {
       .slice(0, 5);
   };
 
-  const getMockComingSoon = (books) => {
-    // Hard-coded random books
-    return [...books]
-      .sort(() => 0.5 - Math.random())
-      .slice(0, 5);
+  const getComingSoonBooks = (books) => {
+    // Get the current date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to beginning of today
+    
+    // Filter for books with publication dates in the future
+    const upcomingBooks = books.filter(book => {
+      if (!book.publicationDate) return false;
+      const publishDate = new Date(book.publicationDate);
+      return publishDate > today;
+    });
+    
+    // Sort by publication date ascending (closest upcoming releases first)
+    const sortedUpcoming = [...upcomingBooks].sort((a, b) => {
+      const dateA = new Date(a.publicationDate);
+      const dateB = new Date(b.publicationDate);
+      return dateA - dateB; // Ascending order (closest upcoming first)
+    });
+    
+    console.log('Found upcoming releases:', sortedUpcoming.length);
+    
+    // If not enough upcoming books, add some recent releases to fill the gap
+    if (sortedUpcoming.length < 5) {
+      const additionalNeeded = 5 - sortedUpcoming.length;
+      const existingIds = new Set(sortedUpcoming.map(book => book.id));
+      
+      // Get some recently published books to fill the gap
+      const fillerBooks = books
+        .filter(book => !existingIds.has(book.id))
+        .sort(() => 0.5 - Math.random()) // Random sort for variety
+        .slice(0, additionalNeeded);
+      
+      return [...sortedUpcoming, ...fillerBooks];
+    }
+    
+    return sortedUpcoming.slice(0, 5);
   };
 
   const getOnSaleBooks = (books) => {
@@ -150,7 +181,7 @@ function Home() {
         setAwardWinners(getMockAwardWinners(allBooks));
         setNewReleases(getNewReleases(allBooks));
         setNewArrivals(getNewArrivals(allBooks));
-        setComingSoon(getMockComingSoon(allBooks));
+        setComingSoon(getComingSoonBooks(allBooks));
         
         // Fetch bestsellers from the API using actual sales data
         fetchBestsellers();
@@ -747,65 +778,101 @@ function Home() {
             <div className="text-center text-red-500 py-10">{error}</div>
           ) : comingSoon.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              {comingSoon.map(book => (
-                <div key={book.id} className="flex flex-col">
-                  <div className="bg-beige aspect-[2/3] mb-3 flex items-center justify-center relative overflow-hidden">
-                    <Link to={`/book/${book.id}`} className="w-full h-full">
-                      <img 
-                        src={book.imageUrl || `https://placehold.co/300x450?text=${encodeURIComponent(book.title)}`}
-                        alt={book.title}
-                        className="object-contain h-full w-full"
-                      />
-                      {book.onSaleFlag && (
-                        <div className="absolute top-0 left-0 bg-red-500 text-white px-2 py-1 text-xs font-bold">
-                          {book.discountPercentage}% OFF
-                        </div>
-                      )}
-                    </Link>
-                    <button 
-                      onClick={() => handleBookmarkToggle(book)}
-                      className="absolute top-2 right-2 bg-white p-1.5 rounded-md shadow-md"
-                      aria-label={bookmarkStates[book.id] ? "Remove from bookmarks" : "Add to bookmarks"}
-                    >
-                      <svg 
-                        xmlns="http://www.w3.org/2000/svg" 
-                        className="h-5 w-5" 
-                        fill={bookmarkStates[book.id] ? "#2563EB" : "none"} 
-                        viewBox="0 0 24 24" 
-                        stroke={bookmarkStates[book.id] ? "#2563EB" : "#1E2B38"} 
-                        strokeWidth={2}
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                      </svg>
-                    </button>
-                  </div>
-                  <div>
-                    <Link to={`/book/${book.id}`} className="hover:text-gold">
-                      <h3 className="text-xs font-medium text-navy">{book.title}</h3>
-                    </Link>
-                    <p className="text-xs text-gray">{book.author || book.authors?.join(', ') || 'Unknown Author'}</p>
-                    <div className="flex justify-between items-center mt-2">
-                      {book.onSaleFlag ? (
-                        <div className="flex items-baseline space-x-2">
-                          <span className="text-xs text-gray-500 line-through">${book.price.toFixed(2)}</span>
-                          <span className="text-xs font-bold text-navy">${(book.price * (1 - book.discountPercentage/100)).toFixed(2)}</span>
-                        </div>
-                      ) : (
-                        <span className="text-xs font-bold text-navy">${(book.price || 0).toFixed(2)}</span>
-                      )}
+              {comingSoon.map(book => {
+                // Check if book is upcoming (publication date is in the future)
+                const isUpcoming = book.publicationDate && new Date(book.publicationDate) > new Date();
+                
+                return (
+                  <div key={book.id} className="flex flex-col">
+                    <div className="bg-beige aspect-[2/3] mb-3 flex items-center justify-center relative overflow-hidden">
+                      <Link to={`/book/${book.id}`} className="w-full h-full">
+                        <img 
+                          src={book.imageUrl || `https://placehold.co/300x450?text=${encodeURIComponent(book.title)}`}
+                          alt={book.title}
+                          className="object-contain h-full w-full"
+                        />
+                        {book.onSaleFlag && (
+                          <div className="absolute top-0 left-0 bg-red-500 text-white px-2 py-1 text-xs font-bold">
+                            {book.discountPercentage}% OFF
+                          </div>
+                        )}
+                        {isUpcoming && (
+                          <div className="absolute bottom-0 left-0 right-0 bg-emerald-700 text-white px-2 py-1 text-xs font-bold text-center">
+                            Release: {new Date(book.publicationDate).toLocaleDateString()}
+                          </div>
+                        )}
+                      </Link>
                       <button 
-                        onClick={() => handleAddToCart(book)}
-                        className="text-xs bg-navy text-white px-2 py-1 rounded-sm hover:bg-gold hover:text-navy transition-colors"
+                        onClick={() => handleBookmarkToggle(book)}
+                        className="absolute top-2 right-2 bg-white p-1.5 rounded-md shadow-md"
+                        aria-label={bookmarkStates[book.id] ? "Remove from bookmarks" : "Add to bookmarks"}
                       >
-                        Add to Cart
+                        <svg 
+                          xmlns="http://www.w3.org/2000/svg" 
+                          className="h-5 w-5" 
+                          fill={bookmarkStates[book.id] ? "#2563EB" : "none"} 
+                          viewBox="0 0 24 24" 
+                          stroke={bookmarkStates[book.id] ? "#2563EB" : "#1E2B38"} 
+                          strokeWidth={2}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                        </svg>
                       </button>
                     </div>
+                    <div>
+                      <Link to={`/book/${book.id}`} className="hover:text-gold">
+                        <h3 className="text-xs font-medium text-navy">{book.title}</h3>
+                      </Link>
+                      <p className="text-xs text-gray">{book.author || book.authors?.join(', ') || 'Unknown Author'}</p>
+                      {isUpcoming && (
+                        <p className="text-xs text-emerald-700 font-medium mt-1">
+                          Coming: {new Date(book.publicationDate).toLocaleDateString()}
+                        </p>
+                      )}
+                      <div className="flex justify-between items-center mt-2">
+                        {book.onSaleFlag ? (
+                          <div className="flex items-baseline space-x-2">
+                            <span className="text-xs text-gray-500 line-through">${book.price.toFixed(2)}</span>
+                            <span className="text-xs font-bold text-navy">${(book.price * (1 - book.discountPercentage/100)).toFixed(2)}</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs font-bold text-navy">${(book.price || 0).toFixed(2)}</span>
+                        )}
+                        
+                        {isUpcoming ? (
+                          <button 
+                            disabled
+                            className="text-xs bg-gray-400 text-white px-2 py-1 rounded-sm cursor-not-allowed"
+                            title="Available after release date"
+                          >
+                            Available on release
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={() => handleAddToCart(book)}
+                            className="text-xs bg-navy text-white px-2 py-1 rounded-sm hover:bg-gold hover:text-navy transition-colors"
+                          >
+                            Add to Cart
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
-            <div className="text-center text-navy">No coming soon titles available</div>
+            <div className="text-center text-navy">No upcoming releases available</div>
+          )}
+          {comingSoon.length > 0 && (
+            <div className="mt-8 text-center">
+              <Link 
+                to="/books?filter=coming-soon" 
+                className="inline-block bg-transparent text-navy border border-navy px-6 py-2 rounded-md hover:bg-gold hover:text-white hover:border-gold transition-colors"
+              >
+                See More Upcoming Books
+              </Link>
+            </div>
           )}
         </div>
       </section>

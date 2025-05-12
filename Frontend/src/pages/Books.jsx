@@ -1050,6 +1050,12 @@ function Books() {
                           {book.discountPercentage}% Off
                         </div>
                       )}
+                      {/* Coming Soon Tag */}
+                      {book.publicationDate && new Date(book.publicationDate) > new Date() && (
+                        <div className="absolute bottom-0 left-0 right-0 bg-emerald-700 text-white text-xs font-bold px-2 py-1 text-center z-10">
+                          Release: {new Date(book.publicationDate).toLocaleDateString()}
+                        </div>
+                      )}
                       <div className={`${viewMode === 'grid' ? 'aspect-[3/4]' : 'h-full'} bg-gray-100 flex items-center justify-center`}>
                         <img 
                           src={book.imageUrl || `https://via.placeholder.com/300x450?text=${encodeURIComponent(book.title)}`}
@@ -1084,12 +1090,22 @@ function Books() {
                         ) : (
                           <span className="text-sm font-bold text-navy">${book.price.toFixed(2)}</span>
                         )}
-                        <button 
-                          className="bg-navy text-white text-xs px-2 py-1 rounded-sm hover:bg-gold transition-colors"
-                          onClick={() => handleAddToCart(book)}
-                        >
-                          Add to Cart
-                        </button>
+                        {book.publicationDate && new Date(book.publicationDate) > new Date() ? (
+                          <button 
+                            disabled
+                            className="bg-gray-400 text-white text-xs px-2 py-1 rounded-sm cursor-not-allowed"
+                            title="Available after release date"
+                          >
+                            Available on release
+                          </button>
+                        ) : (
+                          <button 
+                            className="bg-navy text-white text-xs px-2 py-1 rounded-sm hover:bg-gold transition-colors"
+                            onClick={() => handleAddToCart(book)}
+                          >
+                            Add to Cart
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

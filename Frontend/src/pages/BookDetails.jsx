@@ -17,6 +17,7 @@ function BookDetails() {
   const [error, setError] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const [isUpcoming, setIsUpcoming] = useState(false);
   const [notification, setNotification] = useState({ show: false, message: '', type: '' });
   const { isAuthenticated } = useAuth();
   
@@ -56,7 +57,7 @@ function BookDetails() {
     fetchBookDetails();
   }, [id]);
   
-  // Check if book is bookmarked
+  // Check if book is bookmarked and handle upcoming status
   useEffect(() => {
     const verifyBookmarkStatus = async () => {
       if (isAuthenticated() && book) {
@@ -68,6 +69,25 @@ function BookDetails() {
         }
       }
     };
+    
+    // Check if book is upcoming based on publication date
+    if (book && book.publicationDate) {
+      const publishDate = new Date(book.publicationDate);
+      const today = new Date();
+      // Clear the time portion for date comparison
+      today.setHours(0, 0, 0, 0);
+      publishDate.setHours(0, 0, 0, 0);
+      const isUpcoming = publishDate > today;
+      console.log('Book upcoming status:', {
+        title: book.title,
+        publicationDate: book.publicationDate,
+        publishDate: publishDate.toISOString(),
+        today: today.toISOString(),
+        isUpcoming
+      });
+      // Store the upcoming status in state
+      setIsUpcoming(isUpcoming);
+    }
     
     verifyBookmarkStatus();
   }, [book, isAuthenticated]);
@@ -95,6 +115,18 @@ function BookDetails() {
   };
   
   const handleAddToCart = async () => {
+    // Check if book is upcoming and prevent adding to cart
+    if (isUpcoming) {
+      setNotification({
+        show: true,
+        message: `${book.title} is not yet available. It will be released on ${new Date(book.publicationDate).toLocaleDateString()}.`,
+        type: 'error'
+      });
+      setTimeout(() => {
+        setNotification({ show: false, message: '', type: '' });
+      }, 3000);
+      return;
+    }
     
     if (!isAuthenticated()) {
       // Redirect to login if not authenticated
@@ -253,6 +285,11 @@ function BookDetails() {
                   Bestseller
                 </div>
               )}
+              {isUpcoming && (
+                <div className="absolute bottom-0 left-0 right-0 bg-emerald-700 text-white px-3 py-2 text-sm font-bold text-center">
+                  Coming: {book.publicationDate ? new Date(book.publicationDate).toLocaleDateString() : 'Soon'}
+                </div>
+              )}
               <img 
                 src={book.imageUrl || '/placeholder-book.png'} 
                 alt={book.title} 
@@ -277,6 +314,26 @@ function BookDetails() {
               </div>
               <span className="ml-2 text-navy">{book.rating || 4.5} ({book.reviewCount || 1289} reviews)</span>
             </div>
+            
+            {/* Upcoming banner if publication date is in future */}
+            {isUpcoming && (
+              <div className="bg-emerald-100 border-l-4 border-emerald-700 text-emerald-900 p-4 mb-6 rounded">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    {/* Calendar icon */}
+                    <svg className="h-5 w-5 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-emerald-900">Coming Soon</h3>
+                    <div className="mt-1 text-sm text-emerald-800">
+                      <p>This book will be available on {book.publicationDate ? new Date(book.publicationDate).toLocaleDateString() : 'a future date'}. Pre-ordering is not available at this time.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             
             {/* Price */}
             {book.onSaleFlag ? (
@@ -339,13 +396,24 @@ function BookDetails() {
             
             {/* Action buttons */}
             <div className="flex flex-wrap gap-4 mb-8">
-              <button 
-                onClick={handleAddToCart}
-                className="flex items-center bg-navy text-white px-6 py-2 rounded-md hover:bg-gold hover:text-navy transition-colors"
-              >
-                <ShoppingCart className="mr-2 h-5 w-5" />
-                Add to Cart
-              </button>
+              {isUpcoming ? (
+                <button 
+                  disabled
+                  className="flex items-center bg-gray-400 text-white px-6 py-2 rounded-md cursor-not-allowed"
+                  title="Available after release date"
+                >
+                  <ShoppingCart className="mr-2 h-5 w-5" />
+                  Available on release
+                </button>
+              ) : (
+                <button 
+                  onClick={handleAddToCart}
+                  className="flex items-center bg-navy text-white px-6 py-2 rounded-md hover:bg-gold hover:text-navy transition-colors"
+                >
+                  <ShoppingCart className="mr-2 h-5 w-5" />
+                  Add to Cart
+                </button>
+              )}
               
               <button 
                 onClick={handleBookmark}
