@@ -285,11 +285,6 @@ function BookDetails() {
                   {book.discountPercentage}% Off
                 </div>
               )}
-              {book.isAwardWinning && (
-                <div className="absolute top-0 right-0 bg-gold text-navy text-xs font-bold px-2 py-1 z-10">
-                  Award Winner
-                </div>
-              )}
               {book.rating > 4 && (
                 <div className="absolute top-2 left-2 bg-gold text-navy text-xs font-bold px-2 py-1 rounded">
                   Bestseller
@@ -310,7 +305,17 @@ function BookDetails() {
           
           {/* Book details */}
           <div className="md:w-2/3 lg:w-3/4">
-            <h1 className="text-2xl font-bold text-navy mb-1">{book.title}</h1>
+            <h1 className="text-3xl font-bold text-navy mb-2">
+              {book.title}
+              {book.isAwardWinning && (
+                <span className="inline-flex items-center ml-2 bg-gold text-navy text-sm font-bold px-2 py-1 rounded">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                  </svg>
+                  Award Winner
+                </span>
+              )}
+            </h1>
             <p className="text-gray mb-4">by {book.authors?.join(', ') || 'Unknown Author'}</p>
             
             {/* Ratings */}

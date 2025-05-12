@@ -1103,18 +1103,14 @@ function Books() {
                           {book.discountPercentage}% Off
                         </div>
                       )}
-                      {/* Award Winner Tag */}
-                      {book.isAwardWinning && (
-                        <div className="absolute top-0 right-0 bg-gold text-navy text-xs font-bold px-2 py-1 z-10">
-                          Award Winner
-                        </div>
-                      )}
+                      {/* Award Winner Tag Removed */}
                       {/* Coming Soon Tag */}
                       {book.publicationDate && new Date(book.publicationDate) > new Date() && (
                         <div className="absolute bottom-0 left-0 right-0 bg-emerald-700 text-white text-xs font-bold px-2 py-1 text-center z-10">
                           Release: {new Date(book.publicationDate).toLocaleDateString()}
                         </div>
                       )}
+                      {/* Award Winner Badge at bottom left removed */}
                       <div className={`${viewMode === 'grid' ? 'aspect-[3/4]' : 'h-full'} bg-gray-100 flex items-center justify-center`}>
                         <img 
                           src={book.imageUrl || `https://via.placeholder.com/300x450?text=${encodeURIComponent(book.title)}`}
@@ -1133,12 +1129,24 @@ function Books() {
                     </button>
                     
                     <div className={`p-4 ${viewMode === 'list' ? 'flex-1 flex flex-col justify-between' : ''}`}>
-                      <Link to={`/book/${book.id}`} className="hover:text-gold transition-colors">
-                        <h3 className="font-medium text-navy text-sm truncate">{book.title}</h3>
-                        <p className="text-xs text-gray-600 mb-1 truncate">
-                          {book.authors?.join(', ') || 'Unknown Author'}
-                        </p>
-                      </Link>
+                      <div className="flex justify-between items-start mb-2">
+                        <Link to={`/book/${book.id}`} className="hover:text-gold transition-colors flex-1">
+                          <h3 className="font-semibold text-lg mb-1 hover:text-blue-600 transition-colors">
+                            {book.title}
+                          </h3>
+                          <p className="text-xs text-gray-600 mb-1 truncate">
+                            {book.authors?.join(', ') || 'Unknown Author'}
+                          </p>
+                        </Link>
+                        {book.isAwardWinning && (
+                          <span className="inline-flex items-center ml-2 bg-gold text-navy text-xs font-bold px-2 py-1 rounded whitespace-nowrap">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                            </svg>
+                            Award Winner
+                          </span>
+                        )}
+                      </div>
                       
                       <div className="flex justify-between items-center">
                         {book.onSaleFlag ? (
