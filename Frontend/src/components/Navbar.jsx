@@ -323,7 +323,7 @@ function Navbar() {
                     <p className="text-xs font-medium text-navy">{user?.firstName} {user?.lastName}</p>
                     <p className="text-xs text-gray-400 capitalize">{user?.role !== undefined ? (['Member', 'Staff', 'Admin'][user.role]) : 'Member'}</p>
                   </div>
-                  <Link to="/profile" className="block px-4 py-2 text-xs text-navy hover:bg-gray-100">My Profile</Link>
+                  <Link to="/reviews" className="block px-4 py-2 text-xs text-navy hover:bg-gray-100">My Reviews</Link>
                   <Link to="/orders" className="block px-4 py-2 text-xs text-navy hover:bg-gray-100">My Orders</Link>
                   {(user?.role === 1 || user?.role === 2) && (
                     <Link to="/admin" className="block px-4 py-2 text-xs text-navy hover:bg-gray-100">Admin Dashboard</Link>
