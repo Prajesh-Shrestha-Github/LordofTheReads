@@ -5,6 +5,7 @@ import "react-toastify/dist/ReactToastify.css";
 import Home from "./pages/Home";
 import Cart from "./pages/Cart";
 import Login from "./pages/Login";
+import MyReviews from "./pages/MyReviews";
 import Signup from "./pages/Signup";
 import Books from "./pages/Books";
 import Bookmarks from "./pages/Bookmarks";
@@ -163,6 +164,11 @@ const AppRoutes = () => {
       <Route path="/orders" element={
         <UserOnlyRoute>
           <Orders />
+        </UserOnlyRoute>
+      } />
+      <Route path="/reviews" element={
+        <UserOnlyRoute>
+          <MyReviews />
         </UserOnlyRoute>
       } />
       
