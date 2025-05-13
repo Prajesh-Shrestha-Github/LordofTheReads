@@ -157,7 +157,7 @@ function Signup() {
                     className={`w-full px-3 py-2 border ${
                       errors.firstName ? 'border-red-500' : 'border-gray'
                     } rounded-md text-navy text-sm focus:outline-none focus:ring-1 focus:ring-gold`}
-                    placeholder="John"
+                    placeholder="First Name"
                   />
                   {errors.firstName && (
                     <p className="mt-1 text-sm text-red-600">{errors.firstName}</p>
@@ -178,7 +178,7 @@ function Signup() {
                     className={`w-full px-3 py-2 border ${
                       errors.lastName ? 'border-red-500' : 'border-gray'
                     } rounded-md text-navy text-sm focus:outline-none focus:ring-1 focus:ring-gold`}
-                    placeholder="Doe"
+                    placeholder="Last Name"
                   />
                   {errors.lastName && (
                     <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>
@@ -200,7 +200,7 @@ function Signup() {
                   className={`w-full px-3 py-2 border ${
                     errors.username ? 'border-red-500' : 'border-gray'
                   } rounded-md text-navy text-sm focus:outline-none focus:ring-1 focus:ring-gold`}
-                  placeholder="johnDoe"
+                  placeholder="User Name"
                 />
                 {errors.username && (
                   <p className="mt-1 text-sm text-red-600">{errors.username}</p>
@@ -265,7 +265,7 @@ function Signup() {
                   <button
                     type="button"
                     onClick={togglePasswordVisibility}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray hover:text-navy"
+                    className="absolute inset-y-0 right-0 pr-3 bg-transparent flex items-center justify-center text-gray hover:text-navy"
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" />
@@ -358,7 +358,7 @@ function Signup() {
                   <button
                     type="button"
                     onClick={toggleConfirmPasswordVisibility}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray hover:text-navy"
+                    className="absolute inset-y-0 right-0 pr-3 bg-transparent flex items-center justify-center text-gray hover:text-navy"
                   >
                     {showConfirmPassword ? (
                       <EyeOff className="h-4 w-4" />

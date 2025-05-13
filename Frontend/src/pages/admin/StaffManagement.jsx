@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import adminStaffService from '../../services/adminStaffService';
-import { Plus, Trash2, AlertCircle, RefreshCw, Loader } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, RefreshCw, Loader, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 const StaffManagement = () => {
@@ -17,6 +17,7 @@ const StaffManagement = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const fetchStaff = async () => {
     try {
@@ -44,6 +45,10 @@ const StaffManagement = () => {
     if (formErrors[name]) {
       setFormErrors(prev => ({ ...prev, [name]: null }));
     }
+  };
+  
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
   };
   
   const validateForm = () => {
@@ -206,14 +211,27 @@ const StaffManagement = () => {
           </div>
           
           <div className="flex flex-col">
-            <input
-              name="password"
-              type="password"
-              placeholder="Password *"
-              className={`border rounded px-3 py-2 ${formErrors.password ? 'border-red-500' : ''}`}
-              value={formData.password}
-              onChange={handleInputChange}
-            />
+            <div className="relative">
+              <input
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Password *"
+                className={`w-full border rounded px-3 py-2 pr-10 ${formErrors.password ? 'border-red-500' : ''}`}
+                value={formData.password}
+                onChange={handleInputChange}
+              />
+              <button
+                type="button"
+                onClick={togglePasswordVisibility}
+                className="absolute inset-y-0 right-0 pr-3 bg-transparent flex items-center justify-center text-gray-500 hover:text-gray-700"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
             {formErrors.password && <p className="text-red-500 text-xs mt-1">{formErrors.password}</p>}
           </div>
           

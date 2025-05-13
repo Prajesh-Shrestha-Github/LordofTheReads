@@ -300,9 +300,10 @@ namespace LordofTheReads.Services
                             query = query.Where(b => b.IsAwardWinning);
                             break;
                         case "new-releases":
-                            // Books published in the last 3 months
+                            // Books published in the last 3 months, excluding upcoming books
                             var threeMonthsAgo = DateTime.UtcNow.AddMonths(-3);
-                            query = query.Where(b => b.PublicationDate >= threeMonthsAgo);
+                            var currentDate = DateTime.UtcNow;
+                            query = query.Where(b => b.PublicationDate >= threeMonthsAgo && b.PublicationDate <= currentDate);
                             break;
                         case "new-arrivals":
                             // Books added to the catalog in the last month
@@ -325,7 +326,8 @@ namespace LordofTheReads.Services
                 if (filter.IsNewRelease.HasValue && filter.IsNewRelease.Value)
                 {
                     var threeMonthsAgo = DateTime.UtcNow.AddMonths(-3);
-                    query = query.Where(b => b.PublicationDate >= threeMonthsAgo);
+                    var currentDate = DateTime.UtcNow;
+                    query = query.Where(b => b.PublicationDate >= threeMonthsAgo && b.PublicationDate <= currentDate);
                 }
 
                 // 15. New arrival filter
@@ -340,6 +342,12 @@ namespace LordofTheReads.Services
                 {
                     var now = DateTime.UtcNow;
                     query = query.Where(b => b.PublicationDate > now);
+                }
+                
+                // 17. Award-winning filter
+                if (filter.IsAwardWinning.HasValue && filter.IsAwardWinning.Value)
+                {
+                    query = query.Where(b => b.IsAwardWinning);
                 }
 
                 // Apply sorting

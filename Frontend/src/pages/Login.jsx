@@ -32,8 +32,8 @@ function Login() {
       }, 5000);
     }
 
-    // Set session expired message if applicable
-    if (sessionExpired) {
+    // Set session expired message if applicable, but only if the user was previously logged in
+    if (sessionExpired && localStorage.getItem('wasLoggedIn') === 'true') {
       setGlobalError('Your session has expired. Please log in again.');
     }
   }, [location, sessionExpired]);
@@ -181,7 +181,7 @@ function Login() {
                   <button
                     type="button"
                     onClick={togglePasswordVisibility}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray hover:text-navy"
+                    className="absolute inset-y-0 right-0 pr-3 bg-transparent flex items-center justify-center text-gray hover:text-navy"
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" />

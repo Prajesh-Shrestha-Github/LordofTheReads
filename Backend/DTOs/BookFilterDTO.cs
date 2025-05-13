@@ -32,6 +32,7 @@ public class BookFilterDTO
     public bool? IsNewRelease { get; set; } // Published in the last 3 months
     public bool? IsNewArrival { get; set; } // Listed in the last month
     public bool? IsComingSoon { get; set; } // Future publication date
+    public bool? IsAwardWinning { get; set; } // Award-winning books
     
     // Sorting
     public string? SortBy { get; set; } // title_asc, title_desc, price_asc, price_desc, date_desc, popularity

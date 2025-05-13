@@ -250,10 +250,7 @@ function Cart() {
                     </div>
                   )}
                   
-                  <div className="flex justify-between text-navy">
-                    <span>Shipping</span>
-                    <span>Free</span>
-                  </div>
+                  
                 </div>
                 
                 <div className="border-t border-gray pt-3 mb-6">
@@ -271,9 +268,7 @@ function Cart() {
                   Proceed to Checkout
                 </button>
                 
-                <p className="text-xs text-center text-gray mt-4">
-                  Free shipping on orders over $50
-                </p>
+                
               </div>
             </div>
           </div>

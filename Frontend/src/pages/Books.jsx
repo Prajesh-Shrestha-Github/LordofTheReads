@@ -52,6 +52,7 @@ function Books() {
   });
   const [sortBy, setSortBy] = useState('popularity');
   const [searchQuery, setSearchQuery] = useState('');
+  const [availableFormats, setAvailableFormats] = useState([]);
   const [appliedSearchQuery, setAppliedSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState('grid');
@@ -112,7 +113,17 @@ function Books() {
       if (filters.price && filters.price !== 'all') {
         queryParams.append('priceRange', filters.price);
       }
-      
+      // Fetch formats from backend if not already loaded
+      if (availableFormats.length === 0) {
+        const formatResponse = await fetch('http://localhost:5253/api/books/formats');
+        if (formatResponse.ok) {
+          const formats = await formatResponse.json();
+          setAvailableFormats(['all', ...formats]);
+        } else {
+          console.warn('Failed to fetch formats');
+        }
+      }
+
       // Add rating filter - important change to use exact star ratings
       if (filters.rating && filters.rating !== 'all') {
         // Parse the exact rating (now just a single number)
@@ -137,6 +148,27 @@ function Books() {
       // Add on sale filter
       if (filters.onSale) {
         queryParams.append('onSale', true);
+      }
+      
+      // Add new releases filter - books published in the last 3 months
+      if (filters.newRelease) {
+        queryParams.append('isNewRelease', true);
+      }
+      
+      // Add new arrivals filter - books added to the store recently
+      if (filters.newArrival) {
+        queryParams.append('isNewArrival', true);
+      }
+      
+      // Add coming soon filter - books with future publication dates
+      if (filters.comingSoon) {
+        queryParams.append('isComingSoon', true);
+      }
+      
+      // Add award-winning filter - books marked as award winners
+      if (filters.awardWinning) {
+        // The backend expects a parameter that matches the BookFilterDTO property
+        queryParams.append('isAwardWinning', true);
       }
       
       // Add author filter
@@ -425,16 +457,37 @@ function Books() {
 
   // Handle filter changes
   const handleFilterChange = (filterType, value) => {
-    setFilters({
-      ...filters,
-      [filterType]: value,
-    });
+    // For special categories, ensure only one can be selected at a time
+    if (['onSale', 'newRelease', 'newArrival', 'comingSoon', 'awardWinning'].includes(filterType)) {
+      // If turning on a filter, turn off all other special category filters
+      if (value === true) {
+        setFilters({
+          ...filters,
+          onSale: filterType === 'onSale' ? true : false,
+          newRelease: filterType === 'newRelease' ? true : false,
+          newArrival: filterType === 'newArrival' ? true : false,
+          comingSoon: filterType === 'comingSoon' ? true : false,
+          awardWinning: filterType === 'awardWinning' ? true : false
+        });
+      } else {
+        // If turning off a filter, just update that one
+        setFilters({
+          ...filters,
+          [filterType]: value
+        });
+      }
+    } else {
+      // For non-special categories, just update the specified filter
+      setFilters({
+        ...filters,
+        [filterType]: value
+      });
+    }
     setCurrentPage(1); // Reset to first page when filters change
   };
-
   // Handle sort change
   const handleSortChange = (value) => {
-    console.log(`Changing sort to: ${value} (backend param: ${mapSortByToApi(value)})`); 
+    console.log(`Changing sort to: ${value} (backend param: ${mapSortByToApi(value)})`);
     setSortBy(value);
     setCurrentPage(1); // Reset to first page when sort changes
   };
@@ -515,7 +568,9 @@ function Books() {
                       publisher: 'all',
                       newRelease: false,
                       newArrival: false,
-                      comingSoon: false
+                      comingSoon: false,
+                      awardWinning: false,
+                      onSale: false
                     });
                     setSearchQuery('');
                     setAppliedSearchQuery('');
@@ -833,21 +888,25 @@ function Books() {
                       All Formats
                     </label>
                   </div>
-                  {/* Predefined formats */}
-                  {['Hardcover', 'Paperback', 'E-Book', 'Audiobook', 'Limited Edition', 'Signed Copy', 'First Edition', 'Collector\'s Edition'].map((format, index) => (
-                    <div key={`format-${index}`} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        id={`format-${index}`}
-                        checked={filters.format === format}
-                        onChange={() => handleFilterChange('format', format)}
-                        className="mr-2"
-                      />
-                      <label htmlFor={`format-${index}`} className="text-sm text-gray-600">
-                        {format}
-                      </label>
-                    </div>
-                  ))}
+                  
+                  {availableFormats.length === 0 ? (
+                    <div className="text-sm text-gray-500">Loading formats...</div>
+                  ) : (
+                    availableFormats.filter(format => format !== 'all').map((format, index) => (
+                      <div key={`format-${index}`} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id={`format-${index}`}
+                          checked={filters.format === format}
+                          onChange={() => handleFilterChange('format', format)}
+                          className="mr-2"
+                        />
+                        <label htmlFor={`format-${index}`} className="text-sm text-gray-600">
+                          {format}
+                        </label>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
               

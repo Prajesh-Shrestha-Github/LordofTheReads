@@ -246,12 +246,19 @@ function OrderConfirmation() {
             {order?.status === 0 && (
               <button 
                 onClick={async () => {
-                  try {
-                    await orderService.cancelOrder(order.id);
-                    setOrder({...order, status: 2, isCancelled: true, cancellationDate: new Date().toISOString()});
-                  } catch (err) {
-                    console.error('Error cancelling order:', err);
-                    alert('Failed to cancel order. Please try again.');
+                  // Show confirmation dialog with bookstore name instead of localhost
+                  const confirmed = window.confirm(
+                    "Are you sure you want to cancel this order from Lord of The Reads Bookstore? This action cannot be undone."
+                  );
+                  
+                  if (confirmed) {
+                    try {
+                      await orderService.cancelOrder(order.id);
+                      setOrder({...order, status: 2, isCancelled: true, cancellationDate: new Date().toISOString()});
+                    } catch (err) {
+                      console.error('Error cancelling order:', err);
+                      alert('Failed to cancel order. Please try again.');
+                    }
                   }
                 }}
                 className="bg-white text-red-600 border border-red-600 py-2 px-4 rounded-md font-medium hover:bg-red-600 hover:text-white transition-colors"

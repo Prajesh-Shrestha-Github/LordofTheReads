@@ -42,9 +42,14 @@ const BooksManagement = () => {
       setError(null);
     } catch (err) {
       console.error('Error deleting book:', err);
-      const errorMessage = err.response?.data?.message || 'Failed to delete book. Please try again.';
+      const errorMessage = err.response?.data?.message || err.response?.data || 'Failed to delete book. Please try again.';
       setError(errorMessage);
       toast.error(`Error: ${errorMessage}`);
+      
+      // If we get a 400 error, suggest retrying after server restart
+      if (err.response?.status === 400) {
+        toast.info('If you recently updated the server code, try restarting the backend server and try again.');
+      }
     } finally {
       setLoading(false);
     }

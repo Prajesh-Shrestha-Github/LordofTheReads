@@ -277,10 +277,6 @@ function Checkout() {
                   </div>
                 )}
                 
-                <div className="flex justify-between text-navy">
-                  <span>Shipping</span>
-                  <span>Free</span>
-                </div>
               </div>
               
               <div className="border-t border-gray pt-3 mb-6">

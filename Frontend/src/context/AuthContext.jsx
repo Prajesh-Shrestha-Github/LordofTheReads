@@ -145,6 +145,9 @@ export const AuthProvider = ({ children }) => {
         }
       }
       
+      // Set flag to indicate user was logged in
+      localStorage.setItem('wasLoggedIn', 'true');
+      
       setUser(response);
       resetSessionTimer();
       return response;
