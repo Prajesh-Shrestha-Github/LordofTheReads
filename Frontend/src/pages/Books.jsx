@@ -884,28 +884,33 @@ function Books() {
                       onChange={() => handleFilterChange('format', 'all')}
                       className="mr-2"
                     />
-                    <label htmlFor="format-all" className="text-sm text-gray-600">
+                    <label htmlFor="format-all" className="text-sm text-gray-600 font-medium">
                       All Formats
                     </label>
                   </div>
                   
                   {availableFormats.length === 0 ? (
-                    <div className="text-sm text-gray-500">Loading formats...</div>
+                    <div className="flex items-center justify-center py-2">
+                      <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-navy border-r-transparent mr-2"></div>
+                      <span className="text-sm text-gray-500">Loading formats...</span>
+                    </div>
                   ) : (
-                    availableFormats.filter(format => format !== 'all').map((format, index) => (
-                      <div key={`format-${index}`} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          id={`format-${index}`}
-                          checked={filters.format === format}
-                          onChange={() => handleFilterChange('format', format)}
-                          className="mr-2"
-                        />
-                        <label htmlFor={`format-${index}`} className="text-sm text-gray-600">
-                          {format}
-                        </label>
-                      </div>
-                    ))
+                    <div className="mt-2">
+                      {availableFormats.filter(format => format !== 'all').map((format, index) => (
+                        <div key={`format-${index}`} className="flex items-center mb-1.5 hover:bg-gray-50 p-1 rounded">
+                          <input
+                            type="checkbox"
+                            id={`format-${index}`}
+                            checked={filters.format === format}
+                            onChange={() => handleFilterChange('format', format)}
+                            className="mr-2"
+                          />
+                          <label htmlFor={`format-${index}`} className="text-sm text-gray-600 cursor-pointer w-full">
+                            {format}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>

@@ -5,12 +5,14 @@ import Footer from '../components/Footer';
 import { useAuth } from '../context/AuthContext';
 import orderService from '../services/orderService';
 import { CheckCircle, Copy, Calendar, Clock } from 'lucide-react';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 function OrderConfirmation() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [codeCopied, setCodeCopied] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const { orderId } = useParams();
   const { isAuthenticated } = useAuth();
 
@@ -245,27 +247,34 @@ function OrderConfirmation() {
             
             {order?.status === 0 && (
               <button 
-                onClick={async () => {
-                  // Show confirmation dialog with bookstore name instead of localhost
-                  const confirmed = window.confirm(
-                    "Are you sure you want to cancel this order from Lord of The Reads Bookstore? This action cannot be undone."
-                  );
-                  
-                  if (confirmed) {
-                    try {
-                      await orderService.cancelOrder(order.id);
-                      setOrder({...order, status: 2, isCancelled: true, cancellationDate: new Date().toISOString()});
-                    } catch (err) {
-                      console.error('Error cancelling order:', err);
-                      alert('Failed to cancel order. Please try again.');
-                    }
-                  }
-                }}
+                onClick={() => setShowCancelModal(true)}
                 className="bg-white text-red-600 border border-red-600 py-2 px-4 rounded-md font-medium hover:bg-red-600 hover:text-white transition-colors"
               >
                 Cancel Order
               </button>
             )}
+            
+            {/* Confirmation Modal for Order Cancellation */}
+            <ConfirmationModal
+              isOpen={showCancelModal}
+              onClose={() => setShowCancelModal(false)}
+              onConfirm={async () => {
+                try {
+                  await orderService.cancelOrder(order.id);
+                  setOrder({...order, status: 2, isCancelled: true, cancellationDate: new Date().toISOString()});
+                  setShowCancelModal(false);
+                } catch (err) {
+                  console.error('Error cancelling order:', err);
+                  alert('Failed to cancel order. Please try again.');
+                  setShowCancelModal(false);
+                }
+              }}
+              title="Cancel Order"
+              message="Are you sure you want to cancel this order from Lord of The Reads Bookstore? This action cannot be undone."
+              confirmText="Cancel Order"
+              cancelText="Keep Order"
+              confirmButtonClass="bg-red-600 hover:bg-red-700"
+            />
           </div>
         </div>
       </div>
