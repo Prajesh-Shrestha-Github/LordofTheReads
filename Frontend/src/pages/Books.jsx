@@ -53,12 +53,14 @@ function Books() {
   const [sortBy, setSortBy] = useState('popularity');
   const [searchQuery, setSearchQuery] = useState('');
   const [appliedSearchQuery, setAppliedSearchQuery] = useState('');
+  const [availableFormats, setAvailableFormats] = useState([]);
+
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState('grid');
   
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const booksPerPage = 12;
+  const booksPerPage = 8;
   const [totalBooks, setTotalBooks] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   
@@ -117,6 +119,18 @@ function Books() {
         const languages = [...new Set(fetchedBooks.map(book => book.language).filter(Boolean))].sort();
         setAvailableLanguages(languages);
       }
+
+      // Fetch formats from backend if not already loaded
+if (availableFormats.length === 0) {
+  const formatResponse = await fetch('http://localhost:5253/api/Books/formats');
+  if (formatResponse.ok) {
+    const formats = await formatResponse.json();
+    setAvailableFormats(['all', ...formats]);
+  } else {
+    console.warn('Failed to fetch formats');
+  }
+}
+
       
       if (availablePublishers.length === 0) {
         const publishers = [...new Set(fetchedBooks.map(book => book.publisher).filter(Boolean))].sort();
@@ -905,40 +919,28 @@ function Books() {
                 </div>
               </div>
               
-              {/* Formats */}
-              <div className="mb-6">
-                <h3 className="font-medium text-navy mb-2">Format</h3>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="format-all"
-                      checked={filters.format === 'all'}
-                      onChange={() => handleFilterChange('format', 'all')}
-                      className="mr-2"
-                    />
-                    <label htmlFor="format-all" className="text-sm text-gray-600">
-                      All Formats
-                    </label>
-                  </div>
-                  {/* Predefined formats */}
-                  {['Hardcover', 'Paperback', 'E-Book', 'Audiobook', 'Limited Edition', 'Signed Copy', 'First Edition', 'Collector\'s Edition'].map((format, index) => (
-                    <div key={`format-${index}`} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        id={`format-${index}`}
-                        checked={filters.format === format}
-                        onChange={() => handleFilterChange('format', format)}
-                        className="mr-2"
-                      />
-                      <label htmlFor={`format-${index}`} className="text-sm text-gray-600">
-                        {format}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
+            {/* Formats */}
+<div className="mb-6">
+  <h3 className="font-medium text-navy mb-2">Format</h3>
+  <div className="space-y-2 max-h-40 overflow-y-auto">
+  {availableFormats.map((format, index) => (
+
+      <div key={`format-${index}`} className="flex items-center">
+        <input
+          type="checkbox"
+          id={`format-${index}`}
+          checked={filters.format === format}
+          onChange={() => handleFilterChange('format', filters.format === format ? 'all' : format)}
+          className="mr-2"
+        />
+        <label htmlFor={`format-${index}`} className="text-sm text-gray-600">
+          {format === 'all' ? 'All Formats' : format}
+        </label>
+      </div>
+    ))}
+  </div>
+</div>
+
               {/* Publishers */}
               <div className="mb-6">
                 <h3 className="font-medium text-navy mb-2">Publisher</h3>
