@@ -115,17 +115,9 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  // Auto-clear session on application shutdown
-  useEffect(() => {
-    const handleUnload = () => {
-      console.log('Application shutdown - clearing session');
-      authService.clearSession();
-    };
-    window.addEventListener('beforeunload', handleUnload);
-    return () => {
-      window.removeEventListener('beforeunload', handleUnload);
-    };
-  }, []);
+  // NOTE: We removed the beforeunload event listener to prevent token clearing on page refresh
+  // This allows users to refresh the page without losing their session
+  // The token will still expire after 7 days as configured
 
   // Login user
   const login = async (credentials) => {

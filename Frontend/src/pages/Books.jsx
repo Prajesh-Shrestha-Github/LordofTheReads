@@ -193,7 +193,7 @@ function Books() {
         queryParams.append('publisher', filters.publisher);
       }
       
-      // Add search query if any
+      // Add search query if present
       if (appliedSearchQuery) {
         queryParams.append('searchQuery', appliedSearchQuery);
         
@@ -216,6 +216,12 @@ function Books() {
         const backendSortParam = mapSortByToApi(sortBy);
         queryParams.append('sortBy', backendSortParam);
         console.log(`Sorting by: ${sortBy} (backend param: ${backendSortParam})`);
+        
+        // Exclude future books when sorting by newest arrivals
+        if (sortBy === 'newest') {
+          queryParams.append('excludeFutureBooks', 'true');
+          console.log('Excluding future books from newest arrivals');
+        }
       }
       
       // Use the filtered endpoint with query parameters
@@ -280,43 +286,50 @@ function Books() {
       default: return 'title_asc';
     }
   };
+  
+  // No separate effect needed for sorting - handled in fetchFilteredBooks
 
   // Fetch books when filters or pagination changes
   useEffect(() => {
     fetchFilteredBooks();
   }, [currentPage, filters, sortBy, appliedSearchQuery]);
 
-  // Handle filter parameter from URL
+  // Handle filter and sale parameters from URL
   useEffect(() => {
+    // Create a new filters object to avoid direct state mutation
+    const updatedFilters = { ...filters };
+    let shouldUpdateFilters = false;
+    
+    // Handle filter parameter
     if (filterParam) {
-      // Create a new filters object to avoid direct state mutation
-      const updatedFilters = { ...filters };
-      
       // Set the appropriate filter based on the URL parameter
       if (filterParam === 'new-releases') {
         updatedFilters.newRelease = true;
-        // Show filters panel when a specific filter is applied
-        setShowFilters(true);
+        shouldUpdateFilters = true;
       } else if (filterParam === 'new-arrivals') {
         updatedFilters.newArrival = true;
-        // Show filters panel when a specific filter is applied
-        setShowFilters(true);
+        shouldUpdateFilters = true;
       } else if (filterParam === 'coming-soon') {
         updatedFilters.comingSoon = true;
-        // Show filters panel when a specific filter is applied
-        setShowFilters(true);
+        shouldUpdateFilters = true;
       } else if (filterParam === 'award-winners') {
-        // For award winners, we'll need to filter the books in the fetchFilteredBooks function
-        // Set a flag to indicate we're looking for award-winning books
         updatedFilters.awardWinning = true;
-        // Show filters panel when a specific filter is applied
-        setShowFilters(true);
+        shouldUpdateFilters = true;
       }
-      
-      // Update the filters state
-      setFilters(updatedFilters);
     }
-  }, [filterParam]); // Only run when filterParam changes
+    
+    // Handle sale parameter
+    if (saleParam === 'true') {
+      updatedFilters.onSale = true;
+      shouldUpdateFilters = true;
+    }
+    
+    // Update filters and show filter panel if any changes were made
+    if (shouldUpdateFilters) {
+      setFilters(updatedFilters);
+      setShowFilters(true);
+    }
+  }, [filterParam, saleParam]); // Run when either parameter changes
 
   // Fetch genres from the database
   useEffect(() => {
